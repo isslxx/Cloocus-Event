@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
       name, company_name, department, job_title,
       email, phone, industry, company_size,
       referral_source, referrer_name, inquiry, privacy_consent,
+      event_id,
     } = body;
 
     // 서버 검증
@@ -73,6 +74,7 @@ export async function POST(req: NextRequest) {
       referrer_name: referrer_name?.trim() || '',
       inquiry: inquiry?.trim() || '',
       privacy_consent,
+      event_id: event_id || null,
     });
 
     if (error) {

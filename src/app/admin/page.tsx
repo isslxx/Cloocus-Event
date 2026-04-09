@@ -6,7 +6,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
 } from 'recharts';
-import type { Registration } from '@/lib/types';
+import type { Registration, Event } from '@/lib/types';
 
 const COLORS = ['#2563eb', '#7c3aed', '#059669', '#d97706', '#dc2626', '#0891b2', '#be185d', '#65a30d', '#c026d3', '#ea580c', '#0369a1', '#4f46e5', '#84cc16'];
 
@@ -18,9 +18,11 @@ type Metrics = {
   byDay: { date: string; count: number }[];
   byIndustry: { name: string; value: number }[];
   bySource: { name: string; value: number }[];
+  byEvent: { name: string; value: number }[];
 };
 
-function computeMetrics(records: Registration[]): Metrics {
+function computeMetrics(records: Registration[], events: Event[]): Metrics {
+  const eventMap = new Map(events.map((e) => [e.id, e.name]));
   const today = new Date().toISOString().slice(0, 10);
   const todayCount = records.filter((r) => r.created_at.slice(0, 10) === today).length;
 
@@ -48,6 +50,16 @@ function computeMetrics(records: Registration[]): Metrics {
     .sort(([, a], [, b]) => b - a)
     .map(([name, value]) => ({ name, value }));
 
+  // 이벤트별
+  const evtMap: Record<string, number> = {};
+  records.forEach((r) => {
+    const name = r.event_id ? (eventMap.get(r.event_id) || '기타') : '미지정';
+    evtMap[name] = (evtMap[name] || 0) + 1;
+  });
+  const byEvent = Object.entries(evtMap)
+    .sort(([, a], [, b]) => b - a)
+    .map(([name, value]) => ({ name, value }));
+
   return {
     total: records.length,
     today: todayCount,
@@ -56,6 +68,7 @@ function computeMetrics(records: Registration[]): Metrics {
     byDay,
     byIndustry,
     bySource,
+    byEvent,
   };
 }
 
@@ -66,11 +79,13 @@ export default function AdminDashboard() {
 
   const fetchData = useCallback(async () => {
     try {
-      const res = await fetch('/api/admin/registrations?limit=10000', {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      const { data } = await res.json();
-      setMetrics(computeMetrics(data || []));
+      const [regRes, evtRes] = await Promise.all([
+        fetch('/api/admin/registrations?limit=10000', { headers: { Authorization: `Bearer ${accessToken}` } }),
+        fetch('/api/admin/events', { headers: { Authorization: `Bearer ${accessToken}` } }),
+      ]);
+      const { data } = await regRes.json();
+      const evtData = await evtRes.json();
+      setMetrics(computeMetrics(data || [], Array.isArray(evtData) ? evtData : []));
     } catch {
       // ignore
     } finally {
@@ -155,6 +170,24 @@ export default function AdminDashboard() {
                 </Pie>
                 <Tooltip />
               </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-gray-400 text-sm h-[280px] flex items-center justify-center">데이터 없음</p>
+          )}
+        </div>
+
+        {/* 이벤트별 등록수 */}
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <h3 className="font-semibold mb-4">이벤트별 등록수</h3>
+          {metrics.byEvent.length > 0 ? (
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={metrics.byEvent} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis type="number" fontSize={11} allowDecimals={false} />
+                <YAxis type="category" dataKey="name" fontSize={11} width={140} />
+                <Tooltip />
+                <Bar dataKey="value" fill="#059669" radius={[0, 4, 4, 0]} name="등록수" />
+              </BarChart>
             </ResponsiveContainer>
           ) : (
             <p className="text-gray-400 text-sm h-[280px] flex items-center justify-center">데이터 없음</p>

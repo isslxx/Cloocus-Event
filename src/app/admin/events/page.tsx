@@ -1,0 +1,261 @@
+'use client';
+
+import { useEffect, useState, useCallback } from 'react';
+import { useAdmin } from '../layout';
+import type { Event } from '@/lib/types';
+
+export default function EventsPage() {
+  const { user: admin, accessToken } = useAdmin();
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // 모달
+  const [editing, setEditing] = useState<Event | null>(null);
+  const [isNew, setIsNew] = useState(false);
+  const [formName, setFormName] = useState('');
+  const [formDate, setFormDate] = useState('');
+  const [formType, setFormType] = useState<'online' | 'offline'>('offline');
+  const [formStatus, setFormStatus] = useState<'open' | 'closed'>('open');
+  const [saving, setSaving] = useState(false);
+
+  const [deleting, setDeleting] = useState<string | null>(null);
+
+  const isAdmin = admin?.role === 'admin';
+
+  const fetchEvents = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/events', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const data = await res.json();
+      setEvents(data || []);
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
+  }, [accessToken]);
+
+  useEffect(() => {
+    if (accessToken) fetchEvents();
+  }, [accessToken, fetchEvents]);
+
+  const openNew = () => {
+    setIsNew(true);
+    setEditing(null);
+    setFormName('');
+    setFormDate('');
+    setFormType('offline');
+    setFormStatus('open');
+  };
+
+  const openEdit = (event: Event) => {
+    setIsNew(false);
+    setEditing(event);
+    setFormName(event.name);
+    setFormDate(event.event_date);
+    setFormType(event.event_type);
+    setFormStatus(event.status);
+  };
+
+  const handleSave = async () => {
+    if (!formName.trim() || !formDate) return;
+    setSaving(true);
+
+    try {
+      const body = { name: formName.trim(), event_date: formDate, event_type: formType, status: formStatus };
+
+      if (isNew) {
+        await fetch('/api/admin/events', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+          body: JSON.stringify(body),
+        });
+      } else if (editing) {
+        await fetch(`/api/admin/events/${editing.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+          body: JSON.stringify(body),
+        });
+      }
+
+      setEditing(null);
+      setIsNew(false);
+      fetchEvents();
+    } catch {
+      // ignore
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await fetch(`/api/admin/events/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      setDeleting(null);
+      fetchEvents();
+    } catch {
+      // ignore
+    }
+  };
+
+  const toggleStatus = async (event: Event) => {
+    const newStatus = event.status === 'open' ? 'closed' : 'open';
+    await fetch(`/api/admin/events/${event.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ status: newStatus }),
+    });
+    fetchEvents();
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">이벤트 관리</h1>
+        {isAdmin && (
+          <button onClick={openNew} className="btn-primary text-sm">
+            + 이벤트 추가
+          </button>
+        )}
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-gray-50 border-b border-gray-200">
+              <th className="px-4 py-3 text-left font-medium text-gray-600">이벤트명</th>
+              <th className="px-4 py-3 text-left font-medium text-gray-600">날짜</th>
+              <th className="px-4 py-3 text-left font-medium text-gray-600">유형</th>
+              <th className="px-4 py-3 text-left font-medium text-gray-600">상태</th>
+              {isAdmin && <th className="px-4 py-3 text-left font-medium text-gray-600 w-40">작업</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr><td colSpan={5} className="px-4 py-12 text-center text-gray-400">로딩 중...</td></tr>
+            ) : events.length === 0 ? (
+              <tr><td colSpan={5} className="px-4 py-12 text-center text-gray-400">등록된 이벤트가 없습니다.</td></tr>
+            ) : events.map((event) => (
+              <tr key={event.id} className="border-b border-gray-100 hover:bg-gray-50">
+                <td className="px-4 py-3 font-medium">{event.name}</td>
+                <td className="px-4 py-3 text-gray-500">
+                  {new Date(event.event_date).toLocaleDateString('ko-KR')}
+                </td>
+                <td className="px-4 py-3">
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                    event.event_type === 'online'
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-purple-100 text-purple-700'
+                  }`}>
+                    {event.event_type === 'online' ? 'Online' : 'Offline'}
+                  </span>
+                </td>
+                <td className="px-4 py-3">
+                  <button
+                    onClick={() => isAdmin && toggleStatus(event)}
+                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                      event.status === 'open'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'bg-gray-100 text-gray-500'
+                    } ${isAdmin ? 'cursor-pointer hover:opacity-80' : ''}`}
+                    disabled={!isAdmin}
+                  >
+                    {event.status === 'open' ? '모집중' : '마감'}
+                  </button>
+                </td>
+                {isAdmin && (
+                  <td className="px-4 py-3">
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => openEdit(event)}
+                        className="text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100"
+                      >
+                        수정
+                      </button>
+                      <button
+                        onClick={() => setDeleting(event.id)}
+                        className="text-xs px-2 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100"
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* 추가/수정 모달 */}
+      {(isNew || editing) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-xl w-full max-w-md p-6">
+            <h2 className="text-lg font-bold mb-4">{isNew ? '이벤트 추가' : '이벤트 수정'}</h2>
+            <div className="space-y-4">
+              <div className="field">
+                <label>이벤트명</label>
+                <input
+                  type="text"
+                  value={formName}
+                  onChange={(e) => setFormName(e.target.value)}
+                  placeholder="예: 4/28(화) 스프린트 - Azure 인프라 입문"
+                />
+              </div>
+              <div className="field">
+                <label>날짜</label>
+                <input
+                  type="date"
+                  value={formDate}
+                  onChange={(e) => setFormDate(e.target.value)}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="field">
+                  <label>유형</label>
+                  <select value={formType} onChange={(e) => setFormType(e.target.value as 'online' | 'offline')}>
+                    <option value="offline">Offline</option>
+                    <option value="online">Online</option>
+                  </select>
+                </div>
+                <div className="field">
+                  <label>상태</label>
+                  <select value={formStatus} onChange={(e) => setFormStatus(e.target.value as 'open' | 'closed')}>
+                    <option value="open">모집중</option>
+                    <option value="closed">마감</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-6">
+              <button onClick={handleSave} disabled={saving} className="btn-primary flex-1">
+                {saving ? '저장 중...' : '저장'}
+              </button>
+              <button onClick={() => { setEditing(null); setIsNew(false); }} className="btn-secondary flex-1">
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 삭제 확인 */}
+      {deleting && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-xl w-full max-w-sm p-6 text-center">
+            <h2 className="text-lg font-bold mb-2">이벤트 삭제</h2>
+            <p className="text-gray-500 text-sm mb-6">이 이벤트를 삭제하시겠습니까?</p>
+            <div className="flex gap-2">
+              <button onClick={() => handleDelete(deleting)} className="btn-danger flex-1">삭제</button>
+              <button onClick={() => setDeleting(null)} className="btn-secondary flex-1">취소</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

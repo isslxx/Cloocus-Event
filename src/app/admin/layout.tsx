@@ -79,6 +79,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const navItems = [
     { href: '/admin', label: '대시보드', icon: '📊' },
     { href: '/admin/registrations', label: '등록 목록', icon: '📋' },
+    { href: '/admin/events', label: '이벤트 관리', icon: '📅' },
+    ...(admin.role === 'admin' ? [{ href: '/admin/users', label: '사용자 관리', icon: '👤' }] : []),
   ];
 
   const roleBadge: Record<string, string> = {

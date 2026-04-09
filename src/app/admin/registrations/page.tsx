@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useAdmin } from '../layout';
 import { INDUSTRIES, COMPANY_SIZES, REFERRAL_SOURCES } from '@/lib/constants';
 import { formatPhone } from '@/lib/validation';
-import type { Registration } from '@/lib/types';
+import type { Registration, Event } from '@/lib/types';
 
 type SortKey = keyof Registration;
 
@@ -20,6 +20,8 @@ export default function RegistrationsPage() {
   const [filterIndustry, setFilterIndustry] = useState('');
   const [filterSize, setFilterSize] = useState('');
   const [filterSource, setFilterSource] = useState('');
+  const [filterEvent, setFilterEvent] = useState('');
+  const [events, setEvents] = useState<Event[]>([]);
 
   // 정렬
   const [sortKey, setSortKey] = useState<SortKey>('created_at');
@@ -35,6 +37,15 @@ export default function RegistrationsPage() {
 
   const limit = 50;
 
+  // 이벤트 목록 로드
+  useEffect(() => {
+    if (!accessToken) return;
+    fetch('/api/admin/events', { headers: { Authorization: `Bearer ${accessToken}` } })
+      .then((r) => r.json())
+      .then((d) => setEvents(Array.isArray(d) ? d : []))
+      .catch(() => {});
+  }, [accessToken]);
+
   const fetchRecords = useCallback(async () => {
     setLoading(true);
     try {
@@ -45,6 +56,7 @@ export default function RegistrationsPage() {
         order: sortAsc ? 'asc' : 'desc',
       });
       if (search) params.set('search', search);
+      if (filterEvent) params.set('event_id', filterEvent);
       if (filterIndustry) params.set('industry', filterIndustry);
       if (filterSize) params.set('company_size', filterSize);
       if (filterSource) params.set('referral_source', filterSource);
@@ -60,7 +72,7 @@ export default function RegistrationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [accessToken, page, sortKey, sortAsc, search, filterIndustry, filterSize, filterSource]);
+  }, [accessToken, page, sortKey, sortAsc, search, filterEvent, filterIndustry, filterSize, filterSource]);
 
   useEffect(() => {
     if (accessToken) fetchRecords();
@@ -168,6 +180,14 @@ export default function RegistrationsPage() {
           onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           className="flex-1 min-w-[200px] px-3 py-2 border border-gray-200 rounded-lg text-sm"
         />
+        <select
+          value={filterEvent}
+          onChange={(e) => { setFilterEvent(e.target.value); setPage(1); }}
+          className="px-3 py-2 border border-gray-200 rounded-lg text-sm"
+        >
+          <option value="">이벤트 전체</option>
+          {events.map((ev) => <option key={ev.id} value={ev.id}>{ev.name}</option>)}
+        </select>
         <select
           value={filterIndustry}
           onChange={(e) => { setFilterIndustry(e.target.value); setPage(1); }}

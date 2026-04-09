@@ -1,5 +1,15 @@
+export type Event = {
+  id: string;
+  name: string;
+  event_date: string;
+  event_type: 'online' | 'offline';
+  status: 'open' | 'closed';
+  created_at: string;
+};
+
 export type Registration = {
   id: string;
+  event_id: string | null;
   name: string;
   company_name: string;
   company_name_raw: string;
