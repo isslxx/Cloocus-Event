@@ -49,7 +49,38 @@ function rejectedHtml(eventName: string, eventDate: string, eventTime: string) {
 </div>`;
 }
 
-async function sendViaStibee(sendKey: string, apiKey: string, to: string): Promise<{ success: boolean; error?: string }> {
+async function addSubscriber(apiKey: string, listId: string, email: string, name: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`https://api.stibee.com/v1/lists/${listId}/subscribers`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'AccessToken': apiKey,
+      },
+      body: JSON.stringify({
+        eventOccuredBy: 'MANUAL',
+        confirmEmailYN: 'N',
+        subscribers: [{ email, name }],
+      }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      return { success: false, error: `Stibee subscribe: ${res.status} ${errText}` };
+    }
+
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: String(err) };
+  }
+}
+
+async function sendViaStibee(sendKey: string, apiKey: string, listId: string, to: string, name: string): Promise<{ success: boolean; error?: string }> {
+  // 1. 먼저 구독자 등록
+  const subResult = await addSubscriber(apiKey, listId, to, name);
+  if (!subResult.success) return subResult;
+
+  // 2. 자동 이메일 발송
   try {
     const res = await fetch(`https://stibee.com/api/v1.0/auto/${sendKey}`, {
       method: 'POST',
@@ -62,7 +93,7 @@ async function sendViaStibee(sendKey: string, apiKey: string, to: string): Promi
 
     if (!res.ok) {
       const errText = await res.text();
-      return { success: false, error: `Stibee: ${res.status} ${errText}` };
+      return { success: false, error: `Stibee send: ${res.status} ${errText}` };
     }
 
     return { success: true };
@@ -114,10 +145,11 @@ export async function POST(req: NextRequest) {
 
   // 스티비 설정 확인
   const apiKey = process.env.STIBEE_API_KEY || '';
+  const listId = process.env.STIBEE_LIST_ID || '';
   const sendKeyConfirmed = process.env.STIBEE_SEND_KEY_CONFIRMED || '';
   const sendKeyRejected = process.env.STIBEE_SEND_KEY_REJECTED || '';
   const sendKey = email_type === 'confirmed' ? sendKeyConfirmed : sendKeyRejected;
-  const useStibee = !!apiKey && !!sendKey;
+  const useStibee = !!apiKey && !!sendKey && !!listId;
 
   // HTML 생성 (로그용)
   const htmlContent = email_type === 'confirmed'
@@ -130,7 +162,7 @@ export async function POST(req: NextRequest) {
     let sendResult: { success: boolean; error?: string };
 
     if (useStibee) {
-      sendResult = await sendViaStibee(sendKey, apiKey, reg.email);
+      sendResult = await sendViaStibee(sendKey, apiKey, listId, reg.email, reg.name);
     } else {
       // 스티비 미설정 시 로그만 저장 (발송은 하지 않음)
       sendResult = { success: true, error: '' };
