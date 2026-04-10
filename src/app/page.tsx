@@ -81,7 +81,14 @@ export default function Home() {
   }, []);
 
   const handleChange = (field: string, value: string | boolean) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
+    setForm((prev) => {
+      const next = { ...prev, [field]: value };
+      // 신청 경로 변경 시 추천인 초기화
+      if (field === 'referral_source' && value !== '클루커스 담당자 소개' && value !== '외부 담당자 소개') {
+        next.referrer_name = '';
+      }
+      return next;
+    });
     if (errors[field]) {
       setErrors((prev) => {
         const next = { ...prev };
@@ -423,15 +430,17 @@ export default function Home() {
               {errors.referral_source && <span className="error-msg">{errors.referral_source}</span>}
             </div>
 
-            <div className="field">
-              <label>추천인 성명</label>
-              <input
-                type="text"
-                value={form.referrer_name}
-                onChange={(e) => handleChange('referrer_name', e.target.value)}
-                placeholder="추천인이 있다면 입력해주세요 (선택)"
-              />
-            </div>
+            {(form.referral_source === '클루커스 담당자 소개' || form.referral_source === '외부 담당자 소개') && (
+              <div className="field">
+                <label>추천인 성명</label>
+                <input
+                  type="text"
+                  value={form.referrer_name}
+                  onChange={(e) => handleChange('referrer_name', e.target.value)}
+                  placeholder="추천인 성명을 입력해주세요"
+                />
+              </div>
+            )}
 
             <div className="field">
               <label>문의사항</label>
