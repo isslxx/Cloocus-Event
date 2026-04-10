@@ -164,8 +164,8 @@ export async function POST(req: NextRequest) {
     if (useStibee) {
       sendResult = await sendViaStibee(sendKey, apiKey, listId, reg.email, reg.name);
     } else {
-      // 스티비 미설정 시 로그만 저장 (발송은 하지 않음)
-      sendResult = { success: true, error: '' };
+      // 스티비 미설정 시 에러 표시
+      sendResult = { success: false, error: `Stibee not configured: apiKey=${!!apiKey}, listId=${!!listId}, sendKey=${!!sendKey}` };
     }
 
     const logStatus = sendResult.success ? 'sent' : 'failed';

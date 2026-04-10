@@ -44,7 +44,7 @@ export default function RegistrationsPage() {
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailType, setEmailType] = useState<'confirmed' | 'rejected'>('confirmed');
   const [sending, setSending] = useState(false);
-  const [sendResult, setSendResult] = useState<{ successCount: number; failCount: number } | null>(null);
+  const [sendResult, setSendResult] = useState<{ successCount: number; failCount: number; errorDetail?: string } | null>(null);
 
   const limit = 50;
 
@@ -179,10 +179,11 @@ export default function RegistrationsPage() {
         }),
       });
       const data = await res.json();
-      setSendResult({ successCount: data.successCount || 0, failCount: data.failCount || 0 });
+      const firstError = data.results?.find((r: { success: boolean; error?: string }) => !r.success)?.error || '';
+      setSendResult({ successCount: data.successCount || 0, failCount: data.failCount || 0, errorDetail: firstError || (data.error ? data.error : '') });
       fetchRecords();
-    } catch {
-      setSendResult({ successCount: 0, failCount: selected.size });
+    } catch (err) {
+      setSendResult({ successCount: 0, failCount: selected.size, errorDetail: String(err) });
     } finally {
       setSending(false);
     }
@@ -383,6 +384,11 @@ export default function RegistrationsPage() {
                 </div>
                 <p className="text-lg font-semibold mb-2">발송 완료</p>
                 <p className="text-sm text-gray-500">성공: {sendResult.successCount}건 / 실패: {sendResult.failCount}건</p>
+                {sendResult.errorDetail && (
+                  <div className="mt-3 p-3 bg-red-50 rounded-lg text-red-600 text-xs text-left break-all">
+                    {sendResult.errorDetail}
+                  </div>
+                )}
                 <button onClick={() => { setShowEmailModal(false); setSelected(new Set()); setSendResult(null); }} className="btn-primary mt-6 w-full">확인</button>
               </div>
             ) : (
