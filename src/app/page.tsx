@@ -21,6 +21,27 @@ const EMPTY_FORM = {
   privacy_consent: false,
 };
 
+function BrandFooter() {
+  return (
+    <footer className="bg-gray-800 py-4 sm:py-5 px-4">
+      <div className="max-w-lg mx-auto text-center">
+        <div className="flex items-center justify-center gap-2 sm:gap-2.5 mb-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/cloocus-logo.png" alt="Cloocus" className="h-4 sm:h-5 brightness-0 invert" />
+          <span className="text-gray-500">|</span>
+          <span className="text-xs sm:text-sm text-gray-300 font-medium">(주)클루커스</span>
+        </div>
+        <p className="text-[10px] sm:text-xs text-gray-400 leading-relaxed">
+          [본사] 📍서울특별시 강남구 논현로75길 6 (역삼동, 에비뉴75)<br className="sm:hidden" /><span className="hidden sm:inline"> | </span>📞02-597-3400
+        </p>
+        <p className="text-[10px] sm:text-xs text-gray-400 mt-1">
+          ✉️ marketing@cloocus.com
+        </p>
+      </div>
+    </footer>
+  );
+}
+
 export default function Home() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
@@ -152,7 +173,8 @@ export default function Home() {
   // ==================== STEP 1: 이벤트 선택 ====================
   if (step === 1) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-lg">
           <div className="bg-white rounded-xl border border-gray-200 p-8">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -222,6 +244,8 @@ export default function Home() {
             </button>
           </div>
         </div>
+        </div>
+        <BrandFooter />
       </div>
     );
   }
@@ -345,23 +369,9 @@ export default function Home() {
           </div>
         </div>
 
-        {/* 브랜드 푸터 */}
-        <footer className="bg-gray-800 py-4 sm:py-5 px-4" style={{ position: 'relative', zIndex: 60 }}>
-          <div className="max-w-lg mx-auto text-center">
-            <div className="flex items-center justify-center gap-2 sm:gap-2.5 mb-2">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/cloocus-logo.png" alt="Cloocus" className="h-4 sm:h-5 brightness-0 invert" />
-              <span className="text-gray-500">|</span>
-              <span className="text-xs sm:text-sm text-gray-300 font-medium">(주)클루커스</span>
-            </div>
-            <p className="text-[10px] sm:text-xs text-gray-400 leading-relaxed">
-              [본사] 📍서울특별시 강남구 논현로75길 6 (역삼동, 에비뉴75)<br className="sm:hidden" /><span className="hidden sm:inline"> | </span>📞02-597-3400
-            </p>
-            <p className="text-[10px] sm:text-xs text-gray-400 mt-1">
-              ✉️ marketing@cloocus.com
-            </p>
-          </div>
-        </footer>
+        <div style={{ position: 'relative', zIndex: 60 }}>
+          <BrandFooter />
+        </div>
       </div>
     );
   }
@@ -632,6 +642,7 @@ export default function Home() {
           </div>
         </form>
       </main>
+      <BrandFooter />
     </div>
   );
 }
