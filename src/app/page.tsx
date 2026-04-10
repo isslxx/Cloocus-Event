@@ -223,43 +223,34 @@ export default function Home() {
   if (step === 3) {
     return (
       <div className="min-h-screen flex flex-col">
-        {/* 메인 콘텐츠 */}
-        <div className="flex-1 flex items-center justify-center p-4 relative">
-          {/* Confetti - 중앙에서 터지는 효과 */}
-          <div style={{ position: 'absolute', top: '50%', left: '50%', width: 0, height: 0, pointerEvents: 'none', zIndex: 10, overflow: 'visible' }} aria-hidden="true">
-            {Array.from({ length: 30 }).map((_, i) => {
-              const angle = (i / 30) * 360;
-              const dist = 150 + Math.random() * 250;
-              const dx = Math.cos((angle * Math.PI) / 180) * dist;
-              const dy = Math.sin((angle * Math.PI) / 180) * dist;
-              const delay = Math.random() * 0.3;
-              const dur = 0.9 + Math.random() * 0.5;
-              const size = 6 + Math.random() * 6;
-              const color = ['#2563eb', '#4f46e5', '#06b6d4', '#8b5cf6', '#f59e0b', '#0ea5e9'][i % 6];
-              const radius = i % 3 === 0 ? '50%' : i % 3 === 1 ? '2px' : '0';
-              return (
-                <div key={i} style={{
-                  position: 'absolute',
-                  width: size, height: size,
-                  backgroundColor: color,
-                  borderRadius: radius,
-                  animation: `burstTo_${i} ${dur}s ${delay}s ease-out forwards`,
-                  opacity: 0,
-                }}>
-                  <style>{`
-                    @keyframes burstTo_${i} {
-                      0% { opacity:1; transform: translate(0,0) rotate(0deg) scale(1); }
-                      70% { opacity:1; }
-                      100% { opacity:0; transform: translate(${dx}px,${dy}px) rotate(540deg) scale(0); }
-                    }
-                  `}</style>
-                </div>
-              );
-            })}
-          </div>
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="neon-wrapper" style={{ overflow: 'visible' }}>
+            {/* Confetti - 카드 중앙에서 터지는 효과 */}
+            <div style={{ position: 'absolute', top: '40%', left: '50%', width: 0, height: 0, pointerEvents: 'none', zIndex: 5 }} aria-hidden="true">
+              {Array.from({ length: 30 }).map((_, i) => {
+                const angle = (i / 30) * 360;
+                const dist = 120 + Math.random() * 200;
+                const dx = Math.cos((angle * Math.PI) / 180) * dist;
+                const dy = Math.sin((angle * Math.PI) / 180) * dist;
+                const delay = Math.random() * 0.3;
+                const dur = 0.9 + Math.random() * 0.5;
+                const size = 6 + Math.random() * 6;
+                const color = ['#2563eb', '#4f46e5', '#06b6d4', '#8b5cf6', '#f59e0b', '#0ea5e9'][i % 6];
+                const radius = i % 3 === 0 ? '50%' : i % 3 === 1 ? '2px' : '0';
+                return (
+                  <div key={i} style={{
+                    position: 'absolute', width: size, height: size,
+                    backgroundColor: color, borderRadius: radius,
+                    animation: `burstTo_${i} ${dur}s ${delay}s ease-out forwards`,
+                    opacity: 0, pointerEvents: 'none',
+                  }}>
+                    <style>{`@keyframes burstTo_${i}{0%{opacity:1;transform:translate(0,0) rotate(0) scale(1)}70%{opacity:1}100%{opacity:0;transform:translate(${dx}px,${dy}px) rotate(540deg) scale(0)}}`}</style>
+                  </div>
+                );
+              })}
+            </div>
 
-          <div className="neon-wrapper">
-            <div className="confirm-container text-center">
+            <div className="confirm-container text-center" style={{ position: 'relative', zIndex: 10 }}>
               <div className="check-icon-bounce bg-green-100 rounded-full flex items-center justify-center mx-auto mb-8" style={{ width: 72, height: 72 }}>
                 <svg className="w-9 h-9 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
@@ -284,6 +275,7 @@ export default function Home() {
                   setStep(1);
                 }}
                 className="btn-secondary mt-10"
+                style={{ position: 'relative', zIndex: 20 }}
               >
                 새로운 등록
               </button>
@@ -292,7 +284,7 @@ export default function Home() {
         </div>
 
         {/* 브랜드 푸터 */}
-        <footer className="bg-gray-800 py-5 px-4">
+        <footer className="bg-gray-800 py-5 px-4" style={{ position: 'relative', zIndex: 20 }}>
           <div className="max-w-lg mx-auto text-center">
             <div className="flex items-center justify-center gap-2.5 mb-2.5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
