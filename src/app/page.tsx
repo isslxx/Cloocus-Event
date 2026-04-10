@@ -271,6 +271,16 @@ export default function Home() {
             </button>
           </div>
         </div>
+
+        {/* 브랜드 푸터 */}
+        <div className="absolute bottom-6 left-0 right-0 text-center" style={{ zIndex: 30 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/cloocus-logo.png" alt="Cloocus" className="h-4 mx-auto mb-1.5 opacity-40" />
+          <p className="text-xs text-gray-400">(주)클루커스</p>
+          <p className="text-[10px] text-gray-300 mt-1">
+            [본사] 📍서울특별시 강남구 논현로75길 6 (역삼동, 에비뉴75) | 📞02-597-3400 | 📧marketing@cloocus.com
+          </p>
+        </div>
       </div>
     );
   }
