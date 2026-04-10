@@ -226,7 +226,7 @@ export default function Home() {
         <div className="flex-1 flex items-center justify-center p-4">
           <div className="neon-wrapper" style={{ overflow: 'visible' }}>
             {/* Confetti - 카드 중앙에서 터지는 효과 */}
-            <div style={{ position: 'absolute', top: '40%', left: '50%', width: 0, height: 0, pointerEvents: 'none', zIndex: 5 }} aria-hidden="true">
+            <div style={{ position: 'absolute', top: '40%', left: '50%', width: 0, height: 0, pointerEvents: 'none', zIndex: 15 }} aria-hidden="true">
               {Array.from({ length: 30 }).map((_, i) => {
                 const angle = (i / 30) * 360;
                 const dist = 120 + Math.random() * 200;
@@ -250,7 +250,7 @@ export default function Home() {
               })}
             </div>
 
-            <div className="confirm-container text-center" style={{ position: 'relative', zIndex: 10 }}>
+            <div className="confirm-container text-center" style={{ position: 'relative', zIndex: 20 }}>
               <div className="check-icon-bounce bg-green-100 rounded-full flex items-center justify-center mx-auto mb-8" style={{ width: 72, height: 72 }}>
                 <svg className="w-9 h-9 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
@@ -275,7 +275,7 @@ export default function Home() {
                   setStep(1);
                 }}
                 className="btn-secondary mt-10"
-                style={{ position: 'relative', zIndex: 20 }}
+                style={{ position: 'relative', zIndex: 30 }}
               >
                 새로운 등록
               </button>
