@@ -148,6 +148,8 @@ export default function Home() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="w-full max-w-lg">
           <div className="bg-white rounded-xl border border-gray-200 p-8">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/cloocus-logo.svg" alt="Cloocus" className="h-6 mx-auto mb-5 opacity-70" />
             <h1 className="text-2xl font-bold text-center mb-2">클루커스 이벤트 등록하기</h1>
             <p className="text-gray-500 text-center mb-8">참여하실 이벤트를 선택해주세요.</p>
 
@@ -278,12 +280,16 @@ export default function Home() {
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-2xl mx-auto px-4 py-6">
-          <button
-            onClick={() => setStep(1)}
-            className="text-sm text-blue-600 hover:underline mb-2 inline-block"
-          >
-            ← 이벤트 선택으로 돌아가기
-          </button>
+          <div className="flex items-center justify-between mb-2">
+            <button
+              onClick={() => setStep(1)}
+              className="text-sm text-blue-600 hover:underline inline-block"
+            >
+              ← 이벤트 선택으로 돌아가기
+            </button>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/cloocus-logo.svg" alt="Cloocus" className="h-5 opacity-60" />
+          </div>
           <h1 className="text-2xl font-bold text-gray-900">클루커스 이벤트 등록하기</h1>
           {selectedEvent && (
             <div className="mt-2 inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg text-sm font-medium">

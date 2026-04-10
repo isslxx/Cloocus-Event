@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 120">
+  <!-- Orange triangle -->
+  <polygon points="268,2 276,18 260,18" fill="#E8A012"/>
+  <!-- Text: Cloocus -->
+  <text x="260" y="105" text-anchor="middle" font-family="'Segoe UI','Arial',sans-serif" font-size="110" font-weight="700" fill="#6B21A8" letter-spacing="-2">Cloocus</text>
+</svg>
