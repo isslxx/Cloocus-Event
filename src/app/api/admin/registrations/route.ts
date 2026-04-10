@@ -16,6 +16,8 @@ export async function GET(req: NextRequest) {
   const industry = url.searchParams.get('industry') || '';
   const company_size = url.searchParams.get('company_size') || '';
   const referral_source = url.searchParams.get('referral_source') || '';
+  const year = url.searchParams.get('year') || '';
+  const email_status = url.searchParams.get('email_status') || '';
   const sort = url.searchParams.get('sort') || 'created_at';
   const order = url.searchParams.get('order') === 'asc' ? true : false;
 
@@ -30,6 +32,11 @@ export async function GET(req: NextRequest) {
   if (industry) query = query.eq('industry', industry);
   if (company_size) query = query.eq('company_size', company_size);
   if (referral_source) query = query.eq('referral_source', referral_source);
+  if (year) {
+    query = query.gte('created_at', `${year}-01-01T00:00:00`).lt('created_at', `${parseInt(year) + 1}-01-01T00:00:00`);
+  }
+  if (email_status === 'not_sent') query = query.is('email_status', null);
+  else if (email_status) query = query.eq('email_status', email_status);
 
   query = query
     .order(sort, { ascending: order })

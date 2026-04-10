@@ -17,6 +17,8 @@ export default function EventsPage() {
   const [formDate, setFormDate] = useState('');
   const [formType, setFormType] = useState<'online' | 'offline'>('offline');
   const [formStatus, setFormStatus] = useState<'open' | 'closed'>('open');
+  const [formLocation, setFormLocation] = useState('');
+  const [formTime, setFormTime] = useState('');
   const [saving, setSaving] = useState(false);
 
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -50,6 +52,8 @@ export default function EventsPage() {
     setFormDate('');
     setFormType('offline');
     setFormStatus('open');
+    setFormLocation('');
+    setFormTime('');
   };
 
   const openEdit = (event: Event) => {
@@ -59,13 +63,15 @@ export default function EventsPage() {
     setFormDate(event.event_date);
     setFormType(event.event_type);
     setFormStatus(event.status);
+    setFormLocation(event.location || '');
+    setFormTime(event.event_time || '');
   };
 
   const handleSave = async () => {
     if (!formName.trim() || !formDate) return;
     setSaving(true);
     try {
-      const body = { name: formName.trim(), event_date: formDate, event_type: formType, status: formStatus };
+      const body = { name: formName.trim(), event_date: formDate, event_type: formType, status: formStatus, location: formLocation.trim(), event_time: formTime.trim() };
       if (isNew) {
         await fetch('/api/admin/events', {
           method: 'POST',
@@ -298,6 +304,14 @@ export default function EventsPage() {
               <div className="field">
                 <label>날짜</label>
                 <input type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} />
+              </div>
+              <div className="field">
+                <label>장소</label>
+                <input type="text" value={formLocation} onChange={(e) => setFormLocation(e.target.value)} placeholder="예: 서울 강남구 역삼동 (선택)" />
+              </div>
+              <div className="field">
+                <label>시간</label>
+                <input type="text" value={formTime} onChange={(e) => setFormTime(e.target.value)} placeholder="예: 14:00 ~ 17:00 (선택)" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="field">

@@ -72,9 +72,8 @@ export default function AdminDashboard() {
   const { accessToken } = useAdmin();
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [loading, setLoading] = useState(true);
-  const [exporting, setExporting] = useState<'png' | 'xlsx' | null>(null);
+  const [exporting, setExporting] = useState<'pdf' | 'xlsx' | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
-  const dashboardRef = useRef<HTMLDivElement>(null);
   const exportMenuRef = useRef<HTMLDivElement>(null);
 
   // 외부 클릭 시 메뉴 닫기
@@ -88,22 +87,66 @@ export default function AdminDashboard() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  const exportAsImage = async () => {
-    if (!dashboardRef.current) return;
-    setExporting('png');
+  const exportAsPdf = async () => {
+    if (!metrics) return;
+    setExporting('pdf');
     setShowExportMenu(false);
     try {
-      const html2canvas = (await import('html2canvas')).default;
-      const canvas = await html2canvas(dashboardRef.current, {
-        backgroundColor: '#f9fafb',
-        scale: 2,
-        useCORS: true,
-        logging: false,
+      const { jsPDF } = await import('jspdf');
+      const autoTable = (await import('jspdf-autotable')).default;
+      const doc = new jsPDF();
+
+      doc.setFontSize(18);
+      doc.text('Cloocus Dashboard', 14, 20);
+      doc.setFontSize(10);
+      doc.text(`Export: ${new Date().toLocaleDateString('ko-KR')}`, 14, 28);
+
+      // 요약
+      autoTable(doc, {
+        startY: 35,
+        head: [['Item', 'Value']],
+        body: [
+          ['Total Registrations', String(metrics.total)],
+          ['Today', String(metrics.today)],
+          ['Top Industry', metrics.topIndustry],
+          ['Top Source', metrics.topSource],
+        ],
+        theme: 'grid',
+        headStyles: { fillColor: [37, 99, 235] },
       });
-      const link = document.createElement('a');
-      link.download = `cloocus_dashboard_${new Date().toISOString().slice(0, 10)}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
+
+      // 산업군
+      const y1 = (doc as unknown as Record<string, unknown>).lastAutoTable as { finalY: number };
+      autoTable(doc, {
+        startY: y1.finalY + 10,
+        head: [['Industry', 'Count']],
+        body: metrics.byIndustry.map((d) => [d.name, String(d.value)]),
+        theme: 'grid',
+        headStyles: { fillColor: [124, 58, 237] },
+      });
+
+      // 이벤트별
+      const y2 = (doc as unknown as Record<string, unknown>).lastAutoTable as { finalY: number };
+      autoTable(doc, {
+        startY: y2.finalY + 10,
+        head: [['Event', 'Count']],
+        body: metrics.byEvent.map((d) => [d.name, String(d.value)]),
+        theme: 'grid',
+        headStyles: { fillColor: [5, 150, 105] },
+      });
+
+      // 신청 경로
+      const y3 = (doc as unknown as Record<string, unknown>).lastAutoTable as { finalY: number };
+      if (y3.finalY > 240) doc.addPage();
+      autoTable(doc, {
+        startY: y3.finalY > 240 ? 20 : y3.finalY + 10,
+        head: [['Source', 'Count']],
+        body: metrics.bySource.map((d) => [d.name, String(d.value)]),
+        theme: 'grid',
+        headStyles: { fillColor: [217, 119, 6] },
+      });
+
+      doc.save(`cloocus_dashboard_${new Date().toISOString().slice(0, 10)}.pdf`);
     } catch {
       // ignore
     } finally {
@@ -208,10 +251,10 @@ export default function AdminDashboard() {
           {showExportMenu && (
             <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[160px]">
               <button
-                onClick={exportAsImage}
+                onClick={exportAsPdf}
                 className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 rounded-t-lg"
               >
-                📷 이미지 (PNG)
+                📄 PDF
               </button>
               <button
                 onClick={exportAsExcel}
@@ -224,7 +267,7 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <div ref={dashboardRef}>
+      <div>
         {/* 메트릭 카드 */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {cards.map((c) => (

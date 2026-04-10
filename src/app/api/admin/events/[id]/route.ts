@@ -10,7 +10,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const updates = await req.json();
   const supabase = getServiceSupabase();
 
-  const allowed = ['name', 'event_date', 'event_type', 'status'];
+  const allowed = ['name', 'event_date', 'event_type', 'status', 'location', 'event_time'];
   const filtered: Record<string, unknown> = {};
   for (const key of allowed) {
     if (key in updates) filtered[key] = updates[key];

@@ -4,6 +4,8 @@ export type Event = {
   event_date: string;
   event_type: 'online' | 'offline';
   status: 'open' | 'closed';
+  location: string;
+  event_time: string;
   created_at: string;
 };
 
@@ -23,6 +25,8 @@ export type Registration = {
   referrer_name: string;
   inquiry: string;
   privacy_consent: boolean;
+  email_status: 'confirmed' | 'rejected' | null;
+  email_sent_at: string | null;
   created_at: string;
   updated_at: string;
 };
