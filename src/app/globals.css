@@ -143,6 +143,7 @@ body {
   border-radius: 16px;
   max-width: 520px;
   width: 100%;
+  z-index: 20;
 }
 
 .neon-wrapper::before {
@@ -205,6 +206,7 @@ body {
   position: absolute;
   top: -10px;
   opacity: 0;
+  pointer-events: none;
   animation: confettiFall ease-out forwards;
 }
 
