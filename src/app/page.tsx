@@ -149,38 +149,57 @@ export default function Home() {
             ) : events.length === 0 ? (
               <p className="text-center text-gray-400 py-8">현재 등록 가능한 이벤트가 없습니다.</p>
             ) : (
-              <div className="space-y-3">
-                {events.map((event) => (
-                  <button
-                    key={event.id}
-                    onClick={() => setSelectedEvent(event)}
-                    className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
-                      selectedEvent?.id === event.id
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    <p className="font-semibold text-base">{event.name}</p>
-                    <div className="flex items-center gap-3 mt-1.5">
-                      <span className="text-sm text-gray-500">
-                        {new Date(event.event_date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
-                      </span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        event.event_type === 'online'
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-purple-100 text-purple-700'
-                      }`}>
-                        {event.event_type === 'online' ? 'Online' : 'Offline'}
-                      </span>
-                    </div>
-                  </button>
-                ))}
-              </div>
+              <>
+                <div className="space-y-3">
+                  {events.map((event) => {
+                    const isClosed = event.status === 'closed';
+                    return (
+                      <button
+                        key={event.id}
+                        onClick={() => !isClosed && setSelectedEvent(event)}
+                        disabled={isClosed}
+                        className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
+                          isClosed
+                            ? 'border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed'
+                            : selectedEvent?.id === event.id
+                              ? 'border-blue-500 bg-blue-50'
+                              : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <p className={`font-semibold text-base ${isClosed ? 'text-gray-400' : ''}`}>{event.name}</p>
+                          {isClosed && (
+                            <span className="text-xs px-2.5 py-1 rounded-full font-bold bg-red-100 text-red-600 shrink-0">
+                              마감
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 mt-1.5">
+                          <span className="text-sm text-gray-500">
+                            {new Date(event.event_date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
+                          </span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                            event.event_type === 'online'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-purple-100 text-purple-700'
+                          }`}>
+                            {event.event_type === 'online' ? 'Online' : 'Offline'}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {events.every((e) => e.status === 'closed') && (
+                  <p className="text-center text-gray-400 text-sm mt-4">현재 모든 이벤트의 신청이 마감되었습니다.</p>
+                )}
+              </>
             )}
 
             <button
-              onClick={() => selectedEvent && setStep(2)}
-              disabled={!selectedEvent}
+              onClick={() => selectedEvent && selectedEvent.status === 'open' && setStep(2)}
+              disabled={!selectedEvent || selectedEvent.status === 'closed'}
               className="btn-primary w-full mt-6"
             >
               다음

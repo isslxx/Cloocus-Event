@@ -13,7 +13,6 @@ export async function GET() {
   const { data, error } = await supabase
     .from('events')
     .select('*')
-    .eq('status', 'open')
     .order('event_date', { ascending: true });
 
   if (error) {

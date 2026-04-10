@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useAdmin } from './layout';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -76,6 +76,28 @@ export default function AdminDashboard() {
   const { accessToken } = useAdmin();
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
+  const dashboardRef = useRef<HTMLDivElement>(null);
+
+  const exportAsImage = async () => {
+    if (!dashboardRef.current) return;
+    setExporting(true);
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const canvas = await html2canvas(dashboardRef.current, {
+        backgroundColor: '#f9fafb',
+        scale: 2,
+      });
+      const link = document.createElement('a');
+      link.download = `cloocus_dashboard_${new Date().toISOString().slice(0, 10)}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch {
+      // ignore
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const fetchData = useCallback(async () => {
     try {
@@ -114,7 +136,18 @@ export default function AdminDashboard() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">대시보드</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">대시보드</h1>
+        <button
+          onClick={exportAsImage}
+          disabled={exporting}
+          className="btn-secondary text-sm"
+        >
+          {exporting ? '내보내는 중...' : '이미지로 저장'}
+        </button>
+      </div>
+
+      <div ref={dashboardRef}>
 
       {/* 메트릭 카드 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -211,6 +244,7 @@ export default function AdminDashboard() {
             <p className="text-gray-400 text-sm h-[280px] flex items-center justify-center">데이터 없음</p>
           )}
         </div>
+      </div>
       </div>
     </div>
   );
