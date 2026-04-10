@@ -62,20 +62,27 @@ export default function Home() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
+  const [companySource, setCompanySource] = useState<'internal' | 'external' | 'none'>('none');
+
   const searchCompanies = useCallback((q: string) => {
     clearTimeout(companyDebounce.current);
     if (q.length < 2) {
       setCompanySuggestions([]);
+      setShowSuggestions(false);
       return;
     }
     companyDebounce.current = setTimeout(async () => {
       try {
         const res = await fetch(`/api/admin/companies?q=${encodeURIComponent(q)}`);
         const data = await res.json();
-        setCompanySuggestions(data);
-        setShowSuggestions(data.length > 0);
+        const results = data.results || data || [];
+        setCompanySuggestions(Array.isArray(results) ? results : []);
+        setCompanySource(data.source || 'none');
+        setShowSuggestions(true);
       } catch {
         setCompanySuggestions([]);
+        setCompanySource('none');
+        setShowSuggestions(true);
       }
     }, 300);
   }, []);
@@ -428,20 +435,41 @@ export default function Home() {
                   className={errors.company_name ? 'error' : ''}
                   autoComplete="off"
                 />
-                {showSuggestions && companySuggestions.length > 0 && (
-                  <ul className="absolute z-10 top-full left-0 right-0 bg-white border border-gray-200 rounded-lg mt-1 shadow-lg max-h-48 overflow-y-auto">
-                    {companySuggestions.map((name) => (
+                {showSuggestions && form.company_name.length >= 2 && (
+                  <ul className="absolute z-10 top-full left-0 right-0 bg-white border border-gray-200 rounded-lg mt-1 shadow-lg max-h-56 overflow-y-auto">
+                    {companySuggestions.length > 0 ? (
+                      <>
+                        {companySuggestions.map((name) => (
+                          <li
+                            key={name}
+                            className="px-3 py-2.5 hover:bg-blue-50 cursor-pointer text-sm flex items-center gap-2"
+                            onMouseDown={() => {
+                              handleChange('company_name', name);
+                              setShowSuggestions(false);
+                            }}
+                          >
+                            <span className="text-gray-400 text-xs">🏢</span>
+                            {name}
+                          </li>
+                        ))}
+                        <li
+                          className="px-3 py-2.5 hover:bg-gray-50 cursor-pointer text-sm text-gray-500 border-t border-gray-100"
+                          onMouseDown={() => setShowSuggestions(false)}
+                        >
+                          <span className="text-xs">✏️</span> &quot;{form.company_name}&quot; 직접 입력
+                        </li>
+                      </>
+                    ) : (
                       <li
-                        key={name}
-                        className="px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm"
-                        onMouseDown={() => {
-                          handleChange('company_name', name);
-                          setShowSuggestions(false);
-                        }}
+                        className="px-3 py-3 text-sm text-gray-500"
+                        onMouseDown={() => setShowSuggestions(false)}
                       >
-                        {name}
+                        <p className="text-gray-400 text-xs mb-1">검색 결과가 없습니다</p>
+                        <p className="text-blue-600 cursor-pointer hover:underline">
+                          <span className="text-xs">✏️</span> &quot;{form.company_name}&quot; 직접 입력하기
+                        </p>
                       </li>
-                    ))}
+                    )}
                   </ul>
                 )}
               </div>
