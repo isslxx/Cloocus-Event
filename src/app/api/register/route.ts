@@ -47,17 +47,6 @@ export async function POST(req: NextRequest) {
 
     const supabase = getServiceSupabase();
 
-    // 이메일 중복 체크
-    const { data: existing } = await supabase
-      .from('event_registrations')
-      .select('id')
-      .eq('email', email.toLowerCase().trim())
-      .maybeSingle();
-
-    if (existing) {
-      return NextResponse.json({ error: '이미 등록된 이메일입니다.' }, { status: 409 });
-    }
-
     const normalizedCompany = normalizeCompanyName(company_name);
 
     const { error } = await supabase.from('event_registrations').insert({
@@ -78,9 +67,6 @@ export async function POST(req: NextRequest) {
     });
 
     if (error) {
-      if (error.code === '23505') {
-        return NextResponse.json({ error: '이미 등록된 이메일입니다.' }, { status: 409 });
-      }
       return NextResponse.json({ error: '등록 중 오류가 발생했습니다.' }, { status: 500 });
     }
 
