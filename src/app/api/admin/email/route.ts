@@ -100,18 +100,6 @@ function rejectedHtml(v: TemplateVars) {
   </table>
   </td></tr>
 </table>`;
-  </div>
-  <div style="background:#fff;padding:30px 28px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px;font-size:15px;line-height:1.8;color:#333;">
-    <p style="margin:0 0 18px;">안녕하세요, <strong>${v.user_name}</strong>님</p>
-    <p style="margin:0 0 18px;">클루커스 이벤트에 신청해 주셔서 감사합니다.</p>
-    <p style="margin:0 0 18px;">귀하의 "<strong>${v.event_name}</strong>" 참석이 어려운 점 안내 드립니다.</p>
-    <p style="margin:0 0 18px;">이번 이벤트의 참석 인원이 모두 마감됨에 따라 금번 이벤트에는 함께 모시지 못하게 된 점 너른 양해 부탁드립니다.</p>
-    <p style="margin:0 0 18px;">추가 문의사항이 있으시면 언제든 편히 문의해주세요.</p>
-    <p style="margin:26px 0 0;">감사합니다.<br/><strong>클루커스 드림</strong></p>
-    <hr style="border:none;border-top:1px solid #e5e7eb;margin:26px 0;"/>
-    <p style="font-size:13px;color:#888;margin:0;">문의사항: marketing@cloocus.com</p>
-  </div>
-</div>`;
 }
 
 type StibeeFields = {
@@ -208,7 +196,7 @@ export async function POST(req: NextRequest) {
 
   const { registration_ids, email_type, event_id } = await req.json();
 
-  if (!registration_ids?.length || !email_type || !event_id) {
+  if (!registration_ids?.length || !email_type) {
     return NextResponse.json({ error: '필수 항목이 누락되었습니다.' }, { status: 400 });
   }
 
@@ -218,17 +206,21 @@ export async function POST(req: NextRequest) {
 
   const supabase = getServiceSupabase();
 
-  const { data: event } = await supabase.from('events').select('*').eq('id', event_id).maybeSingle();
-  if (!event) return NextResponse.json({ error: '이벤트를 찾을 수 없습니다.' }, { status: 404 });
-
+  // 등록자 조회 (event_id 포함)
   const { data: registrations } = await supabase
     .from('event_registrations')
-    .select('id, email, name')
+    .select('id, email, name, event_id')
     .in('id', registration_ids);
 
   if (!registrations?.length) return NextResponse.json({ error: '대상 등록자가 없습니다.' }, { status: 404 });
 
-  const eventDate = new Date(event.event_date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+  // 관련된 모든 이벤트 조회 (각 등록자의 event_id가 다를 수 있음)
+  const eventIds = [...new Set(registrations.map((r) => r.event_id || event_id).filter(Boolean))];
+  const { data: eventsData } = await supabase.from('events').select('*').in('id', eventIds);
+  const eventMap = new Map((eventsData || []).map((e) => [e.id, e]));
+
+  // 폴백 이벤트 (event_id 파라미터로 전달된 것)
+  const fallbackEvent = event_id ? eventMap.get(event_id) : null;
 
   const apiKey = process.env.STIBEE_API_KEY || '';
   const listId = process.env.STIBEE_LIST_ID || '';
@@ -251,11 +243,20 @@ export async function POST(req: NextRequest) {
   const results: { id: string; email: string; success: boolean; error?: string }[] = [];
 
   for (const reg of registrations) {
+    // 각 등록자의 이벤트 정보 개별 조회
+    const regEvent = eventMap.get(reg.event_id || '') || fallbackEvent;
+    if (!regEvent) {
+      results.push({ id: reg.id, email: reg.email, success: false, error: '이벤트 정보를 찾을 수 없습니다.' });
+      continue;
+    }
+
+    const eventDate = new Date(regEvent.event_date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+
     const vars: TemplateVars = {
-      event_name: event.name,
+      event_name: regEvent.name,
       event_date: eventDate,
-      event_time: event.event_time || '',
-      event_location: event.location || '',
+      event_time: regEvent.event_time || '',
+      event_location: regEvent.location || '',
       user_name: reg.name,
     };
 
@@ -264,14 +265,15 @@ export async function POST(req: NextRequest) {
     let sendResult: { success: boolean; error?: string };
 
     if (useStibee) {
+      const typeLabel = email_type === 'confirmed' ? '등록 확정' : '등록 불가';
       const stibeeFields: StibeeFields = {
         email: reg.email,
         name: reg.name,
-        event_title: `[등록 확정] ${event.name}`,
-        event_name: event.name,
+        event_title: `[${typeLabel}] ${regEvent.name}`,
+        event_name: regEvent.name,
         event_date: eventDate,
-        event_time: event.event_time || '',
-        event_location: event.location || '',
+        event_time: regEvent.event_time || '',
+        event_location: regEvent.location || '',
         user_name: reg.name,
       };
       sendResult = await sendViaStibee(sendKey, apiKey, listId, stibeeFields);
@@ -283,7 +285,7 @@ export async function POST(req: NextRequest) {
 
     await supabase.from('email_logs').insert({
       registration_id: reg.id,
-      event_id,
+      event_id: reg.event_id || event_id,
       recipient_email: reg.email,
       recipient_name: reg.name,
       email_type,

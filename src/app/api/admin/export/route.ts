@@ -8,11 +8,19 @@ export async function GET(req: NextRequest) {
 
   const supabase = getServiceSupabase();
   const format = req.nextUrl.searchParams.get('format') || 'csv';
+  const ids = req.nextUrl.searchParams.get('ids');
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('event_registrations')
     .select('*')
     .order('created_at', { ascending: false });
+
+  if (ids) {
+    const idList = ids.split(',').filter(Boolean);
+    query = query.in('id', idList);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

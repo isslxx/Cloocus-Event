@@ -100,7 +100,11 @@ export default function RegistrationsPage() {
   };
 
   const handleExport = async (format: 'csv' | 'xlsx') => {
-    const res = await fetch(`/api/admin/export?format=${format}`, {
+    const params = new URLSearchParams({ format });
+    if (selected.size > 0) {
+      params.set('ids', Array.from(selected).join(','));
+    }
+    const res = await fetch(`/api/admin/export?${params}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     const blob = await res.blob();
@@ -221,7 +225,7 @@ export default function RegistrationsPage() {
               이메일 발송 ({selected.size})
             </button>
           )}
-          <button onClick={() => handleExport('xlsx')} className="btn-secondary text-sm">XLSX</button>
+          <button onClick={() => handleExport('xlsx')} className="btn-secondary text-sm">XLSX{selected.size > 0 ? ` (${selected.size})` : ''}</button>
           <button onClick={() => handleExport('csv')} className="btn-secondary text-sm">CSV</button>
         </div>
       </div>
