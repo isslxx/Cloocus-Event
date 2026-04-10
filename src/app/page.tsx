@@ -226,7 +226,7 @@ export default function Home() {
         <div className="flex-1 flex items-center justify-center p-4">
           <div className="neon-wrapper" style={{ overflow: 'visible' }}>
             {/* Confetti - 중앙에서 팡! 터지는 효과 */}
-            <div style={{ position: 'absolute', top: '35%', left: '50%', width: 0, height: 0, pointerEvents: 'none', zIndex: 15 }} aria-hidden="true">
+            <div style={{ position: 'absolute', top: '35%', left: '50%', width: 0, height: 0, pointerEvents: 'none', zIndex: 25 }} aria-hidden="true">
               {Array.from({ length: 40 }).map((_, i) => {
                 const angle = (i / 40) * 360 + (Math.random() * 15 - 7.5);
                 const dist = 200 + Math.random() * 350;
