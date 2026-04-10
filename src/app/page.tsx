@@ -225,26 +225,27 @@ export default function Home() {
       <div className="min-h-screen flex flex-col">
         <div className="flex-1 flex items-center justify-center p-4">
           <div className="neon-wrapper" style={{ overflow: 'visible' }}>
-            {/* Confetti - 카드 중앙에서 터지는 효과 */}
-            <div style={{ position: 'absolute', top: '40%', left: '50%', width: 0, height: 0, pointerEvents: 'none', zIndex: 15 }} aria-hidden="true">
-              {Array.from({ length: 30 }).map((_, i) => {
-                const angle = (i / 30) * 360;
-                const dist = 120 + Math.random() * 200;
+            {/* Confetti - 중앙에서 팡! 터지는 효과 */}
+            <div style={{ position: 'absolute', top: '35%', left: '50%', width: 0, height: 0, pointerEvents: 'none', zIndex: 15 }} aria-hidden="true">
+              {Array.from({ length: 40 }).map((_, i) => {
+                const angle = (i / 40) * 360 + (Math.random() * 15 - 7.5);
+                const dist = 200 + Math.random() * 350;
                 const dx = Math.cos((angle * Math.PI) / 180) * dist;
                 const dy = Math.sin((angle * Math.PI) / 180) * dist;
-                const delay = Math.random() * 0.3;
-                const dur = 0.9 + Math.random() * 0.5;
-                const size = 6 + Math.random() * 6;
-                const color = ['#2563eb', '#4f46e5', '#06b6d4', '#8b5cf6', '#f59e0b', '#0ea5e9'][i % 6];
+                const delay = Math.random() * 0.15;
+                const dur = 0.7 + Math.random() * 0.5;
+                const size = 7 + Math.random() * 8;
+                const color = ['#2563eb', '#4f46e5', '#06b6d4', '#8b5cf6', '#f59e0b', '#0ea5e9', '#10b981', '#ec4899'][i % 8];
                 const radius = i % 3 === 0 ? '50%' : i % 3 === 1 ? '2px' : '0';
+                const midScale = 1.5 + Math.random() * 0.5;
                 return (
                   <div key={i} style={{
                     position: 'absolute', width: size, height: size,
                     backgroundColor: color, borderRadius: radius,
-                    animation: `burstTo_${i} ${dur}s ${delay}s ease-out forwards`,
+                    animation: `burst_${i} ${dur}s ${delay}s ease-out forwards`,
                     opacity: 0, pointerEvents: 'none',
                   }}>
-                    <style>{`@keyframes burstTo_${i}{0%{opacity:1;transform:translate(0,0) rotate(0) scale(1)}70%{opacity:1}100%{opacity:0;transform:translate(${dx}px,${dy}px) rotate(540deg) scale(0)}}`}</style>
+                    <style>{`@keyframes burst_${i}{0%{opacity:1;transform:translate(0,0) rotate(0) scale(0)}20%{opacity:1;transform:translate(${dx*0.3}px,${dy*0.3}px) rotate(120deg) scale(${midScale})}70%{opacity:0.8}100%{opacity:0;transform:translate(${dx}px,${dy}px) rotate(720deg) scale(0)}}`}</style>
                   </div>
                 );
               })}
