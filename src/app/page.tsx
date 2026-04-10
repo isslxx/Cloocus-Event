@@ -23,18 +23,18 @@ const EMPTY_FORM = {
 
 function BrandFooter() {
   return (
-    <footer className="bg-gray-800 py-4 sm:py-5 px-4">
+    <footer className="py-4 sm:py-5 px-4 border-t border-gray-200" style={{ backgroundColor: '#eef0f4' }}>
       <div className="max-w-lg mx-auto text-center">
         <div className="flex items-center justify-center gap-2 sm:gap-2.5 mb-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/cloocus-logo.png" alt="Cloocus" className="h-4 sm:h-5 brightness-0 invert" />
-          <span className="text-gray-500">|</span>
-          <span className="text-xs sm:text-sm text-gray-300 font-medium">(주)클루커스</span>
+          <img src="/cloocus-logo.png" alt="Cloocus" className="h-4 sm:h-5" />
+          <span className="text-gray-300">|</span>
+          <span className="text-xs sm:text-sm text-gray-600 font-medium">(주)클루커스</span>
         </div>
-        <p className="text-[10px] sm:text-xs text-gray-400 leading-relaxed">
+        <p className="text-[10px] sm:text-xs text-gray-500 leading-relaxed">
           📍본사ㅣ서울특별시 강남구 논현로75길 6 (역삼동, 에비뉴75)<br className="sm:hidden" /><span className="hidden sm:inline"> | </span>📞02-597-3400
         </p>
-        <p className="text-[10px] sm:text-xs text-gray-400 mt-1">
+        <p className="text-[10px] sm:text-xs text-gray-500 mt-1">
           ✉️ marketing@cloocus.com
         </p>
       </div>
