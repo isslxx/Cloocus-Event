@@ -179,6 +179,17 @@ export async function POST(req: NextRequest) {
   const sendKey = email_type === 'confirmed' ? sendKeyConfirmed : sendKeyRejected;
   const useStibee = !!apiKey && !!sendKey && !!listId;
 
+  // 디버그 정보
+  const stibeeDebug = {
+    hasApiKey: !!apiKey,
+    hasListId: !!listId,
+    hasSendKey: !!sendKey,
+    apiKeyPrefix: apiKey.slice(0, 8),
+    listId,
+    sendKeyPrefix: sendKey.slice(0, 8),
+    useStibee,
+  };
+
   const results: { id: string; email: string; success: boolean; error?: string }[] = [];
 
   for (const reg of registrations) {
@@ -197,7 +208,7 @@ export async function POST(req: NextRequest) {
     if (useStibee) {
       sendResult = await sendViaStibee(sendKey, apiKey, listId, reg.email, reg.name);
     } else {
-      sendResult = { success: false, error: `Stibee not configured: apiKey=${!!apiKey}, listId=${!!listId}, sendKey=${!!sendKey}` };
+      sendResult = { success: false, error: `Stibee not configured: apiKey=${stibeeDebug.hasApiKey}, listId=${stibeeDebug.hasListId}, sendKey=${stibeeDebug.hasSendKey}` };
     }
 
     const logStatus = sendResult.success ? 'sent' : 'failed';
@@ -227,5 +238,5 @@ export async function POST(req: NextRequest) {
   const successCount = results.filter((r) => r.success).length;
   const failCount = results.filter((r) => !r.success).length;
 
-  return NextResponse.json({ results, successCount, failCount, stibeeConnected: useStibee });
+  return NextResponse.json({ results, successCount, failCount, stibeeConnected: useStibee, stibeeDebug });
 }

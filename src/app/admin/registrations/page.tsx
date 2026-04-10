@@ -183,7 +183,8 @@ export default function RegistrationsPage() {
       });
       const data = await res.json();
       const firstError = data.results?.find((r: { success: boolean; error?: string }) => !r.success)?.error || '';
-      setSendResult({ successCount: data.successCount || 0, failCount: data.failCount || 0, errorDetail: firstError || (data.error ? data.error : '') });
+      const debugInfo = data.stibeeDebug ? `\n[Debug] apiKey:${data.stibeeDebug.hasApiKey} listId:${data.stibeeDebug.hasListId} sendKey:${data.stibeeDebug.hasSendKey} connected:${data.stibeeConnected}` : '';
+      setSendResult({ successCount: data.successCount || 0, failCount: data.failCount || 0, errorDetail: (firstError || data.error || '') + debugInfo });
       fetchRecords();
     } catch (err) {
       setSendResult({ successCount: 0, failCount: selected.size, errorDetail: String(err) });
