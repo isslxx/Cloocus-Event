@@ -45,6 +45,9 @@ export default function RegistrationsPage() {
   const [emailType, setEmailType] = useState<'confirmed' | 'rejected'>('confirmed');
   const [sending, setSending] = useState(false);
   const [sendResult, setSendResult] = useState<{ successCount: number; failCount: number; errorDetail?: string } | null>(null);
+  const [previewHtml, setPreviewHtml] = useState('');
+  const [previewSubject, setPreviewSubject] = useState('');
+  const [showPreview, setShowPreview] = useState(false);
 
   const limit = 50;
 
@@ -414,19 +417,39 @@ export default function RegistrationsPage() {
                   </select>
                 </div>
 
-                <div className="bg-gray-50 rounded-lg p-4 mb-4 text-xs text-gray-500 leading-relaxed">
-                  {emailType === 'confirmed' ? (
-                    <>
-                      <p className="font-semibold text-gray-700 mb-1">[등록 확정] 미리보기</p>
-                      <p>귀하의 본 세미나 등록이 확정되었습니다. 영업일 기준 3일 이내로 참석자 안내사항을 포함해 이메일로 전달 드리겠습니다.</p>
-                    </>
-                  ) : (
-                    <>
-                      <p className="font-semibold text-gray-700 mb-1">[등록 불가] 미리보기</p>
-                      <p>이번 이벤트의 참석 인원이 모두 마감됨에 따라 금번 이벤트에는 함께 모시지 못하게 된 점 너른 양해 부탁드립니다.</p>
-                    </>
-                  )}
-                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const eid = filterEvent || records.filter((r) => selected.has(r.id))[0]?.event_id;
+                    if (!eid) return;
+                    try {
+                      const res = await fetch(`/api/admin/email?event_id=${eid}&email_type=${emailType}`, {
+                        headers: { Authorization: `Bearer ${accessToken}` },
+                      });
+                      const data = await res.json();
+                      setPreviewSubject(data.subject || '');
+                      setPreviewHtml(data.html || '');
+                      setShowPreview(true);
+                    } catch { /* ignore */ }
+                  }}
+                  className="text-sm text-blue-600 hover:underline mb-4 block"
+                >
+                  이메일 미리보기
+                </button>
+
+                {showPreview && previewHtml && (
+                  <div className="mb-4 border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
+                      <p className="text-xs text-gray-500">제목</p>
+                      <p className="text-sm font-semibold">{previewSubject}</p>
+                    </div>
+                    <div
+                      className="p-2 bg-white max-h-[300px] overflow-y-auto"
+                      style={{ transform: 'scale(0.75)', transformOrigin: 'top left', width: '133%' }}
+                      dangerouslySetInnerHTML={{ __html: previewHtml }}
+                    />
+                  </div>
+                )}
 
                 <div className="flex gap-2">
                   <button onClick={handleSendEmail} disabled={sending} className="btn-primary flex-1">
