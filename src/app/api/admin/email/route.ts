@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFromToken, getServiceSupabase, canEdit } from '@/lib/supabase-auth';
-import { Resend } from 'resend';
-
-function getResend() {
-  return new Resend(process.env.RESEND_API_KEY);
-}
 
 function confirmedHtml(eventName: string, eventDate: string, location: string, eventTime: string) {
   return `
@@ -54,6 +49,35 @@ function rejectedHtml(eventName: string, eventDate: string, eventTime: string) {
 </div>`;
 }
 
+async function sendViaStibee(to: string, subject: string, html: string): Promise<{ success: boolean; error?: string }> {
+  const apiKey = process.env.STIBEE_API_KEY;
+  if (!apiKey) return { success: false, error: 'STIBEE_API_KEY not configured' };
+
+  try {
+    const res = await fetch('https://api.stibee.com/v1/emails/transactional', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'AccessToken': apiKey,
+      },
+      body: JSON.stringify({
+        subscriber: to,
+        subject,
+        content: html,
+      }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      return { success: false, error: `Stibee API error: ${res.status} ${errText}` };
+    }
+
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: String(err) };
+  }
+}
+
 export async function POST(req: NextRequest) {
   const admin = await getAdminFromToken(req.headers.get('authorization'));
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -92,7 +116,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '대상 등록자가 없습니다.' }, { status: 404 });
   }
 
-  const resend = getResend();
   const eventDate = new Date(event.event_date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
   const subject = email_type === 'confirmed'
     ? `[등록 확정] ${event.name}`
@@ -101,28 +124,20 @@ export async function POST(req: NextRequest) {
   const results: { id: string; email: string; success: boolean; error?: string }[] = [];
 
   for (const reg of registrations) {
-    try {
-      const html = email_type === 'confirmed'
-        ? confirmedHtml(event.name, eventDate, event.location || '', event.event_time || '')
-        : rejectedHtml(event.name, eventDate, event.event_time || '');
+    const html = email_type === 'confirmed'
+      ? confirmedHtml(event.name, eventDate, event.location || '', event.event_time || '')
+      : rejectedHtml(event.name, eventDate, event.event_time || '');
 
-      await resend.emails.send({
-        from: 'Cloocus <marketing@cloocus.com>',
-        to: reg.email,
-        subject,
-        html,
-      });
+    const result = await sendViaStibee(reg.email, subject, html);
 
-      // 발송 상태 업데이트
+    if (result.success) {
       await supabase
         .from('event_registrations')
         .update({ email_status: email_type, email_sent_at: new Date().toISOString() })
         .eq('id', reg.id);
-
-      results.push({ id: reg.id, email: reg.email, success: true });
-    } catch (err) {
-      results.push({ id: reg.id, email: reg.email, success: false, error: String(err) });
     }
+
+    results.push({ id: reg.id, email: reg.email, ...result });
   }
 
   const successCount = results.filter((r) => r.success).length;
