@@ -39,6 +39,20 @@ export type AdminUser = {
   created_at: string;
 };
 
+export type EmailLog = {
+  id: string;
+  registration_id: string | null;
+  event_id: string | null;
+  recipient_email: string;
+  recipient_name: string;
+  email_type: 'confirmed' | 'rejected';
+  subject: string;
+  status: 'pending' | 'sent' | 'failed';
+  error_message: string;
+  sent_by: string;
+  created_at: string;
+};
+
 export type AuditEntry = {
   id: string;
   admin_user_id: string;

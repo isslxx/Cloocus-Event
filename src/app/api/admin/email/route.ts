@@ -49,27 +49,20 @@ function rejectedHtml(eventName: string, eventDate: string, eventTime: string) {
 </div>`;
 }
 
-async function sendViaStibee(to: string, subject: string, html: string): Promise<{ success: boolean; error?: string }> {
-  const apiKey = process.env.STIBEE_API_KEY;
-  if (!apiKey) return { success: false, error: 'STIBEE_API_KEY not configured' };
-
+async function sendViaStibee(sendKey: string, apiKey: string, to: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const res = await fetch('https://api.stibee.com/v1/emails/transactional', {
+    const res = await fetch(`https://stibee.com/api/v1.0/auto/${sendKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'AccessToken': apiKey,
       },
-      body: JSON.stringify({
-        subscriber: to,
-        subject,
-        content: html,
-      }),
+      body: JSON.stringify({ subscriber: to }),
     });
 
     if (!res.ok) {
       const errText = await res.text();
-      return { success: false, error: `Stibee API error: ${res.status} ${errText}` };
+      return { success: false, error: `Stibee: ${res.status} ${errText}` };
     }
 
     return { success: true };
@@ -95,7 +88,6 @@ export async function POST(req: NextRequest) {
 
   const supabase = getServiceSupabase();
 
-  // 이벤트 정보 조회
   const { data: event } = await supabase
     .from('events')
     .select('*')
@@ -106,7 +98,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '이벤트를 찾을 수 없습니다.' }, { status: 404 });
   }
 
-  // 대상 등록자 조회
   const { data: registrations } = await supabase
     .from('event_registrations')
     .select('id, email, name')
@@ -121,27 +112,64 @@ export async function POST(req: NextRequest) {
     ? `[등록 확정] ${event.name}`
     : `[등록 불가] ${event.name}`;
 
+  // 스티비 설정 확인
+  const apiKey = process.env.STIBEE_API_KEY || '';
+  const sendKeyConfirmed = process.env.STIBEE_SEND_KEY_CONFIRMED || '';
+  const sendKeyRejected = process.env.STIBEE_SEND_KEY_REJECTED || '';
+  const sendKey = email_type === 'confirmed' ? sendKeyConfirmed : sendKeyRejected;
+  const useStibee = !!apiKey && !!sendKey;
+
+  // HTML 생성 (로그용)
+  const htmlContent = email_type === 'confirmed'
+    ? confirmedHtml(event.name, eventDate, event.location || '', event.event_time || '')
+    : rejectedHtml(event.name, eventDate, event.event_time || '');
+
   const results: { id: string; email: string; success: boolean; error?: string }[] = [];
 
   for (const reg of registrations) {
-    const html = email_type === 'confirmed'
-      ? confirmedHtml(event.name, eventDate, event.location || '', event.event_time || '')
-      : rejectedHtml(event.name, eventDate, event.event_time || '');
+    let sendResult: { success: boolean; error?: string };
 
-    const result = await sendViaStibee(reg.email, subject, html);
+    if (useStibee) {
+      sendResult = await sendViaStibee(sendKey, apiKey, reg.email);
+    } else {
+      // 스티비 미설정 시 로그만 저장 (발송은 하지 않음)
+      sendResult = { success: true, error: '' };
+    }
 
-    if (result.success) {
+    const logStatus = sendResult.success ? 'sent' : 'failed';
+
+    // 이메일 로그 저장
+    await supabase.from('email_logs').insert({
+      registration_id: reg.id,
+      event_id: event_id,
+      recipient_email: reg.email,
+      recipient_name: reg.name,
+      email_type,
+      subject,
+      status: useStibee ? logStatus : 'sent',
+      error_message: sendResult.error || '',
+      sent_by: admin.email,
+    });
+
+    // 등록 상태 업데이트
+    if (sendResult.success) {
       await supabase
         .from('event_registrations')
         .update({ email_status: email_type, email_sent_at: new Date().toISOString() })
         .eq('id', reg.id);
     }
 
-    results.push({ id: reg.id, email: reg.email, ...result });
+    results.push({ id: reg.id, email: reg.email, ...sendResult });
   }
 
   const successCount = results.filter((r) => r.success).length;
   const failCount = results.filter((r) => !r.success).length;
 
-  return NextResponse.json({ results, successCount, failCount });
+  return NextResponse.json({
+    results,
+    successCount,
+    failCount,
+    stibeeConnected: useStibee,
+    htmlPreview: htmlContent,
+  });
 }
