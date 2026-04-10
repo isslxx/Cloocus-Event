@@ -8,6 +8,7 @@ export default function EventsPage() {
   const { user: admin, accessToken } = useAdmin();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   // 모달
   const [editing, setEditing] = useState<Event | null>(null);
@@ -19,6 +20,8 @@ export default function EventsPage() {
   const [saving, setSaving] = useState(false);
 
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [showCloseAll, setShowCloseAll] = useState(false);
+  const [showCloseSelected, setShowCloseSelected] = useState(false);
 
   const isAdmin = admin?.role === 'admin';
 
@@ -28,7 +31,7 @@ export default function EventsPage() {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       const data = await res.json();
-      setEvents(data || []);
+      setEvents(Array.isArray(data) ? data : []);
     } catch {
       // ignore
     } finally {
@@ -61,10 +64,8 @@ export default function EventsPage() {
   const handleSave = async () => {
     if (!formName.trim() || !formDate) return;
     setSaving(true);
-
     try {
       const body = { name: formName.trim(), event_date: formDate, event_type: formType, status: formStatus };
-
       if (isNew) {
         await fetch('/api/admin/events', {
           method: 'POST',
@@ -78,7 +79,6 @@ export default function EventsPage() {
           body: JSON.stringify(body),
         });
       }
-
       setEditing(null);
       setIsNew(false);
       fetchEvents();
@@ -96,6 +96,7 @@ export default function EventsPage() {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       setDeleting(null);
+      setSelected((prev) => { const next = new Set(prev); next.delete(id); return next; });
       fetchEvents();
     } catch {
       // ignore
@@ -112,14 +113,82 @@ export default function EventsPage() {
     fetchEvents();
   };
 
+  const closeAllEvents = async () => {
+    setShowCloseAll(false);
+    const openEvents = events.filter((e) => e.status === 'open');
+    await Promise.all(
+      openEvents.map((e) =>
+        fetch(`/api/admin/events/${e.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+          body: JSON.stringify({ status: 'closed' }),
+        })
+      )
+    );
+    fetchEvents();
+  };
+
+  const closeSelectedEvents = async () => {
+    setShowCloseSelected(false);
+    const ids = Array.from(selected);
+    await Promise.all(
+      ids.map((id) =>
+        fetch(`/api/admin/events/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+          body: JSON.stringify({ status: 'closed' }),
+        })
+      )
+    );
+    setSelected(new Set());
+    fetchEvents();
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selected.size === events.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(events.map((e) => e.id)));
+    }
+  };
+
+  const hasOpenEvents = events.some((e) => e.status === 'open');
+  const selectedOpenCount = Array.from(selected).filter((id) => events.find((e) => e.id === id)?.status === 'open').length;
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <h1 className="text-2xl font-bold">이벤트 관리</h1>
         {isAdmin && (
-          <button onClick={openNew} className="btn-primary text-sm">
-            + 이벤트 추가
-          </button>
+          <div className="flex gap-2">
+            {selected.size > 0 && selectedOpenCount > 0 && (
+              <button
+                onClick={() => setShowCloseSelected(true)}
+                className="btn-danger text-sm"
+              >
+                선택 마감 ({selectedOpenCount})
+              </button>
+            )}
+            <button
+              onClick={() => setShowCloseAll(true)}
+              disabled={!hasOpenEvents}
+              className="btn-danger text-sm disabled:opacity-40"
+            >
+              모든 이벤트 종료
+            </button>
+            <button onClick={openNew} className="btn-primary text-sm">
+              + 이벤트 추가
+            </button>
+          </div>
         )}
       </div>
 
@@ -127,20 +196,40 @@ export default function EventsPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
+              {isAdmin && (
+                <th className="px-3 py-3 w-10">
+                  <input
+                    type="checkbox"
+                    checked={events.length > 0 && selected.size === events.length}
+                    onChange={toggleSelectAll}
+                    className="w-4 h-4 rounded accent-blue-600"
+                  />
+                </th>
+              )}
               <th className="px-4 py-3 text-left font-medium text-gray-600">이벤트명</th>
               <th className="px-4 py-3 text-left font-medium text-gray-600">날짜</th>
               <th className="px-4 py-3 text-left font-medium text-gray-600">유형</th>
               <th className="px-4 py-3 text-left font-medium text-gray-600">상태</th>
-              {isAdmin && <th className="px-4 py-3 text-left font-medium text-gray-600 w-40">작업</th>}
+              {isAdmin && <th className="px-4 py-3 text-left font-medium text-gray-600 w-28">작업</th>}
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="px-4 py-12 text-center text-gray-400">로딩 중...</td></tr>
+              <tr><td colSpan={6} className="px-4 py-12 text-center text-gray-400">로딩 중...</td></tr>
             ) : events.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-12 text-center text-gray-400">등록된 이벤트가 없습니다.</td></tr>
+              <tr><td colSpan={6} className="px-4 py-12 text-center text-gray-400">등록된 이벤트가 없습니다.</td></tr>
             ) : events.map((event) => (
-              <tr key={event.id} className="border-b border-gray-100 hover:bg-gray-50">
+              <tr key={event.id} className={`border-b border-gray-100 hover:bg-gray-50 ${selected.has(event.id) ? 'bg-blue-50/50' : ''}`}>
+                {isAdmin && (
+                  <td className="px-3 py-3">
+                    <input
+                      type="checkbox"
+                      checked={selected.has(event.id)}
+                      onChange={() => toggleSelect(event.id)}
+                      className="w-4 h-4 rounded accent-blue-600"
+                    />
+                  </td>
+                )}
                 <td className="px-4 py-3 font-medium">{event.name}</td>
                 <td className="px-4 py-3 text-gray-500">
                   {new Date(event.event_date).toLocaleDateString('ko-KR')}
@@ -208,11 +297,7 @@ export default function EventsPage() {
               </div>
               <div className="field">
                 <label>날짜</label>
-                <input
-                  type="date"
-                  value={formDate}
-                  onChange={(e) => setFormDate(e.target.value)}
-                />
+                <input type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="field">
@@ -238,6 +323,39 @@ export default function EventsPage() {
               <button onClick={() => { setEditing(null); setIsNew(false); }} className="btn-secondary flex-1">
                 취소
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 모든 이벤트 종료 확인 */}
+      {showCloseAll && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-xl w-full max-w-sm p-6 text-center">
+            <h2 className="text-lg font-bold mb-2">모든 이벤트 종료</h2>
+            <p className="text-gray-500 text-sm mb-6">
+              모든 이벤트를 마감하시겠습니까?<br />
+              고객 화면에서 등록이 불가능해집니다.
+            </p>
+            <div className="flex gap-2">
+              <button onClick={closeAllEvents} className="btn-danger flex-1">전체 마감</button>
+              <button onClick={() => setShowCloseAll(false)} className="btn-secondary flex-1">취소</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 선택 이벤트 마감 확인 */}
+      {showCloseSelected && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-xl w-full max-w-sm p-6 text-center">
+            <h2 className="text-lg font-bold mb-2">선택 이벤트 마감</h2>
+            <p className="text-gray-500 text-sm mb-6">
+              선택한 {selectedOpenCount}개 이벤트를 마감하시겠습니까?
+            </p>
+            <div className="flex gap-2">
+              <button onClick={closeSelectedEvents} className="btn-danger flex-1">마감</button>
+              <button onClick={() => setShowCloseSelected(false)} className="btn-secondary flex-1">취소</button>
             </div>
           </div>
         </div>
