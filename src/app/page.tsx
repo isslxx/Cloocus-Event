@@ -224,9 +224,9 @@ export default function Home() {
     return (
       <div className="min-h-screen flex flex-col">
         {/* 메인 콘텐츠 */}
-        <div className="flex-1 flex items-center justify-center p-4 relative" style={{ overflow: 'clip' }}>
+        <div className="flex-1 flex items-center justify-center p-4 relative">
           {/* Confetti - 중앙에서 터지는 효과 */}
-          <div style={{ position: 'absolute', top: '50%', left: '50%', width: 0, height: 0, pointerEvents: 'none', zIndex: 10 }} aria-hidden="true">
+          <div style={{ position: 'absolute', top: '50%', left: '50%', width: 0, height: 0, pointerEvents: 'none', zIndex: 10, overflow: 'visible' }} aria-hidden="true">
             {Array.from({ length: 30 }).map((_, i) => {
               const angle = (i / 30) * 360;
               const dist = 150 + Math.random() * 250;
