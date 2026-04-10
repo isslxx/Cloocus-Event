@@ -220,20 +220,42 @@ export default function Home() {
   // ==================== STEP 3: 완료 ====================
   if (step === 3) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+        {/* Confetti */}
+        <div className="confetti-container" aria-hidden="true">
+          {Array.from({ length: 24 }).map((_, i) => (
+            <div key={i} className="confetti-piece" style={{
+              left: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 1.2}s`,
+              animationDuration: `${1.5 + Math.random() * 1.5}s`,
+              backgroundColor: ['#2563eb', '#4f46e5', '#06b6d4', '#8b5cf6', '#3b82f6', '#0ea5e9'][i % 6],
+              width: `${6 + Math.random() * 6}px`,
+              height: `${6 + Math.random() * 6}px`,
+              borderRadius: i % 3 === 0 ? '50%' : i % 3 === 1 ? '2px' : '0',
+              transform: `rotate(${Math.random() * 360}deg)`,
+            }} />
+          ))}
+        </div>
+
         <div className="neon-wrapper">
           <div className="confirm-container text-center">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            {/* 체크 아이콘 (bounce-in) */}
+            <div className="check-icon-bounce w-18 h-18 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-8" style={{ width: 72, height: 72 }}>
+              <svg className="w-9 h-9 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h2 className="text-2xl font-bold mb-4 leading-relaxed">
-              클루커스 이벤트에 관심을 가지고<br />신청해 주셔서 감사합니다!
+
+            <h2 className="text-2xl font-bold mb-2 leading-relaxed">
+              클루커스 이벤트에 관심을 가지고
             </h2>
-            <p className="text-lg text-gray-500 leading-relaxed">
-              등록하신 이메일로 등록 확정 여부와<br />관련 정보를 전달해 드리겠습니다.
+            <h2 className="text-2xl font-bold mb-6 leading-relaxed">
+              신청해 주셔서 감사합니다!
+            </h2>
+            <p className="text-base text-gray-500 leading-relaxed">
+              등록하신 이메일로 등록 확정 여부와<br />관련 정보를 D-7 이내 전달해 드리겠습니다.
             </p>
+
             <button
               onClick={() => {
                 setForm(EMPTY_FORM);
@@ -241,7 +263,7 @@ export default function Home() {
                 setErrors({});
                 setStep(1);
               }}
-              className="btn-secondary mt-8"
+              className="btn-secondary mt-10"
             >
               새로운 등록
             </button>
