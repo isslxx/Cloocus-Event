@@ -222,36 +222,90 @@ export default function Home() {
   // ==================== STEP 3: 완료 ====================
   if (step === 3) {
     return (
-      <div className="min-h-screen flex flex-col">
+      <div className="min-h-screen flex flex-col relative">
+        {/* 폭죽 Canvas - 전체 화면, 콘텐츠 뒤 */}
+        <canvas
+          ref={(canvas) => {
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            const colors = ['#2563eb', '#4f46e5', '#06b6d4', '#8b5cf6', '#f59e0b', '#0ea5e9', '#10b981', '#ec4899'];
+            const particles: { x: number; y: number; vx: number; vy: number; size: number; color: string; life: number; maxLife: number; rotation: number; rotSpeed: number; shape: number }[] = [];
+
+            const cx = canvas.width / 2;
+            const cy = canvas.height * 0.4;
+
+            for (let i = 0; i < 60; i++) {
+              const angle = Math.random() * Math.PI * 2;
+              const speed = 4 + Math.random() * 10;
+              particles.push({
+                x: cx, y: cy,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - 2,
+                size: 4 + Math.random() * 6,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                life: 0,
+                maxLife: 60 + Math.random() * 40,
+                rotation: Math.random() * 360,
+                rotSpeed: (Math.random() - 0.5) * 15,
+                shape: Math.floor(Math.random() * 3),
+              });
+            }
+
+            let frame = 0;
+            const animate = () => {
+              if (frame > 120) { ctx.clearRect(0, 0, canvas.width, canvas.height); return; }
+              ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+              for (const p of particles) {
+                p.life++;
+                if (p.life > p.maxLife) continue;
+
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.15;
+                p.vx *= 0.98;
+                p.rotation += p.rotSpeed;
+
+                const alpha = Math.max(0, 1 - p.life / p.maxLife);
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate((p.rotation * Math.PI) / 180);
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = p.color;
+
+                if (p.shape === 0) {
+                  ctx.beginPath();
+                  ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2);
+                  ctx.fill();
+                } else if (p.shape === 1) {
+                  ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
+                } else {
+                  ctx.beginPath();
+                  ctx.moveTo(0, -p.size / 2);
+                  ctx.lineTo(p.size / 2, p.size / 2);
+                  ctx.lineTo(-p.size / 2, p.size / 2);
+                  ctx.closePath();
+                  ctx.fill();
+                }
+                ctx.restore();
+              }
+
+              frame++;
+              requestAnimationFrame(animate);
+            };
+            requestAnimationFrame(animate);
+          }}
+          style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 50 }}
+        />
+
+        {/* 메인 콘텐츠 */}
         <div className="flex-1 flex items-center justify-center p-4">
           <div className="neon-wrapper" style={{ overflow: 'visible' }}>
-            {/* Confetti - 중앙에서 팡! 터지는 효과 */}
-            <div style={{ position: 'absolute', top: '35%', left: '50%', width: 0, height: 0, pointerEvents: 'none', zIndex: 25 }} aria-hidden="true">
-              {Array.from({ length: 40 }).map((_, i) => {
-                const angle = (i / 40) * 360 + (Math.random() * 15 - 7.5);
-                const dist = 200 + Math.random() * 350;
-                const dx = Math.cos((angle * Math.PI) / 180) * dist;
-                const dy = Math.sin((angle * Math.PI) / 180) * dist;
-                const delay = Math.random() * 0.15;
-                const dur = 0.7 + Math.random() * 0.5;
-                const size = 7 + Math.random() * 8;
-                const color = ['#2563eb', '#4f46e5', '#06b6d4', '#8b5cf6', '#f59e0b', '#0ea5e9', '#10b981', '#ec4899'][i % 8];
-                const radius = i % 3 === 0 ? '50%' : i % 3 === 1 ? '2px' : '0';
-                const midScale = 1.5 + Math.random() * 0.5;
-                return (
-                  <div key={i} style={{
-                    position: 'absolute', width: size, height: size,
-                    backgroundColor: color, borderRadius: radius,
-                    animation: `burst_${i} ${dur}s ${delay}s ease-out forwards`,
-                    opacity: 0, pointerEvents: 'none',
-                  }}>
-                    <style>{`@keyframes burst_${i}{0%{opacity:1;transform:translate(0,0) rotate(0) scale(0)}20%{opacity:1;transform:translate(${dx*0.3}px,${dy*0.3}px) rotate(120deg) scale(${midScale})}70%{opacity:0.8}100%{opacity:0;transform:translate(${dx}px,${dy}px) rotate(720deg) scale(0)}}`}</style>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="confirm-container text-center" style={{ position: 'relative', zIndex: 20 }}>
+            <div className="confirm-container text-center">
               <div className="check-icon-bounce bg-green-100 rounded-full flex items-center justify-center mx-auto mb-8" style={{ width: 72, height: 72 }}>
                 <svg className="w-9 h-9 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
@@ -276,7 +330,7 @@ export default function Home() {
                   setStep(1);
                 }}
                 className="btn-secondary mt-10"
-                style={{ position: 'relative', zIndex: 30 }}
+                style={{ position: 'relative', zIndex: 60 }}
               >
                 새로운 등록
               </button>
@@ -285,7 +339,7 @@ export default function Home() {
         </div>
 
         {/* 브랜드 푸터 */}
-        <footer className="bg-gray-800 py-5 px-4" style={{ position: 'relative', zIndex: 20 }}>
+        <footer className="bg-gray-800 py-5 px-4" style={{ position: 'relative', zIndex: 60 }}>
           <div className="max-w-lg mx-auto text-center">
             <div className="flex items-center justify-center gap-2.5 mb-2.5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
