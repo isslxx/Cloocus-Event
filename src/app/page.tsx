@@ -224,25 +224,36 @@ export default function Home() {
     return (
       <div className="min-h-screen flex flex-col">
         {/* 메인 콘텐츠 */}
-        <div className="flex-1 flex items-center justify-center p-4 relative overflow-hidden">
+        <div className="flex-1 flex items-center justify-center p-4 relative" style={{ overflow: 'clip' }}>
           {/* Confetti - 중앙에서 터지는 효과 */}
-          <div className="confetti-burst" aria-hidden="true">
+          <div style={{ position: 'absolute', top: '50%', left: '50%', width: 0, height: 0, pointerEvents: 'none', zIndex: 10 }} aria-hidden="true">
             {Array.from({ length: 30 }).map((_, i) => {
               const angle = (i / 30) * 360;
-              const distance = 120 + Math.random() * 200;
-              const dx = Math.cos((angle * Math.PI) / 180) * distance;
-              const dy = Math.sin((angle * Math.PI) / 180) * distance;
+              const dist = 150 + Math.random() * 250;
+              const dx = Math.cos((angle * Math.PI) / 180) * dist;
+              const dy = Math.sin((angle * Math.PI) / 180) * dist;
+              const delay = Math.random() * 0.3;
+              const dur = 0.9 + Math.random() * 0.5;
+              const size = 6 + Math.random() * 6;
+              const color = ['#2563eb', '#4f46e5', '#06b6d4', '#8b5cf6', '#f59e0b', '#0ea5e9'][i % 6];
+              const radius = i % 3 === 0 ? '50%' : i % 3 === 1 ? '2px' : '0';
               return (
-                <div key={i} className="confetti-particle" style={{
-                  '--dx': `${dx}px`,
-                  '--dy': `${dy}px`,
-                  animationDelay: `${Math.random() * 0.3}s`,
-                  animationDuration: `${0.8 + Math.random() * 0.6}s`,
-                  backgroundColor: ['#2563eb', '#4f46e5', '#06b6d4', '#8b5cf6', '#f59e0b', '#0ea5e9'][i % 6],
-                  width: `${5 + Math.random() * 7}px`,
-                  height: `${5 + Math.random() * 7}px`,
-                  borderRadius: i % 3 === 0 ? '50%' : i % 3 === 1 ? '2px' : '0',
-                } as React.CSSProperties} />
+                <div key={i} style={{
+                  position: 'absolute',
+                  width: size, height: size,
+                  backgroundColor: color,
+                  borderRadius: radius,
+                  animation: `burstTo_${i} ${dur}s ${delay}s ease-out forwards`,
+                  opacity: 0,
+                }}>
+                  <style>{`
+                    @keyframes burstTo_${i} {
+                      0% { opacity:1; transform: translate(0,0) rotate(0deg) scale(1); }
+                      70% { opacity:1; }
+                      100% { opacity:0; transform: translate(${dx}px,${dy}px) rotate(540deg) scale(0); }
+                    }
+                  `}</style>
+                </div>
               );
             })}
           </div>
@@ -290,7 +301,10 @@ export default function Home() {
               <span className="text-sm text-gray-300 font-medium">(주)클루커스</span>
             </div>
             <p className="text-xs text-gray-400 leading-relaxed">
-              [본사] 📍서울특별시 강남구 논현로75길 6 (역삼동, 에비뉴75) | 📞02-597-3400 | 📧marketing@cloocus.com
+              [본사] 📍서울특별시 강남구 논현로75길 6 (역삼동, 에비뉴75) | 📞02-597-3400
+            </p>
+            <p className="text-xs text-gray-400 mt-1.5">
+              ✉️ marketing@cloocus.com
             </p>
           </div>
         </footer>
