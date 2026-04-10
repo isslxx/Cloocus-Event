@@ -32,7 +32,7 @@ function BrandFooter() {
           <span className="text-xs sm:text-sm text-gray-300 font-medium">(주)클루커스</span>
         </div>
         <p className="text-[10px] sm:text-xs text-gray-400 leading-relaxed">
-          [본사] 📍서울특별시 강남구 논현로75길 6 (역삼동, 에비뉴75)<br className="sm:hidden" /><span className="hidden sm:inline"> | </span>📞02-597-3400
+          📍본사ㅣ서울특별시 강남구 논현로75길 6 (역삼동, 에비뉴75)<br className="sm:hidden" /><span className="hidden sm:inline"> | </span>📞02-597-3400
         </p>
         <p className="text-[10px] sm:text-xs text-gray-400 mt-1">
           ✉️ marketing@cloocus.com
