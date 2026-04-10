@@ -67,7 +67,18 @@ function rejectedHtml(v: TemplateVars) {
 </div>`;
 }
 
-async function addSubscriber(apiKey: string, listId: string, email: string, name: string): Promise<{ success: boolean; error?: string }> {
+type StibeeFields = {
+  email: string;
+  name: string;
+  event_title?: string;
+  event_name?: string;
+  event_date?: string;
+  event_time?: string;
+  event_location?: string;
+  user_name?: string;
+};
+
+async function addSubscriber(apiKey: string, listId: string, fields: StibeeFields): Promise<{ success: boolean; error?: string }> {
   try {
     const res = await fetch(`https://api.stibee.com/v1/lists/${listId}/subscribers`, {
       method: 'POST',
@@ -75,7 +86,7 @@ async function addSubscriber(apiKey: string, listId: string, email: string, name
       body: JSON.stringify({
         eventOccuredBy: 'MANUAL',
         confirmEmailYN: 'N',
-        subscribers: [{ email, name }],
+        subscribers: [fields],
       }),
     });
     if (!res.ok) {
@@ -88,15 +99,15 @@ async function addSubscriber(apiKey: string, listId: string, email: string, name
   }
 }
 
-async function sendViaStibee(sendKey: string, apiKey: string, listId: string, to: string, name: string): Promise<{ success: boolean; error?: string }> {
-  const subResult = await addSubscriber(apiKey, listId, to, name);
+async function sendViaStibee(sendKey: string, apiKey: string, listId: string, fields: StibeeFields): Promise<{ success: boolean; error?: string }> {
+  const subResult = await addSubscriber(apiKey, listId, fields);
   if (!subResult.success) return subResult;
 
   try {
     const res = await fetch(`https://stibee.com/api/v1.0/auto/${sendKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'AccessToken': apiKey },
-      body: JSON.stringify({ subscriber: to }),
+      body: JSON.stringify({ subscriber: fields.email }),
     });
     if (!res.ok) {
       const errText = await res.text();
@@ -206,7 +217,17 @@ export async function POST(req: NextRequest) {
     let sendResult: { success: boolean; error?: string };
 
     if (useStibee) {
-      sendResult = await sendViaStibee(sendKey, apiKey, listId, reg.email, reg.name);
+      const stibeeFields: StibeeFields = {
+        email: reg.email,
+        name: reg.name,
+        event_title: `[등록 확정] ${event.name}`,
+        event_name: event.name,
+        event_date: eventDate,
+        event_time: event.event_time || '',
+        event_location: event.location || '',
+        user_name: reg.name,
+      };
+      sendResult = await sendViaStibee(sendKey, apiKey, listId, stibeeFields);
     } else {
       sendResult = { success: false, error: `Stibee not configured: apiKey=${stibeeDebug.hasApiKey}, listId=${stibeeDebug.hasListId}, sendKey=${stibeeDebug.hasSendKey}` };
     }
