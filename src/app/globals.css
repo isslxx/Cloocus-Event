@@ -167,6 +167,8 @@ body {
   border-radius: 14px;
   padding: 48px 36px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  position: relative;
+  z-index: 30;
 }
 
 @keyframes neonFlow {
