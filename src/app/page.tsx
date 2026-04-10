@@ -222,65 +222,78 @@ export default function Home() {
   // ==================== STEP 3: 완료 ====================
   if (step === 3) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
-        {/* Confetti */}
-        <div className="confetti-container" aria-hidden="true">
-          {Array.from({ length: 24 }).map((_, i) => (
-            <div key={i} className="confetti-piece" style={{
-              left: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 1.2}s`,
-              animationDuration: `${1.5 + Math.random() * 1.5}s`,
-              backgroundColor: ['#2563eb', '#4f46e5', '#06b6d4', '#8b5cf6', '#3b82f6', '#0ea5e9'][i % 6],
-              width: `${6 + Math.random() * 6}px`,
-              height: `${6 + Math.random() * 6}px`,
-              borderRadius: i % 3 === 0 ? '50%' : i % 3 === 1 ? '2px' : '0',
-              transform: `rotate(${Math.random() * 360}deg)`,
-            }} />
-          ))}
-        </div>
+      <div className="min-h-screen flex flex-col">
+        {/* 메인 콘텐츠 */}
+        <div className="flex-1 flex items-center justify-center p-4 relative overflow-hidden">
+          {/* Confetti - 중앙에서 터지는 효과 */}
+          <div className="confetti-burst" aria-hidden="true">
+            {Array.from({ length: 30 }).map((_, i) => {
+              const angle = (i / 30) * 360;
+              const distance = 120 + Math.random() * 200;
+              const dx = Math.cos((angle * Math.PI) / 180) * distance;
+              const dy = Math.sin((angle * Math.PI) / 180) * distance;
+              return (
+                <div key={i} className="confetti-particle" style={{
+                  '--dx': `${dx}px`,
+                  '--dy': `${dy}px`,
+                  animationDelay: `${Math.random() * 0.3}s`,
+                  animationDuration: `${0.8 + Math.random() * 0.6}s`,
+                  backgroundColor: ['#2563eb', '#4f46e5', '#06b6d4', '#8b5cf6', '#f59e0b', '#0ea5e9'][i % 6],
+                  width: `${5 + Math.random() * 7}px`,
+                  height: `${5 + Math.random() * 7}px`,
+                  borderRadius: i % 3 === 0 ? '50%' : i % 3 === 1 ? '2px' : '0',
+                } as React.CSSProperties} />
+              );
+            })}
+          </div>
 
-        <div className="neon-wrapper">
-          <div className="confirm-container text-center">
-            {/* 체크 아이콘 (bounce-in) */}
-            <div className="check-icon-bounce w-18 h-18 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-8" style={{ width: 72, height: 72 }}>
-              <svg className="w-9 h-9 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-              </svg>
+          <div className="neon-wrapper">
+            <div className="confirm-container text-center">
+              <div className="check-icon-bounce bg-green-100 rounded-full flex items-center justify-center mx-auto mb-8" style={{ width: 72, height: 72 }}>
+                <svg className="w-9 h-9 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+
+              <h2 className="text-2xl font-bold mb-2 leading-relaxed">
+                클루커스 이벤트에 관심을 가지고
+              </h2>
+              <h2 className="text-2xl font-bold mb-6 leading-relaxed">
+                신청해 주셔서 감사합니다!
+              </h2>
+              <p className="text-base text-gray-500 leading-relaxed">
+                등록하신 이메일로 등록 확정 여부와<br />관련 정보를 D-7 이내 전달해 드리겠습니다.
+              </p>
+
+              <button
+                onClick={() => {
+                  setForm(EMPTY_FORM);
+                  setSelectedEvent(null);
+                  setErrors({});
+                  setStep(1);
+                }}
+                className="btn-secondary mt-10"
+              >
+                새로운 등록
+              </button>
             </div>
-
-            <h2 className="text-2xl font-bold mb-2 leading-relaxed">
-              클루커스 이벤트에 관심을 가지고
-            </h2>
-            <h2 className="text-2xl font-bold mb-6 leading-relaxed">
-              신청해 주셔서 감사합니다!
-            </h2>
-            <p className="text-base text-gray-500 leading-relaxed">
-              등록하신 이메일로 등록 확정 여부와<br />관련 정보를 D-7 이내 전달해 드리겠습니다.
-            </p>
-
-            <button
-              onClick={() => {
-                setForm(EMPTY_FORM);
-                setSelectedEvent(null);
-                setErrors({});
-                setStep(1);
-              }}
-              className="btn-secondary mt-10"
-            >
-              새로운 등록
-            </button>
           </div>
         </div>
 
         {/* 브랜드 푸터 */}
-        <div className="absolute bottom-6 left-0 right-0 text-center" style={{ zIndex: 30 }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/cloocus-logo.png" alt="Cloocus" className="h-4 mx-auto mb-1.5 opacity-40" />
-          <p className="text-xs text-gray-400">(주)클루커스</p>
-          <p className="text-[10px] text-gray-300 mt-1">
-            [본사] 📍서울특별시 강남구 논현로75길 6 (역삼동, 에비뉴75) | 📞02-597-3400 | 📧marketing@cloocus.com
-          </p>
-        </div>
+        <footer className="bg-gray-800 py-5 px-4">
+          <div className="max-w-lg mx-auto text-center">
+            <div className="flex items-center justify-center gap-2.5 mb-2.5">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/cloocus-logo.png" alt="Cloocus" className="h-5 brightness-0 invert" />
+              <span className="text-gray-500">|</span>
+              <span className="text-sm text-gray-300 font-medium">(주)클루커스</span>
+            </div>
+            <p className="text-xs text-gray-400 leading-relaxed">
+              [본사] 📍서울특별시 강남구 논현로75길 6 (역삼동, 에비뉴75) | 📞02-597-3400 | 📧marketing@cloocus.com
+            </p>
+          </div>
+        </footer>
       </div>
     );
   }
