@@ -5,7 +5,7 @@ import { useAdmin } from '../layout';
 import type { EmailLog, Event } from '@/lib/types';
 
 export default function EmailsPage() {
-  const { accessToken } = useAdmin();
+  const { user: admin, accessToken } = useAdmin();
   const [logs, setLogs] = useState<EmailLog[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -18,10 +18,18 @@ export default function EmailsPage() {
   const [filterStatus, setFilterStatus] = useState('');
   const [search, setSearch] = useState('');
 
+  // 선택
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  // 삭제 확인
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteSuccess, setDeleteSuccess] = useState('');
+
   // 상세 보기
   const [detail, setDetail] = useState<EmailLog | null>(null);
 
   const limit = 50;
+  const canEdit = admin?.role === 'admin' || admin?.role === 'editor';
 
   useEffect(() => {
     if (!accessToken) return;
@@ -57,6 +65,40 @@ export default function EmailsPage() {
     if (accessToken) fetchLogs();
   }, [accessToken, fetchLogs]);
 
+  // 선택
+  const toggleSelect = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selected.size === logs.length) setSelected(new Set());
+    else setSelected(new Set(logs.map((l) => l.id)));
+  };
+
+  // 삭제
+  const handleDelete = async () => {
+    setShowDeleteConfirm(false);
+    try {
+      const res = await fetch('/api/admin/email-logs/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ ids: Array.from(selected) }),
+      });
+      if (res.ok) {
+        setDeleteSuccess(`선택한 이메일 발송 기록 ${selected.size}건이 삭제되었습니다.`);
+        setSelected(new Set());
+        fetchLogs();
+        setTimeout(() => setDeleteSuccess(''), 3000);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
   const totalPages = Math.ceil(total / limit);
   const eventNameMap = new Map(events.map((e) => [e.id, e.name]));
 
@@ -84,7 +126,29 @@ export default function EmailsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">이메일 발송 관리</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold">이메일 발송 관리</h1>
+          {selected.size > 0 && (
+            <p className="text-sm text-blue-600 mt-1">{selected.size}건 선택됨</p>
+          )}
+        </div>
+        {canEdit && selected.size > 0 && (
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="btn-danger text-sm"
+          >
+            선택 삭제 ({selected.size})
+          </button>
+        )}
+      </div>
+
+      {/* 성공 메시지 */}
+      {deleteSuccess && (
+        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
+          {deleteSuccess}
+        </div>
+      )}
 
       {/* 통계 카드 */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
@@ -142,6 +206,11 @@ export default function EmailsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
+                {canEdit && (
+                  <th className="px-3 py-3 w-10">
+                    <input type="checkbox" checked={logs.length > 0 && selected.size === logs.length} onChange={toggleSelectAll} className="w-4 h-4 rounded accent-blue-600" />
+                  </th>
+                )}
                 <th className="px-4 py-3 text-left font-medium text-gray-600">수신자</th>
                 <th className="px-4 py-3 text-left font-medium text-gray-600">이메일</th>
                 <th className="px-4 py-3 text-left font-medium text-gray-600">제목</th>
@@ -155,11 +224,16 @@ export default function EmailsPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={9} className="px-4 py-12 text-center text-gray-400">로딩 중...</td></tr>
+                <tr><td colSpan={10} className="px-4 py-12 text-center text-gray-400">로딩 중...</td></tr>
               ) : logs.length === 0 ? (
-                <tr><td colSpan={9} className="px-4 py-12 text-center text-gray-400">발송 기록이 없습니다.</td></tr>
+                <tr><td colSpan={10} className="px-4 py-12 text-center text-gray-400">발송 기록이 없습니다.</td></tr>
               ) : logs.map((log) => (
-                <tr key={log.id} className="border-b border-gray-100 hover:bg-gray-50">
+                <tr key={log.id} className={`border-b border-gray-100 hover:bg-gray-50 ${selected.has(log.id) ? 'bg-blue-50/50' : ''}`}>
+                  {canEdit && (
+                    <td className="px-3 py-3">
+                      <input type="checkbox" checked={selected.has(log.id)} onChange={() => toggleSelect(log.id)} className="w-4 h-4 rounded accent-blue-600" />
+                    </td>
+                  )}
                   <td className="px-4 py-3 whitespace-nowrap font-medium">{log.recipient_name}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-gray-500">{log.recipient_email}</td>
                   <td className="px-4 py-3 whitespace-nowrap max-w-[200px] truncate">{log.subject}</td>
@@ -196,6 +270,23 @@ export default function EmailsPage() {
           </div>
         )}
       </div>
+
+      {/* 삭제 확인 모달 */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-xl w-full max-w-sm p-6 text-center">
+            <h2 className="text-lg font-bold mb-2">발송 기록 삭제</h2>
+            <p className="text-gray-500 text-sm mb-6">
+              선택한 이메일 발송 기록 {selected.size}건을 삭제하시겠습니까?<br />
+              <span className="text-xs text-gray-400 mt-1 block">등록 데이터에는 영향이 없습니다.</span>
+            </p>
+            <div className="flex gap-2">
+              <button onClick={handleDelete} className="btn-danger flex-1">삭제</button>
+              <button onClick={() => setShowDeleteConfirm(false)} className="btn-secondary flex-1">취소</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 상세 모달 */}
       {detail && (
