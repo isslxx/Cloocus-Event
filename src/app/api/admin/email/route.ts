@@ -16,50 +16,90 @@ function generateSubject(type: 'confirmed' | 'rejected', vars: TemplateVars): st
 }
 
 function confirmedHtml(v: TemplateVars) {
+  const imgBase = typeof window === 'undefined' ? (process.env.NEXT_PUBLIC_SITE_URL || 'https://cloocus-event-dfgk.vercel.app') : '';
   return `
-<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',sans-serif;max-width:600px;margin:0 auto;padding:40px 20px;background:#f9fafb;">
-  <div style="background:linear-gradient(135deg,#1e3a8a,#2563eb,#3b82f6);padding:44px 28px;border-radius:12px 12px 0 0;text-align:center;">
-    <div style="width:52px;height:52px;margin:0 auto 14px;background:rgba(255,255,255,0.2);border-radius:50%;line-height:52px;font-size:28px;color:#fff;">✓</div>
-    <h1 style="margin:0;font-size:20px;line-height:1.5;color:#ffffff;font-weight:600;">[등록 확정] ${v.event_name}</h1>
-  </div>
-  <div style="background:#f0f4ff;padding:22px 28px;border-bottom:1px solid #dbeafe;">
-    <table style="font-size:14px;color:#333;border-collapse:collapse;width:100%;">
-      <tr><td style="padding:10px 20px 10px 0;font-weight:600;color:#666;">이벤트</td><td style="padding:10px 0;">${v.event_name}</td></tr>
-      <tr><td style="padding:10px 20px 10px 0;font-weight:600;color:#666;">날짜</td><td style="padding:10px 0;">${v.event_date}</td></tr>
-      ${v.event_time ? `<tr><td style="padding:10px 20px 10px 0;font-weight:600;color:#666;">시간</td><td style="padding:10px 0;">${v.event_time}</td></tr>` : ''}
-      ${v.event_location ? `<tr><td style="padding:10px 20px 10px 0;font-weight:600;color:#666;">장소</td><td style="padding:10px 0;">${v.event_location}</td></tr>` : ''}
-    </table>
-  </div>
-  <div style="background:#16a34a;color:#ffffff;text-align:center;padding:14px 20px;font-size:15px;font-weight:600;">귀하의 이벤트 등록이 확정되었습니다.</div>
-  <div style="background:#fff;padding:30px 28px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px;font-size:15px;line-height:1.8;color:#333;">
-    <p style="margin:0 0 18px;">안녕하세요, <strong>${v.user_name}</strong>님</p>
-    <p style="margin:0 0 18px;">클루커스 이벤트에 신청해 주셔서 감사합니다.</p>
-    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:18px;margin:22px 0;">
-      <p style="margin:0;font-size:14px;color:#555;">신청 이벤트</p>
-      <p style="margin:8px 0 0;font-size:16px;font-weight:600;color:#111;">${v.event_name}</p>
-    </div>
-    <p style="margin:0 0 18px;">해당 이벤트 등록이 <strong style="color:#2563eb;">최종 확정</strong>되었습니다.</p>
-    <p style="margin:0 0 18px;">참석자 안내사항을 3일 이내 이메일로 전달 드릴 예정입니다.</p>
-    <p style="margin:26px 0 0;">감사합니다.<br/><strong>클루커스 드림</strong></p>
-    <hr style="border:none;border-top:1px solid #e5e7eb;margin:26px 0;"/>
-    <p style="font-size:13px;color:#888;margin:0;">문의사항: marketing@cloocus.com</p>
-  </div>
-</div>`;
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="font-family:'Malgun Gothic',Arial,sans-serif;background:#f9fafb;padding:30px 0;">
+  <tr><td align="center">
+  <table width="600" cellpadding="0" cellspacing="0" border="0" style="background:#fff;border-radius:12px;overflow:hidden;">
+    <tr>
+      <td align="center" style="padding:0;background-color:#4f46e5;border-radius:12px 12px 0 0;">
+        <img src="${imgBase}/bg_purple.png" width="600" style="display:block;width:100%;max-width:600px;height:auto;border-radius:12px 12px 0 0;" alt=""/>
+        <div style="padding:0 20px 28px;color:#ffffff;font-size:22px;font-weight:700;">[등록 확정] ${v.event_name}</div>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:22px;background:#f5f3ff;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr><td style="padding:8px 0;color:#6d28d9;font-weight:600;">날짜</td><td style="padding:8px 0;">${v.event_date}</td></tr>
+          ${v.event_time ? `<tr><td style="padding:8px 0;color:#6d28d9;font-weight:600;">시간</td><td style="padding:8px 0;">${v.event_time}</td></tr>` : ''}
+          ${v.event_location ? `<tr><td style="padding:8px 0;color:#6d28d9;font-weight:600;">장소</td><td style="padding:8px 0;">${v.event_location}</td></tr>` : ''}
+        </table>
+      </td>
+    </tr>
+    <tr><td align="center" style="background:#16a34a;color:#fff;padding:14px;font-weight:600;">귀하의 이벤트 등록이 확정되었습니다.</td></tr>
+    <tr>
+      <td style="padding:30px;font-size:15px;line-height:1.8;color:#333;">
+        <p style="margin:0 0 16px;">안녕하세요, <strong>${v.user_name}</strong>님<br/>클루커스 이벤트에 신청해 주셔서 감사합니다.</p>
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;margin:20px 0;">
+          <tr><td style="padding:16px;">
+            <div style="font-size:13px;color:#666;">신청 이벤트</div>
+            <div style="font-size:16px;font-weight:600;margin-top:6px;">✔ ${v.event_name}</div>
+          </td></tr>
+        </table>
+        <p style="margin:8px 0 16px;">해당 이벤트 등록이 <strong style="color:#6d28d9;">최종 확정</strong>되었습니다.<br/>참석자 안내사항을 3일 이내 이메일로 전달 드릴 예정입니다.</p>
+        <p style="margin:24px 0 0;">감사합니다.<br/><strong>클루커스 드림</strong></p>
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:28px 0;"/>
+        <div style="text-align:center;font-size:12.5px;color:#888;line-height:1.7;">
+          <div style="font-weight:600;color:#666;">(주)클루커스</div>
+          <div>본사ㅣ서울특별시 강남구 논현로75길 6 (역삼동, 에비뉴75) | 📞 02-597-3400</div>
+          <div style="margin-top:4px;">📧 marketing@cloocus.com</div>
+        </div>
+      </td>
+    </tr>
+  </table>
+  </td></tr>
+</table>`;
 }
 
 function rejectedHtml(v: TemplateVars) {
+  const imgBase = typeof window === 'undefined' ? (process.env.NEXT_PUBLIC_SITE_URL || 'https://cloocus-event-dfgk.vercel.app') : '';
   return `
-<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',sans-serif;max-width:600px;margin:0 auto;padding:40px 20px;background:#f9fafb;">
-  <div style="background:linear-gradient(135deg,#4b5563,#6b7280,#9ca3af);padding:44px 28px;border-radius:12px 12px 0 0;text-align:center;">
-    <div style="width:52px;height:52px;margin:0 auto 14px;background:rgba(255,255,255,0.2);border-radius:50%;line-height:52px;font-size:28px;color:#fff;">✕</div>
-    <h1 style="margin:0;font-size:20px;line-height:1.5;color:#ffffff;font-weight:600;">[등록 불가] ${v.event_name}</h1>
-  </div>
-  <div style="background:#f9fafb;padding:22px 28px;border-bottom:1px solid #e5e7eb;">
-    <table style="font-size:14px;color:#333;border-collapse:collapse;width:100%;">
-      <tr><td style="padding:10px 20px 10px 0;font-weight:600;color:#666;">이벤트</td><td style="padding:10px 0;">${v.event_name}</td></tr>
-      <tr><td style="padding:10px 20px 10px 0;font-weight:600;color:#666;">날짜</td><td style="padding:10px 0;">${v.event_date}</td></tr>
-      ${v.event_time ? `<tr><td style="padding:10px 20px 10px 0;font-weight:600;color:#666;">시간</td><td style="padding:10px 0;">${v.event_time}</td></tr>` : ''}
-    </table>
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="font-family:'Malgun Gothic',Arial,sans-serif;background:#f9fafb;padding:30px 0;">
+  <tr><td align="center">
+  <table width="600" cellpadding="0" cellspacing="0" border="0" style="background:#fff;border-radius:12px;overflow:hidden;">
+    <tr>
+      <td align="center" style="padding:0;background-color:#6b7280;border-radius:12px 12px 0 0;">
+        <img src="${imgBase}/bg_purple.png" width="600" style="display:block;width:100%;max-width:600px;height:auto;border-radius:12px 12px 0 0;opacity:0.6;" alt=""/>
+        <div style="padding:0 20px 28px;color:#ffffff;font-size:22px;font-weight:700;">[등록 불가] ${v.event_name}</div>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:22px;background:#f9fafb;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr><td style="padding:8px 0;color:#666;font-weight:600;">이벤트</td><td style="padding:8px 0;">${v.event_name}</td></tr>
+          <tr><td style="padding:8px 0;color:#666;font-weight:600;">날짜</td><td style="padding:8px 0;">${v.event_date}</td></tr>
+          ${v.event_time ? `<tr><td style="padding:8px 0;color:#666;font-weight:600;">시간</td><td style="padding:8px 0;">${v.event_time}</td></tr>` : ''}
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:30px;font-size:15px;line-height:1.8;color:#333;">
+        <p style="margin:0 0 16px;">안녕하세요, <strong>${v.user_name}</strong>님<br/>클루커스 이벤트에 신청해 주셔서 감사합니다.</p>
+        <p style="margin:0 0 16px;">귀하의 "<strong>${v.event_name}</strong>" 참석이 어려운 점 안내 드립니다.</p>
+        <p style="margin:0 0 16px;">이번 이벤트의 참석 인원이 모두 마감됨에 따라 금번 이벤트에는 함께 모시지 못하게 된 점 너른 양해 부탁드립니다.</p>
+        <p style="margin:0 0 16px;">추가 문의사항이 있으시면 언제든 편히 문의해주세요.</p>
+        <p style="margin:24px 0 0;">감사합니다.<br/><strong>클루커스 드림</strong></p>
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:28px 0;"/>
+        <div style="text-align:center;font-size:12.5px;color:#888;line-height:1.7;">
+          <div style="font-weight:600;color:#666;">(주)클루커스</div>
+          <div>본사ㅣ서울특별시 강남구 논현로75길 6 (역삼동, 에비뉴75) | 📞 02-597-3400</div>
+          <div style="margin-top:4px;">📧 marketing@cloocus.com</div>
+        </div>
+      </td>
+    </tr>
+  </table>
+  </td></tr>
+</table>`;
   </div>
   <div style="background:#fff;padding:30px 28px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px;font-size:15px;line-height:1.8;color:#333;">
     <p style="margin:0 0 18px;">안녕하세요, <strong>${v.user_name}</strong>님</p>
