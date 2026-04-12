@@ -75,6 +75,7 @@ export default function AdminDashboard() {
   const [exporting, setExporting] = useState<'pdf' | 'xlsx' | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
+  const dashboardRef = useRef<HTMLDivElement>(null);
 
   // 외부 클릭 시 메뉴 닫기
   useEffect(() => {
@@ -88,63 +89,49 @@ export default function AdminDashboard() {
   }, []);
 
   const exportAsPdf = async () => {
-    if (!metrics) return;
+    if (!dashboardRef.current) return;
     setExporting('pdf');
     setShowExportMenu(false);
     try {
+      const html2canvas = (await import('html2canvas')).default;
       const { jsPDF } = await import('jspdf');
-      const autoTable = (await import('jspdf-autotable')).default;
-      const doc = new jsPDF();
 
-      doc.setFontSize(18);
-      doc.text('Cloocus Dashboard', 14, 20);
-      doc.setFontSize(10);
-      doc.text(`Export: ${new Date().toLocaleDateString('ko-KR')}`, 14, 28);
-
-      // 요약
-      autoTable(doc, {
-        startY: 35,
-        head: [['Item', 'Value']],
-        body: [
-          ['Total Registrations', String(metrics.total)],
-          ['Today', String(metrics.today)],
-          ['Top Industry', metrics.topIndustry],
-          ['Top Source', metrics.topSource],
-        ],
-        theme: 'grid',
-        headStyles: { fillColor: [37, 99, 235] },
+      const canvas = await html2canvas(dashboardRef.current, {
+        backgroundColor: '#f9fafb',
+        scale: 2,
+        useCORS: true,
+        logging: false,
       });
 
-      // 산업군
-      const y1 = (doc as unknown as Record<string, unknown>).lastAutoTable as { finalY: number };
-      autoTable(doc, {
-        startY: y1.finalY + 10,
-        head: [['Industry', 'Count']],
-        body: metrics.byIndustry.map((d) => [d.name, String(d.value)]),
-        theme: 'grid',
-        headStyles: { fillColor: [124, 58, 237] },
-      });
+      const imgData = canvas.toDataURL('image/png');
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
 
-      // 이벤트별
-      const y2 = (doc as unknown as Record<string, unknown>).lastAutoTable as { finalY: number };
-      autoTable(doc, {
-        startY: y2.finalY + 10,
-        head: [['Event', 'Count']],
-        body: metrics.byEvent.map((d) => [d.name, String(d.value)]),
-        theme: 'grid',
-        headStyles: { fillColor: [5, 150, 105] },
-      });
+      // A4: 210mm x 297mm
+      const pdfWidth = 210;
+      const pdfMargin = 10;
+      const contentWidth = pdfWidth - pdfMargin * 2;
+      const ratio = contentWidth / imgWidth;
+      const contentHeight = imgHeight * ratio;
 
-      // 신청 경로
-      const y3 = (doc as unknown as Record<string, unknown>).lastAutoTable as { finalY: number };
-      if (y3.finalY > 240) doc.addPage();
-      autoTable(doc, {
-        startY: y3.finalY > 240 ? 20 : y3.finalY + 10,
-        head: [['Source', 'Count']],
-        body: metrics.bySource.map((d) => [d.name, String(d.value)]),
-        theme: 'grid',
-        headStyles: { fillColor: [217, 119, 6] },
-      });
+      const doc = new jsPDF('p', 'mm', 'a4');
+      const pageHeight = 297 - pdfMargin * 2;
+
+      let position = 0;
+      let page = 0;
+
+      while (position < contentHeight) {
+        if (page > 0) doc.addPage();
+
+        doc.addImage(
+          imgData, 'PNG',
+          pdfMargin, pdfMargin - position,
+          contentWidth, contentHeight
+        );
+
+        position += pageHeight;
+        page++;
+      }
 
       doc.save(`cloocus_dashboard_${new Date().toISOString().slice(0, 10)}.pdf`);
     } catch {
@@ -267,7 +254,7 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <div>
+      <div ref={dashboardRef}>
         {/* 메트릭 카드 */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {cards.map((c) => (
