@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useAdmin } from './layout';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell,
+  PieChart, Pie, Cell, Legend,
 } from 'recharts';
 import type { Registration, Event } from '@/lib/types';
 
@@ -297,15 +297,21 @@ export default function AdminDashboard() {
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <h3 className="font-semibold mb-4">일별 등록 추이</h3>
             {metrics.byDay.length > 0 ? (
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={metrics.byDay}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="date" fontSize={11} />
-                  <YAxis fontSize={11} allowDecimals={false} />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#2563eb" radius={[4, 4, 0, 0]} name="등록수" />
-                </BarChart>
-              </ResponsiveContainer>
+              <>
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={metrics.byDay}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="date" fontSize={11} />
+                    <YAxis fontSize={11} allowDecimals={false} />
+                    <Tooltip />
+                    <Bar dataKey="count" fill="#2563eb" radius={[4, 4, 0, 0]} name="등록수" />
+                  </BarChart>
+                </ResponsiveContainer>
+                <table className="w-full text-xs mt-4 border-collapse">
+                  <thead><tr className="bg-gray-50"><th className="px-3 py-2 text-left border border-gray-200">날짜</th><th className="px-3 py-2 text-right border border-gray-200">등록수</th></tr></thead>
+                  <tbody>{metrics.byDay.map((d) => <tr key={d.date}><td className="px-3 py-1.5 border border-gray-200">{d.date}</td><td className="px-3 py-1.5 text-right border border-gray-200 font-medium">{d.count}</td></tr>)}</tbody>
+                </table>
+              </>
             ) : (
               <p className="text-gray-400 text-sm h-[280px] flex items-center justify-center">데이터 없음</p>
             )}
@@ -315,27 +321,37 @@ export default function AdminDashboard() {
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <h3 className="font-semibold mb-4">산업군 분포</h3>
             {metrics.byIndustry.length > 0 ? (
-              <ResponsiveContainer width="100%" height={280}>
-                <PieChart>
-                  <Pie
-                    data={metrics.byIndustry}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={90}
-                    innerRadius={45}
-                    label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
-                    labelLine={false}
-                    fontSize={11}
-                  >
-                    {metrics.byIndustry.map((_, i) => (
-                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
+              <>
+                <ResponsiveContainer width="100%" height={280}>
+                  <PieChart>
+                    <Pie
+                      data={metrics.byIndustry}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={90}
+                      innerRadius={45}
+                      label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
+                      labelLine={false}
+                      fontSize={11}
+                    >
+                      {metrics.byIndustry.map((_, i) => (
+                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <table className="w-full text-xs mt-4 border-collapse">
+                  <thead><tr className="bg-gray-50"><th className="px-3 py-2 text-left border border-gray-200">산업군</th><th className="px-3 py-2 text-right border border-gray-200">등록수</th><th className="px-3 py-2 text-right border border-gray-200">비율</th></tr></thead>
+                  <tbody>{metrics.byIndustry.map((d, i) => {
+                    const pct = metrics.total > 0 ? ((d.value / metrics.total) * 100).toFixed(1) : '0';
+                    return <tr key={d.name}><td className="px-3 py-1.5 border border-gray-200"><span style={{ display:'inline-block',width:10,height:10,borderRadius:2,backgroundColor:COLORS[i%COLORS.length],marginRight:6,verticalAlign:'middle' }}></span>{d.name}</td><td className="px-3 py-1.5 text-right border border-gray-200 font-medium">{d.value}</td><td className="px-3 py-1.5 text-right border border-gray-200">{pct}%</td></tr>;
+                  })}</tbody>
+                </table>
+              </>
             ) : (
               <p className="text-gray-400 text-sm h-[280px] flex items-center justify-center">데이터 없음</p>
             )}
@@ -345,15 +361,21 @@ export default function AdminDashboard() {
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <h3 className="font-semibold mb-4">이벤트별 등록수</h3>
             {metrics.byEvent.length > 0 ? (
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={metrics.byEvent} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis type="number" fontSize={11} allowDecimals={false} />
-                  <YAxis type="category" dataKey="name" fontSize={11} width={140} />
-                  <Tooltip />
-                  <Bar dataKey="value" fill="#059669" radius={[0, 4, 4, 0]} name="등록수" />
-                </BarChart>
-              </ResponsiveContainer>
+              <>
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={metrics.byEvent} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis type="number" fontSize={11} allowDecimals={false} />
+                    <YAxis type="category" dataKey="name" fontSize={11} width={140} />
+                    <Tooltip />
+                    <Bar dataKey="value" fill="#059669" radius={[0, 4, 4, 0]} name="등록수" />
+                  </BarChart>
+                </ResponsiveContainer>
+                <table className="w-full text-xs mt-4 border-collapse">
+                  <thead><tr className="bg-gray-50"><th className="px-3 py-2 text-left border border-gray-200">이벤트</th><th className="px-3 py-2 text-right border border-gray-200">등록수</th></tr></thead>
+                  <tbody>{metrics.byEvent.map((d) => <tr key={d.name}><td className="px-3 py-1.5 border border-gray-200">{d.name}</td><td className="px-3 py-1.5 text-right border border-gray-200 font-medium">{d.value}</td></tr>)}</tbody>
+                </table>
+              </>
             ) : (
               <p className="text-gray-400 text-sm h-[280px] flex items-center justify-center">데이터 없음</p>
             )}
@@ -363,15 +385,24 @@ export default function AdminDashboard() {
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <h3 className="font-semibold mb-4">신청 경로 분포</h3>
             {metrics.bySource.length > 0 ? (
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={metrics.bySource} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis type="number" fontSize={11} allowDecimals={false} />
-                  <YAxis type="category" dataKey="name" fontSize={11} width={160} />
-                  <Tooltip />
-                  <Bar dataKey="value" fill="#7c3aed" radius={[0, 4, 4, 0]} name="등록수" />
-                </BarChart>
-              </ResponsiveContainer>
+              <>
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={metrics.bySource} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis type="number" fontSize={11} allowDecimals={false} />
+                    <YAxis type="category" dataKey="name" fontSize={11} width={160} />
+                    <Tooltip />
+                    <Bar dataKey="value" fill="#7c3aed" radius={[0, 4, 4, 0]} name="등록수" />
+                  </BarChart>
+                </ResponsiveContainer>
+                <table className="w-full text-xs mt-4 border-collapse">
+                  <thead><tr className="bg-gray-50"><th className="px-3 py-2 text-left border border-gray-200">신청 경로</th><th className="px-3 py-2 text-right border border-gray-200">등록수</th><th className="px-3 py-2 text-right border border-gray-200">비율</th></tr></thead>
+                  <tbody>{metrics.bySource.map((d) => {
+                    const pct = metrics.total > 0 ? ((d.value / metrics.total) * 100).toFixed(1) : '0';
+                    return <tr key={d.name}><td className="px-3 py-1.5 border border-gray-200">{d.name}</td><td className="px-3 py-1.5 text-right border border-gray-200 font-medium">{d.value}</td><td className="px-3 py-1.5 text-right border border-gray-200">{pct}%</td></tr>;
+                  })}</tbody>
+                </table>
+              </>
             ) : (
               <p className="text-gray-400 text-sm h-[280px] flex items-center justify-center">데이터 없음</p>
             )}
