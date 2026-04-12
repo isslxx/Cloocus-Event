@@ -134,8 +134,8 @@ export default function AdminDashboard() {
       }
 
       doc.save(`cloocus_dashboard_${new Date().toISOString().slice(0, 10)}.pdf`);
-    } catch {
-      // ignore
+    } catch (err) {
+      alert('PDF 오류: ' + String(err));
     } finally {
       setExporting(null);
     }
