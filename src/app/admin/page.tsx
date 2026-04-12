@@ -96,11 +96,37 @@ export default function AdminDashboard() {
       const html2canvas = (await import('html2canvas')).default;
       const { jsPDF } = await import('jspdf');
 
-      const canvas = await html2canvas(dashboardRef.current, {
+      // Tailwind CSS 4의 lab() 색상을 html2canvas가 지원하지 않으므로
+      // 임시로 모든 lab() 색상을 fallback으로 변환
+      const el = dashboardRef.current;
+      const allElements = el.querySelectorAll('*');
+      const originalStyles: { el: HTMLElement; prop: string; value: string }[] = [];
+
+      allElements.forEach((node) => {
+        const htmlEl = node as HTMLElement;
+        const computed = getComputedStyle(htmlEl);
+        ['color', 'backgroundColor', 'borderColor'].forEach((prop) => {
+          const val = computed.getPropertyValue(prop === 'backgroundColor' ? 'background-color' : prop === 'borderColor' ? 'border-color' : prop);
+          if (val && val.includes('lab(')) {
+            originalStyles.push({ el: htmlEl, prop, value: htmlEl.style.getPropertyValue(prop) });
+            if (prop === 'backgroundColor') htmlEl.style.backgroundColor = '#f9fafb';
+            else if (prop === 'borderColor') htmlEl.style.borderColor = '#e5e7eb';
+            else htmlEl.style.color = '#333333';
+          }
+        });
+      });
+
+      const canvas = await html2canvas(el, {
         backgroundColor: '#f9fafb',
         scale: 2,
         useCORS: true,
         logging: false,
+      });
+
+      // 원래 스타일 복원
+      originalStyles.forEach(({ el: htmlEl, prop, value }) => {
+        if (value) htmlEl.style.setProperty(prop, value);
+        else htmlEl.style.removeProperty(prop);
       });
 
       const imgData = canvas.toDataURL('image/png');
