@@ -39,6 +39,7 @@ export default function RegistrationsPage() {
 
   // 삭제 확인
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [showBulkDelete, setShowBulkDelete] = useState(false);
 
   // 이메일 발송 모달
   const [showEmailModal, setShowEmailModal] = useState(false);
@@ -145,6 +146,22 @@ export default function RegistrationsPage() {
     } catch { /* ignore */ }
   };
 
+  const handleBulkDelete = async () => {
+    setShowBulkDelete(false);
+    const ids = Array.from(selected);
+    for (const id of ids) {
+      try {
+        await fetch('/api/admin/registrations', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+          body: JSON.stringify({ id }),
+        });
+      } catch { /* ignore */ }
+    }
+    setSelected(new Set());
+    fetchRecords();
+  };
+
   // 선택
   const toggleSelect = (id: string) => {
     setSelected((prev) => {
@@ -217,6 +234,14 @@ export default function RegistrationsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <h1 className="text-2xl font-bold">등록 목록 ({total}건)</h1>
         <div className="flex gap-2 flex-wrap">
+          {selected.size > 0 && canDeleteRecord && (
+            <button
+              onClick={() => setShowBulkDelete(true)}
+              className="btn-danger text-sm"
+            >
+              선택 삭제 ({selected.size})
+            </button>
+          )}
           {selected.size > 0 && canEditRecord && (
             <button
               onClick={() => { setShowEmailModal(true); setSendResult(null); }}
@@ -374,6 +399,23 @@ export default function RegistrationsPage() {
             <div className="flex gap-2">
               <button onClick={() => handleDelete(deleting)} className="btn-danger flex-1">삭제</button>
               <button onClick={() => setDeleting(null)} className="btn-secondary flex-1">취소</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 일괄 삭제 확인 */}
+      {showBulkDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-xl w-full max-w-sm p-6 text-center">
+            <h2 className="text-lg font-bold mb-2">등록 일괄 삭제</h2>
+            <p className="text-gray-500 text-sm mb-6">
+              선택한 {selected.size}건의 등록 정보를 삭제하시겠습니까?<br />
+              <span className="text-xs text-red-500 mt-1 block">이 작업은 되돌릴 수 없습니다.</span>
+            </p>
+            <div className="flex gap-2">
+              <button onClick={handleBulkDelete} className="btn-danger flex-1">삭제</button>
+              <button onClick={() => setShowBulkDelete(false)} className="btn-secondary flex-1">취소</button>
             </div>
           </div>
         </div>
