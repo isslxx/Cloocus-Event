@@ -4,6 +4,7 @@ export type Event = {
   event_date: string;
   event_type: 'online' | 'offline';
   status: 'open' | 'closed';
+  visible: boolean;
   location: string;
   event_time: string;
   created_at: string;

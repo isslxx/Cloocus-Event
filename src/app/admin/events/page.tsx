@@ -19,6 +19,7 @@ export default function EventsPage() {
   const [formStatus, setFormStatus] = useState<'open' | 'closed'>('open');
   const [formLocation, setFormLocation] = useState('');
   const [formTime, setFormTime] = useState('');
+  const [formVisible, setFormVisible] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -54,6 +55,7 @@ export default function EventsPage() {
     setFormStatus('open');
     setFormLocation('');
     setFormTime('');
+    setFormVisible(true);
   };
 
   const openEdit = (event: Event) => {
@@ -65,13 +67,14 @@ export default function EventsPage() {
     setFormStatus(event.status);
     setFormLocation(event.location || '');
     setFormTime(event.event_time || '');
+    setFormVisible(event.visible !== false);
   };
 
   const handleSave = async () => {
     if (!formName.trim() || !formDate) return;
     setSaving(true);
     try {
-      const body = { name: formName.trim(), event_date: formDate, event_type: formType, status: formStatus, location: formLocation.trim(), event_time: formTime.trim() };
+      const body = { name: formName.trim(), event_date: formDate, event_type: formType, status: formStatus, location: formLocation.trim(), event_time: formTime.trim(), visible: formVisible };
       if (isNew) {
         await fetch('/api/admin/events', {
           method: 'POST',
@@ -107,6 +110,15 @@ export default function EventsPage() {
     } catch {
       // ignore
     }
+  };
+
+  const toggleVisible = async (event: Event) => {
+    await fetch(`/api/admin/events/${event.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ visible: !event.visible }),
+    });
+    fetchEvents();
   };
 
   const toggleStatus = async (event: Event) => {
@@ -216,14 +228,15 @@ export default function EventsPage() {
               <th className="px-4 py-3 text-left font-medium text-gray-600">날짜</th>
               <th className="px-4 py-3 text-left font-medium text-gray-600">유형</th>
               <th className="px-4 py-3 text-left font-medium text-gray-600">상태</th>
+              <th className="px-4 py-3 text-left font-medium text-gray-600">노출</th>
               {isAdmin && <th className="px-4 py-3 text-left font-medium text-gray-600 w-28">작업</th>}
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} className="px-4 py-12 text-center text-gray-400">로딩 중...</td></tr>
+              <tr><td colSpan={7} className="px-4 py-12 text-center text-gray-400">로딩 중...</td></tr>
             ) : events.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-12 text-center text-gray-400">등록된 이벤트가 없습니다.</td></tr>
+              <tr><td colSpan={7} className="px-4 py-12 text-center text-gray-400">등록된 이벤트가 없습니다.</td></tr>
             ) : events.map((event) => (
               <tr key={event.id} className={`border-b border-gray-100 hover:bg-gray-50 ${selected.has(event.id) ? 'bg-blue-50/50' : ''}`}>
                 {isAdmin && (
@@ -260,6 +273,19 @@ export default function EventsPage() {
                     disabled={!isAdmin}
                   >
                     {event.status === 'open' ? '모집중' : '마감'}
+                  </button>
+                </td>
+                <td className="px-4 py-3">
+                  <button
+                    onClick={() => isAdmin && toggleVisible(event)}
+                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                      event.visible !== false
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-red-100 text-red-600'
+                    } ${isAdmin ? 'cursor-pointer hover:opacity-80' : ''}`}
+                    disabled={!isAdmin}
+                  >
+                    {event.visible !== false ? '노출' : '숨김'}
                   </button>
                 </td>
                 {isAdmin && (
@@ -313,7 +339,7 @@ export default function EventsPage() {
                 <label>시간</label>
                 <input type="text" value={formTime} onChange={(e) => setFormTime(e.target.value)} placeholder="예: 14:00 ~ 17:00 (선택)" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="field">
                   <label>유형</label>
                   <select value={formType} onChange={(e) => setFormType(e.target.value as 'online' | 'offline')}>
@@ -326,6 +352,13 @@ export default function EventsPage() {
                   <select value={formStatus} onChange={(e) => setFormStatus(e.target.value as 'open' | 'closed')}>
                     <option value="open">모집중</option>
                     <option value="closed">마감</option>
+                  </select>
+                </div>
+                <div className="field">
+                  <label>노출</label>
+                  <select value={formVisible ? 'true' : 'false'} onChange={(e) => setFormVisible(e.target.value === 'true')}>
+                    <option value="true">노출</option>
+                    <option value="false">숨김</option>
                   </select>
                 </div>
               </div>

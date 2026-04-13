@@ -1,0 +1,2 @@
+-- 이벤트 노출 여부 컬럼 추가
+ALTER TABLE events ADD COLUMN IF NOT EXISTS visible BOOLEAN DEFAULT TRUE;
