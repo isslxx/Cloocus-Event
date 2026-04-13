@@ -438,6 +438,7 @@ export default function Home() {
             <div className="field" ref={companyRef}>
               <label>회사명 <span className="required">*</span></label>
               <div className="relative">
+                <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#aaa', fontSize: 14, pointerEvents: 'none' }}>🔍</span>
                 <input
                   type="text"
                   value={form.company_name}
@@ -446,9 +447,10 @@ export default function Home() {
                     searchCompanies(e.target.value);
                   }}
                   onFocus={() => companySuggestions.length > 0 && setShowSuggestions(true)}
-                  placeholder="회사명을 입력해주세요"
+                  placeholder="회사명을 검색해주세요"
                   className={errors.company_name ? 'error' : ''}
                   autoComplete="off"
+                  style={{ paddingLeft: 34 }}
                 />
                 {showSuggestions && form.company_name.length >= 2 && (
                   <ul className="absolute z-10 top-full left-0 right-0 bg-white border border-gray-200 rounded-lg mt-1 shadow-lg max-h-56 overflow-y-auto">
