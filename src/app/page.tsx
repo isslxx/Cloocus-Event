@@ -214,7 +214,7 @@ export default function Home() {
                         </div>
                         <div className="flex items-center gap-3 mt-1.5">
                           <span className="text-sm text-gray-500">
-                            {new Date(event.event_date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })}
+                            {(() => { const d = new Date(event.event_date); const day = ['일','월','화','수','목','금','토'][d.getDay()]; return `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${day})`; })()}
                           </span>
                           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                             event.event_type === 'online'
