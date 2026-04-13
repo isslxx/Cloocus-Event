@@ -302,6 +302,7 @@ export default function RegistrationsPage() {
                   <input type="checkbox" checked={records.length > 0 && selected.size === records.length} onChange={toggleSelectAll} className="w-4 h-4 rounded accent-blue-600" />
                 </th>
                 {[
+                  { key: 'event_id' as SortKey, label: '이벤트' },
                   { key: 'name' as SortKey, label: '성함' },
                   { key: 'company_name' as SortKey, label: '회사명' },
                   { key: 'email' as SortKey, label: '이메일' },
@@ -322,14 +323,15 @@ export default function RegistrationsPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={11} className="px-4 py-12 text-center text-gray-400">로딩 중...</td></tr>
+                <tr><td colSpan={12} className="px-4 py-12 text-center text-gray-400">로딩 중...</td></tr>
               ) : records.length === 0 ? (
-                <tr><td colSpan={11} className="px-4 py-12 text-center text-gray-400">등록 데이터가 없습니다.</td></tr>
+                <tr><td colSpan={12} className="px-4 py-12 text-center text-gray-400">등록 데이터가 없습니다.</td></tr>
               ) : records.map((r) => (
                 <tr key={r.id} className={`border-b border-gray-100 hover:bg-gray-50 ${selected.has(r.id) ? 'bg-blue-50/50' : ''}`}>
                   <td className="px-3 py-3">
                     <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleSelect(r.id)} className="w-4 h-4 rounded accent-blue-600" />
                   </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-500 max-w-[150px] truncate">{r.event_id ? (events.find((e) => e.id === r.event_id)?.name || '-') : '-'}</td>
                   <td className="px-4 py-3 whitespace-nowrap font-medium">{r.name}</td>
                   <td className="px-4 py-3 whitespace-nowrap">{r.company_name}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.email}</td>
