@@ -5,6 +5,7 @@ export type Event = {
   event_type: 'online' | 'offline';
   status: 'open' | 'closed';
   visible: boolean;
+  capacity: number | null;
   location: string;
   event_time: string;
   created_at: string;

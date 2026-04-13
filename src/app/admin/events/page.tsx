@@ -20,6 +20,7 @@ export default function EventsPage() {
   const [formLocation, setFormLocation] = useState('');
   const [formTime, setFormTime] = useState('');
   const [formVisible, setFormVisible] = useState(true);
+  const [formCapacity, setFormCapacity] = useState('');
   const [saving, setSaving] = useState(false);
 
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -56,6 +57,7 @@ export default function EventsPage() {
     setFormLocation('');
     setFormTime('');
     setFormVisible(true);
+    setFormCapacity('');
   };
 
   const openEdit = (event: Event) => {
@@ -68,13 +70,14 @@ export default function EventsPage() {
     setFormLocation(event.location || '');
     setFormTime(event.event_time || '');
     setFormVisible(event.visible !== false);
+    setFormCapacity(event.capacity ? String(event.capacity) : '');
   };
 
   const handleSave = async () => {
     if (!formName.trim() || !formDate) return;
     setSaving(true);
     try {
-      const body = { name: formName.trim(), event_date: formDate, event_type: formType, status: formStatus, location: formLocation.trim(), event_time: formTime.trim(), visible: formVisible };
+      const body = { name: formName.trim(), event_date: formDate, event_type: formType, status: formStatus, location: formLocation.trim(), event_time: formTime.trim(), visible: formVisible, capacity: formCapacity ? parseInt(formCapacity) : null };
       if (isNew) {
         await fetch('/api/admin/events', {
           method: 'POST',
@@ -227,6 +230,7 @@ export default function EventsPage() {
               <th className="px-4 py-3 text-left font-medium text-gray-600">이벤트명</th>
               <th className="px-4 py-3 text-left font-medium text-gray-600">날짜</th>
               <th className="px-4 py-3 text-left font-medium text-gray-600">유형</th>
+              <th className="px-4 py-3 text-left font-medium text-gray-600">정원</th>
               <th className="px-4 py-3 text-left font-medium text-gray-600">상태</th>
               <th className="px-4 py-3 text-left font-medium text-gray-600">노출</th>
               {isAdmin && <th className="px-4 py-3 text-left font-medium text-gray-600 w-28">작업</th>}
@@ -234,9 +238,9 @@ export default function EventsPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="px-4 py-12 text-center text-gray-400">로딩 중...</td></tr>
+              <tr><td colSpan={8} className="px-4 py-12 text-center text-gray-400">로딩 중...</td></tr>
             ) : events.length === 0 ? (
-              <tr><td colSpan={7} className="px-4 py-12 text-center text-gray-400">등록된 이벤트가 없습니다.</td></tr>
+              <tr><td colSpan={8} className="px-4 py-12 text-center text-gray-400">등록된 이벤트가 없습니다.</td></tr>
             ) : events.map((event) => (
               <tr key={event.id} className={`border-b border-gray-100 hover:bg-gray-50 ${selected.has(event.id) ? 'bg-blue-50/50' : ''}`}>
                 {isAdmin && (
@@ -261,6 +265,9 @@ export default function EventsPage() {
                   }`}>
                     {event.event_type === 'online' ? 'Online' : 'Offline'}
                   </span>
+                </td>
+                <td className="px-4 py-3 text-gray-600 text-sm">
+                  {event.capacity ? `${event.capacity}명` : '-'}
                 </td>
                 <td className="px-4 py-3">
                   <button
@@ -335,9 +342,15 @@ export default function EventsPage() {
                 <label>장소</label>
                 <input type="text" value={formLocation} onChange={(e) => setFormLocation(e.target.value)} placeholder="예: 서울 강남구 역삼동 (선택)" />
               </div>
-              <div className="field">
-                <label>시간</label>
-                <input type="text" value={formTime} onChange={(e) => setFormTime(e.target.value)} placeholder="예: 14:00 ~ 17:00 (선택)" />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="field">
+                  <label>시간</label>
+                  <input type="text" value={formTime} onChange={(e) => setFormTime(e.target.value)} placeholder="예: 14:00 ~ 17:00" />
+                </div>
+                <div className="field">
+                  <label>정원</label>
+                  <input type="number" value={formCapacity} onChange={(e) => setFormCapacity(e.target.value)} placeholder="예: 30 (미입력 시 제한없음)" min="1" />
+                </div>
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="field">

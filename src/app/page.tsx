@@ -223,6 +223,11 @@ export default function Home() {
                           }`}>
                             {event.event_type === 'online' ? 'Online' : 'Offline'}
                           </span>
+                          {event.capacity && (
+                            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700">
+                              정원 {event.capacity}명
+                            </span>
+                          )}
                         </div>
                       </button>
                     );

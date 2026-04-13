@@ -1,0 +1,2 @@
+-- 이벤트 정원 컬럼 추가
+ALTER TABLE events ADD COLUMN IF NOT EXISTS capacity INT DEFAULT NULL;

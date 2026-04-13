@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (admin.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const { name, event_date, event_type, status, location, event_time, visible } = await req.json();
+  const { name, event_date, event_type, status, location, event_time, visible, capacity } = await req.json();
 
   if (!name?.trim() || !event_date || !event_type) {
     return NextResponse.json({ error: '필수 항목을 입력해주세요.' }, { status: 400 });
@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
     location: location?.trim() || '',
     event_time: event_time?.trim() || '',
     visible: visible !== false,
+    capacity: capacity || null,
   });
 
   if (error) {
