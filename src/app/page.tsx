@@ -214,7 +214,7 @@ export default function Home() {
                         </div>
                         <div className="flex items-center gap-3 mt-1.5">
                           <span className="text-sm text-gray-500">
-                            {new Date(event.event_date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
+                            {new Date(event.event_date).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })}
                           </span>
                           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                             event.event_type === 'online'
