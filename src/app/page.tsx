@@ -65,6 +65,14 @@ export default function Home() {
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState('');
 
+  // 등록 완료 후 수정 지원
+  const [registrationId, setRegistrationId] = useState<string | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [eventEditable, setEventEditable] = useState(false);
+
+  // 검증 오류 팝업
+  const [validationPopup, setValidationPopup] = useState<string[]>([]);
+
   // 회사명 자동완성
   const [companySuggestions, setCompanySuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -164,9 +172,9 @@ export default function Home() {
     setServerError('');
   };
 
-  const handleEmailBlur = () => {
-    if (form.email && isBlockedEmailDomain(form.email)) {
-      setEmailWarning('Naver, Gmail, Kakao, Daum 등 개인 이메일 사용은 관련 안내 이메일이 반송·미수신 될 수 있습니다.');
+  const checkEmailWarning = (email: string) => {
+    if (email && isBlockedEmailDomain(email)) {
+      setEmailWarning('Naver, Gmail, Kakao, Daum 등 개인 이메일 사용 시 관련 안내 이메일이 반송·미수신 될 수 있습니다. 가능하면 업무용 이메일을 사용해주세요.');
     } else {
       setEmailWarning('');
     }
@@ -176,17 +184,31 @@ export default function Home() {
     e.preventDefault();
     const validationErrors = validateRegistrationForm(form);
     setErrors(validationErrors);
-    if (Object.keys(validationErrors).length > 0) return;
+    if (Object.keys(validationErrors).length > 0) {
+      setValidationPopup(Object.values(validationErrors));
+      return;
+    }
 
     setSubmitting(true);
     setServerError('');
 
     try {
-      const res = await fetch('/api/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, event_id: selectedEvent?.id }),
-      });
+      let res: Response;
+      if (editMode && registrationId) {
+        // 수정 모드
+        res = await fetch(`/api/register/${registrationId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(form),
+        });
+      } else {
+        // 신규 등록
+        res = await fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...form, event_id: selectedEvent?.id }),
+        });
+      }
 
       const data = await res.json();
 
@@ -199,6 +221,10 @@ export default function Home() {
         return;
       }
 
+      if (!editMode && data.id) {
+        setRegistrationId(data.id);
+      }
+      setEditMode(false);
       setStep(3);
     } catch {
       setServerError('네트워크 오류가 발생했습니다. 다시 시도해주세요.');
@@ -404,18 +430,75 @@ export default function Home() {
                 등록하신 이메일로 등록 확정 여부와<br />관련 정보를 D-7 이내 전달해 드리겠습니다.
               </p>
 
-              <button
-                onClick={() => {
-                  setForm(EMPTY_FORM);
-                  setSelectedEvent(null);
-                  setErrors({});
-                  setStep(1);
-                }}
-                className="btn-secondary mt-10"
-                style={{ position: 'relative', zIndex: 60 }}
-              >
-                새로운 등록
-              </button>
+              <div className="flex flex-col gap-3 mt-10" style={{ position: 'relative', zIndex: 60 }}>
+                {registrationId && (
+                  <button
+                    onClick={async () => {
+                      try {
+                        const res = await fetch(`/api/register/${registrationId}`);
+                        const data = await res.json();
+                        if (!res.ok) {
+                          alert(data.error || '등록 정보를 불러올 수 없습니다.');
+                          return;
+                        }
+                        const r = data.registration;
+                        // 기타 값 분리
+                        let industry = r.industry;
+                        let industry_etc = '';
+                        if (industry?.startsWith('기타: ')) {
+                          industry_etc = industry.replace('기타: ', '');
+                          industry = '기타';
+                        }
+                        let referral_source = r.referral_source;
+                        let referral_source_etc = '';
+                        if (referral_source?.startsWith('기타: ')) {
+                          referral_source_etc = referral_source.replace('기타: ', '');
+                          referral_source = '기타';
+                        }
+                        setForm({
+                          name: r.name || '',
+                          company_name: r.company_name || '',
+                          department: r.department || '',
+                          job_title: r.job_title || '',
+                          email: r.email || '',
+                          phone: r.phone || '',
+                          industry,
+                          industry_etc,
+                          company_size: r.company_size || '',
+                          referral_source,
+                          referral_source_etc,
+                          referrer_name: r.referrer_name || '',
+                          inquiry: r.inquiry || '',
+                          privacy_consent: true,
+                        });
+                        setEventEditable(data.editable);
+                        setEditMode(true);
+                        setErrors({});
+                        setServerError('');
+                        setStep(2);
+                      } catch {
+                        alert('네트워크 오류가 발생했습니다.');
+                      }
+                    }}
+                    className="btn-primary"
+                  >
+                    내 응답 확인 / 수정
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setForm(EMPTY_FORM);
+                    setSelectedEvent(null);
+                    setRegistrationId(null);
+                    setEditMode(false);
+                    setErrors({});
+                    setStep(1);
+                  }}
+                  className="btn-secondary"
+                >
+                  새로운 등록
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -434,15 +517,17 @@ export default function Home() {
         <div className="max-w-2xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between mb-2">
             <button
-              onClick={() => setStep(1)}
+              onClick={() => editMode ? setStep(3) : setStep(1)}
               className="text-sm text-gray-400 hover:text-gray-600 hover:underline inline-block"
             >
-              ← 이벤트 선택으로 돌아가기
+              {editMode ? '← 돌아가기' : '← 이벤트 선택으로 돌아가기'}
             </button>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/cloocus-logo.png" alt="Cloocus" className="h-5" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">클루커스 이벤트 등록하기</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {editMode ? '내 응답 확인 / 수정' : '클루커스 이벤트 등록하기'}
+          </h1>
         </div>
       </header>
 
@@ -584,8 +669,8 @@ export default function Home() {
               <input
                 type="email"
                 value={form.email}
-                onChange={(e) => handleChange('email', e.target.value)}
-                onBlur={handleEmailBlur}
+                onChange={(e) => { handleChange('email', e.target.value); checkEmailWarning(e.target.value); }}
+                onBlur={() => checkEmailWarning(form.email)}
                 placeholder="name@company.com"
                 className={errors.email ? 'error' : ''}
               />
@@ -626,14 +711,17 @@ export default function Home() {
               </select>
               {errors.industry && <span className="error-msg">{errors.industry}</span>}
               {form.industry === '기타' && (
-                <input
-                  type="text"
-                  value={form.industry_etc}
-                  onChange={(e) => handleChange('industry_etc', e.target.value)}
-                  placeholder="산업군을 입력해주세요"
-                  className="mt-2"
-                  style={{ padding: '10px 12px', border: '1px solid #e0e0e0', borderRadius: 8, fontSize: 14, width: '100%' }}
-                />
+                <>
+                  <input
+                    type="text"
+                    value={form.industry_etc}
+                    onChange={(e) => handleChange('industry_etc', e.target.value)}
+                    placeholder="산업군을 입력해주세요 *"
+                    className={`mt-2 ${errors.industry_etc ? 'error' : ''}`}
+                    style={{ padding: '10px 12px', border: `1px solid ${errors.industry_etc ? '#ef4444' : '#e0e0e0'}`, borderRadius: 8, fontSize: 14, width: '100%' }}
+                  />
+                  {errors.industry_etc && <span className="error-msg">{errors.industry_etc}</span>}
+                </>
               )}
             </div>
 
@@ -662,26 +750,31 @@ export default function Home() {
               </select>
               {errors.referral_source && <span className="error-msg">{errors.referral_source}</span>}
               {form.referral_source === '기타' && (
-                <input
-                  type="text"
-                  value={form.referral_source_etc}
-                  onChange={(e) => handleChange('referral_source_etc', e.target.value)}
-                  placeholder="신청 경로를 입력해주세요"
-                  className="mt-2"
-                  style={{ padding: '10px 12px', border: '1px solid #e0e0e0', borderRadius: 8, fontSize: 14, width: '100%' }}
-                />
+                <>
+                  <input
+                    type="text"
+                    value={form.referral_source_etc}
+                    onChange={(e) => handleChange('referral_source_etc', e.target.value)}
+                    placeholder="신청 경로를 입력해주세요 *"
+                    className={`mt-2 ${errors.referral_source_etc ? 'error' : ''}`}
+                    style={{ padding: '10px 12px', border: `1px solid ${errors.referral_source_etc ? '#ef4444' : '#e0e0e0'}`, borderRadius: 8, fontSize: 14, width: '100%' }}
+                  />
+                  {errors.referral_source_etc && <span className="error-msg">{errors.referral_source_etc}</span>}
+                </>
               )}
             </div>
 
             {(form.referral_source === '클루커스 담당자 소개' || form.referral_source === '외부 담당자 소개') && (
               <div className="field">
-                <label>추천인 성명</label>
+                <label>추천인 성명 <span className="required">*</span></label>
                 <input
                   type="text"
                   value={form.referrer_name}
                   onChange={(e) => handleChange('referrer_name', e.target.value)}
                   placeholder="추천인 성명을 입력해주세요"
+                  className={errors.referrer_name ? 'error' : ''}
                 />
+                {errors.referrer_name && <span className="error-msg">{errors.referrer_name}</span>}
               </div>
             )}
 
@@ -723,15 +816,54 @@ export default function Home() {
           </div>
 
           <div className="mt-8 mb-12">
-            <button
-              type="submit"
-              disabled={submitting}
-              className="btn-primary w-full"
-            >
-              {submitting ? '등록 중...' : '이벤트 등록하기'}
-            </button>
+            {editMode && !eventEditable ? (
+              <div className="text-center">
+                <p className="text-sm text-gray-500 mb-4">이벤트가 마감되어 수정할 수 없습니다.</p>
+                <button
+                  type="button"
+                  onClick={() => setStep(3)}
+                  className="btn-secondary w-full"
+                >
+                  돌아가기
+                </button>
+              </div>
+            ) : (
+              <button
+                type="submit"
+                disabled={submitting}
+                className="btn-primary w-full"
+              >
+                {submitting ? (editMode ? '수정 중...' : '등록 중...') : (editMode ? '수정하기' : '이벤트 등록하기')}
+              </button>
+            )}
           </div>
         </form>
+
+        {/* 검증 오류 팝업 */}
+        {validationPopup.length > 0 && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 relative">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-red-500 text-xl">⚠</span>
+                <h3 className="text-lg font-bold text-gray-900">입력 정보를 확인해주세요</h3>
+              </div>
+              <ul className="space-y-2 mb-6 max-h-60 overflow-y-auto">
+                {validationPopup.map((msg, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                    <span className="text-red-400 mt-0.5 shrink-0">•</span>
+                    {msg}
+                  </li>
+                ))}
+              </ul>
+              <button
+                onClick={() => setValidationPopup([])}
+                className="btn-primary w-full"
+              >
+                확인
+              </button>
+            </div>
+          </div>
+        )}
       </main>
       <BrandFooter />
     </div>

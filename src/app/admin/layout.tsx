@@ -79,12 +79,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const navItems = [
     { href: '/admin', label: '대시보드', icon: '📊' },
     { href: '/admin/registrations', label: '등록 리스트', icon: '📋' },
-    { href: '/admin/trash', label: '휴지통', icon: '🗑️' },
     { href: '/admin/form', label: '등록 페이지 관리', icon: '📝' },
     { href: '/admin/events', label: '이벤트 관리', icon: '📅' },
     { href: '/admin/emails', label: '이메일 발송', icon: '✉️' },
     ...(admin.role === 'admin' ? [{ href: '/admin/users', label: '사용자 관리', icon: '👤' }] : []),
   ];
+
+  const bottomNavItem = { href: '/admin/trash', label: '휴지통', icon: '🗑️' };
 
   const roleBadge: Record<string, string> = {
     admin: 'bg-red-100 text-red-700',
@@ -132,21 +133,36 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             ))}
           </nav>
 
-          <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-xs font-bold">
-                {admin.display_name[0]}
+          <div className="absolute bottom-0 left-0 right-0 border-t border-gray-200">
+            {/* 휴지통 - 하단 축소 표시 */}
+            <Link
+              href={bottomNavItem.href}
+              onClick={() => setSidebarOpen(false)}
+              className={`flex items-center gap-2 px-4 py-2 text-xs transition-colors ${
+                pathname === bottomNavItem.href
+                  ? 'bg-gray-100 text-gray-700'
+                  : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <span className="text-xs">{bottomNavItem.icon}</span>
+              {bottomNavItem.label}
+            </Link>
+            <div className="p-4 pt-2">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-xs font-bold">
+                  {admin.display_name[0]}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{admin.display_name}</p>
+                  <span className={`text-xs px-1.5 py-0.5 rounded ${roleBadge[admin.role]}`}>
+                    {admin.role}
+                  </span>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{admin.display_name}</p>
-                <span className={`text-xs px-1.5 py-0.5 rounded ${roleBadge[admin.role]}`}>
-                  {admin.role}
-                </span>
-              </div>
+              <button onClick={handleLogout} className="btn-secondary w-full text-xs">
+                로그아웃
+              </button>
             </div>
-            <button onClick={handleLogout} className="btn-secondary w-full text-xs">
-              로그아웃
-            </button>
           </div>
         </aside>
 

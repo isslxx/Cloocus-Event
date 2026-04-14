@@ -70,10 +70,13 @@ function computeMetrics(records: Registration[], events: Event[]): Metrics {
 
 export default function AdminDashboard() {
   const { accessToken } = useAdmin();
+  const [allRecords, setAllRecords] = useState<Registration[]>([]);
+  const [allEvents, setAllEvents] = useState<Event[]>([]);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState<'pdf' | 'xlsx' | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [filter, setFilter] = useState<string>('all'); // 'all' | 'online' | 'offline' | event_id
   const exportMenuRef = useRef<HTMLDivElement>(null);
   const dashboardRef = useRef<HTMLDivElement>(null);
 
@@ -214,6 +217,19 @@ export default function AdminDashboard() {
     }
   };
 
+  const applyFilter = useCallback((records: Registration[], events: Event[], f: string) => {
+    const eventMap = new Map(events.map((e) => [e.id, e]));
+    let filtered = records;
+    if (f === 'online') {
+      filtered = records.filter((r) => r.event_id && eventMap.get(r.event_id)?.event_type === 'online');
+    } else if (f === 'offline') {
+      filtered = records.filter((r) => r.event_id && eventMap.get(r.event_id)?.event_type === 'offline');
+    } else if (f !== 'all') {
+      filtered = records.filter((r) => r.event_id === f);
+    }
+    setMetrics(computeMetrics(filtered, events));
+  }, []);
+
   const fetchData = useCallback(async () => {
     try {
       const [regRes, evtRes] = await Promise.all([
@@ -222,17 +238,26 @@ export default function AdminDashboard() {
       ]);
       const { data } = await regRes.json();
       const evtData = await evtRes.json();
-      setMetrics(computeMetrics(data || [], Array.isArray(evtData) ? evtData : []));
+      const records = data || [];
+      const events = Array.isArray(evtData) ? evtData : [];
+      setAllRecords(records);
+      setAllEvents(events);
+      applyFilter(records, events, 'all');
     } catch {
       // ignore
     } finally {
       setLoading(false);
     }
-  }, [accessToken]);
+  }, [accessToken, applyFilter]);
 
   useEffect(() => {
     if (accessToken) fetchData();
   }, [accessToken, fetchData]);
+
+  const handleFilterChange = (f: string) => {
+    setFilter(f);
+    applyFilter(allRecords, allEvents, f);
+  };
 
   if (loading) {
     return <p className="text-gray-400">데이터 로딩 중...</p>;
@@ -251,8 +276,27 @@ export default function AdminDashboard() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <h1 className="text-2xl font-bold">대시보드</h1>
+        <div className="flex items-center gap-3">
+          <select
+            value={filter}
+            onChange={(e) => handleFilterChange(e.target.value)}
+            className="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">전체 (Total)</option>
+            <optgroup label="유형별">
+              <option value="online">온라인 이벤트</option>
+              <option value="offline">오프라인 이벤트</option>
+            </optgroup>
+            {allEvents.length > 0 && (
+              <optgroup label="이벤트별">
+                {allEvents.map((evt) => (
+                  <option key={evt.id} value={evt.id}>{evt.name}</option>
+                ))}
+              </optgroup>
+            )}
+          </select>
         <div className="relative" ref={exportMenuRef}>
           <button
             onClick={() => setShowExportMenu(!showExportMenu)}
@@ -278,7 +322,19 @@ export default function AdminDashboard() {
             </div>
           )}
         </div>
+        </div>
       </div>
+
+      {filter !== 'all' && (
+        <div className="mb-4 flex items-center gap-2">
+          <span className="text-sm text-blue-600 bg-blue-50 px-3 py-1 rounded-full font-medium">
+            {filter === 'online' ? '온라인 이벤트' : filter === 'offline' ? '오프라인 이벤트' : allEvents.find((e) => e.id === filter)?.name || filter}
+          </span>
+          <button onClick={() => handleFilterChange('all')} className="text-xs text-gray-400 hover:text-gray-600">
+            초기화
+          </button>
+        </div>
+      )}
 
       <div ref={dashboardRef}>
         {/* 메트릭 카드 */}

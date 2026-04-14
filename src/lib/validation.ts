@@ -31,8 +31,11 @@ export function validateRegistrationForm(form: {
   email: string;
   phone: string;
   industry: string;
+  industry_etc?: string;
   company_size: string;
   referral_source: string;
+  referral_source_etc?: string;
+  referrer_name?: string;
   privacy_consent: boolean;
 }): FormErrors {
   const errors: FormErrors = {};
@@ -46,8 +49,6 @@ export function validateRegistrationForm(form: {
     errors.email = '이메일을 입력해주세요.';
   } else if (!isValidEmail(form.email)) {
     errors.email = '올바른 이메일 형식이 아닙니다.';
-  } else if (isBlockedEmailDomain(form.email)) {
-    errors.email = '업무용 이메일 주소를 입력해주세요.';
   }
 
   if (!form.phone.trim()) {
@@ -56,9 +57,19 @@ export function validateRegistrationForm(form: {
     errors.phone = '올바른 연락처 형식(010-0000-0000)을 입력해주세요.';
   }
 
-  if (!form.industry) errors.industry = '산업군을 선택해주세요.';
+  if (!form.industry) {
+    errors.industry = '산업군을 선택해주세요.';
+  } else if (form.industry === '기타' && !form.industry_etc?.trim()) {
+    errors.industry_etc = '산업군을 입력해주세요.';
+  }
   if (!form.company_size) errors.company_size = '기업 규모를 선택해주세요.';
-  if (!form.referral_source) errors.referral_source = '신청 경로를 선택해주세요.';
+  if (!form.referral_source) {
+    errors.referral_source = '신청 경로를 선택해주세요.';
+  } else if (form.referral_source === '기타' && !form.referral_source_etc?.trim()) {
+    errors.referral_source_etc = '신청 경로를 입력해주세요.';
+  } else if ((form.referral_source === '클루커스 담당자 소개' || form.referral_source === '외부 담당자 소개') && !form.referrer_name?.trim()) {
+    errors.referrer_name = '추천인 성명을 입력해주세요.';
+  }
   if (!form.privacy_consent) errors.privacy_consent = '개인정보 수집 및 이용에 동의해주세요.';
 
   return errors;
