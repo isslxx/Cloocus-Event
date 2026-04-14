@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { INDUSTRIES, COMPANY_SIZES, REFERRAL_SOURCES, PRIVACY_POLICY_TEXT } from '@/lib/constants';
+import type { } from '@/lib/constants'; // keep import for PRIVACY_POLICY_TEXT
 import { formatPhone, isBlockedEmailDomain, validateRegistrationForm } from '@/lib/validation';
 import type { FormErrors } from '@/lib/validation';
 import type { Event } from '@/lib/types';
@@ -50,6 +51,9 @@ export default function Home() {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [eventsLoading, setEventsLoading] = useState(true);
 
+  // 동적 폼 옵션
+  const [formOptions, setFormOptions] = useState<Record<string, string[]>>({});
+
   // Step 2: 폼
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState<FormErrors>({});
@@ -63,13 +67,18 @@ export default function Home() {
   const companyDebounce = useRef<ReturnType<typeof setTimeout>>(undefined);
   const companyRef = useRef<HTMLDivElement>(null);
 
-  // 이벤트 목록 로드
+  // 이벤트 목록 + 폼 옵션 로드
   useEffect(() => {
     fetch('/api/events')
       .then((res) => res.json())
       .then((data) => setEvents(data))
       .catch(() => {})
       .finally(() => setEventsLoading(false));
+
+    fetch('/api/form-options')
+      .then((res) => res.json())
+      .then((data) => setFormOptions(data))
+      .catch(() => {});
   }, []);
 
   // 외부 클릭 시 자동완성 닫기
@@ -86,15 +95,20 @@ export default function Home() {
   const [companySource, setCompanySource] = useState<'internal' | 'external' | 'none'>('none');
   const companyCache = useRef<Map<string, string[]>>(new Map());
 
+  const searchAbort = useRef<AbortController | null>(null);
+
   const searchCompanies = useCallback((q: string) => {
     clearTimeout(companyDebounce.current);
+    // 이전 요청 즉시 취소
+    if (searchAbort.current) searchAbort.current.abort();
+
     if (q.length < 1) {
       setCompanySuggestions([]);
       setShowSuggestions(false);
       return;
     }
 
-    // 캐시 확인
+    // 캐시 확인 → 즉시 반환
     const cached = companyCache.current.get(q);
     if (cached) {
       setCompanySuggestions(cached);
@@ -103,8 +117,10 @@ export default function Home() {
     }
 
     companyDebounce.current = setTimeout(async () => {
+      const controller = new AbortController();
+      searchAbort.current = controller;
       try {
-        const res = await fetch(`/api/admin/companies?q=${encodeURIComponent(q)}`);
+        const res = await fetch(`/api/admin/companies?q=${encodeURIComponent(q)}`, { signal: controller.signal });
         const data = await res.json();
         const results = data.results || data || [];
         const list = Array.isArray(results) ? results : [];
@@ -112,12 +128,14 @@ export default function Home() {
         setCompanySuggestions(list);
         setCompanySource(data.source || 'none');
         setShowSuggestions(true);
-      } catch {
-        setCompanySuggestions([]);
-        setCompanySource('none');
-        setShowSuggestions(true);
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') {
+          setCompanySuggestions([]);
+          setCompanySource('none');
+          setShowSuggestions(true);
+        }
       }
-    }, 150);
+    }, 100);
   }, []);
 
   const handleChange = (field: string, value: string | boolean) => {
@@ -570,7 +588,7 @@ export default function Home() {
                 className={errors.industry ? 'error' : ''}
               >
                 <option value="">선택해주세요</option>
-                {INDUSTRIES.map((v) => <option key={v} value={v}>{v}</option>)}
+                {(formOptions.industry || INDUSTRIES).map((v) => <option key={v} value={v}>{v}</option>)}
               </select>
               {errors.industry && <span className="error-msg">{errors.industry}</span>}
             </div>
@@ -583,7 +601,7 @@ export default function Home() {
                 className={errors.company_size ? 'error' : ''}
               >
                 <option value="">선택해주세요</option>
-                {COMPANY_SIZES.map((v) => <option key={v} value={v}>{v}</option>)}
+                {(formOptions.company_size || COMPANY_SIZES).map((v) => <option key={v} value={v}>{v}</option>)}
               </select>
               {errors.company_size && <span className="error-msg">{errors.company_size}</span>}
             </div>
@@ -596,7 +614,7 @@ export default function Home() {
                 className={errors.referral_source ? 'error' : ''}
               >
                 <option value="">선택해주세요</option>
-                {REFERRAL_SOURCES.map((v) => <option key={v} value={v}>{v}</option>)}
+                {(formOptions.referral_source || REFERRAL_SOURCES).map((v) => <option key={v} value={v}>{v}</option>)}
               </select>
               {errors.referral_source && <span className="error-msg">{errors.referral_source}</span>}
             </div>
