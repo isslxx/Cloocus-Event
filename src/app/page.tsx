@@ -84,20 +84,32 @@ export default function Home() {
   }, []);
 
   const [companySource, setCompanySource] = useState<'internal' | 'external' | 'none'>('none');
+  const companyCache = useRef<Map<string, string[]>>(new Map());
 
   const searchCompanies = useCallback((q: string) => {
     clearTimeout(companyDebounce.current);
-    if (q.length < 2) {
+    if (q.length < 1) {
       setCompanySuggestions([]);
       setShowSuggestions(false);
       return;
     }
+
+    // 캐시 확인
+    const cached = companyCache.current.get(q);
+    if (cached) {
+      setCompanySuggestions(cached);
+      setShowSuggestions(true);
+      return;
+    }
+
     companyDebounce.current = setTimeout(async () => {
       try {
         const res = await fetch(`/api/admin/companies?q=${encodeURIComponent(q)}`);
         const data = await res.json();
         const results = data.results || data || [];
-        setCompanySuggestions(Array.isArray(results) ? results : []);
+        const list = Array.isArray(results) ? results : [];
+        companyCache.current.set(q, list);
+        setCompanySuggestions(list);
         setCompanySource(data.source || 'none');
         setShowSuggestions(true);
       } catch {
@@ -105,7 +117,7 @@ export default function Home() {
         setCompanySource('none');
         setShowSuggestions(true);
       }
-    }, 300);
+    }, 150);
   }, []);
 
   const handleChange = (field: string, value: string | boolean) => {
@@ -452,7 +464,7 @@ export default function Home() {
                   autoComplete="off"
                   style={{ paddingLeft: 34 }}
                 />
-                {showSuggestions && form.company_name.length >= 2 && (
+                {showSuggestions && form.company_name.length >= 1 && (
                   <ul className="absolute z-10 top-full left-0 right-0 bg-white border border-gray-200 rounded-lg mt-1 shadow-lg max-h-56 overflow-y-auto">
                     {companySuggestions.length > 0 ? (
                       <>
