@@ -435,24 +435,34 @@ export default function Home() {
           <div className="flex items-center justify-between mb-2">
             <button
               onClick={() => setStep(1)}
-              className="text-sm text-blue-600 hover:underline inline-block"
+              className="text-sm text-gray-400 hover:text-gray-600 hover:underline inline-block"
             >
               ← 이벤트 선택으로 돌아가기
             </button>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/cloocus-logo.png" alt="Cloocus" className="h-5" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">클루커스 이벤트 등록하기</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-3">클루커스 이벤트 등록하기</h1>
           {selectedEvent && (
-            <div className="mt-2 inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg text-sm font-medium">
-              <span>{selectedEvent.name}</span>
-              <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                selectedEvent.event_type === 'online'
-                  ? 'bg-green-100 text-green-700'
-                  : 'bg-purple-100 text-purple-700'
-              }`}>
-                {selectedEvent.event_type === 'online' ? 'Online' : 'Offline'}
-              </span>
+            <div className="bg-gray-50 border border-gray-200 rounded-xl px-5 py-4">
+              <p className="text-lg font-bold text-gray-900">{selectedEvent.name}</p>
+              <div className="flex items-center gap-3 mt-1.5">
+                <span className="text-sm text-gray-500">
+                  {(() => { const d = new Date(selectedEvent.event_date); const day = ['일','월','화','수','목','금','토'][d.getDay()]; return `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${day})`; })()}
+                </span>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                  selectedEvent.event_type === 'online'
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-purple-100 text-purple-700'
+                }`}>
+                  {selectedEvent.event_type === 'online' ? 'Online' : 'Offline'}
+                </span>
+                {selectedEvent.capacity && (
+                  <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700">
+                    정원 {selectedEvent.capacity}명
+                  </span>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -467,7 +477,10 @@ export default function Home() {
           )}
 
           <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-5">
-            <h2 className="text-lg font-semibold border-b pb-3 mb-2">기본 정보</h2>
+            <div className="flex items-center justify-between border-b pb-3 mb-2">
+              <h2 className="text-lg font-semibold">기본 정보</h2>
+              <span className="text-xs text-red-500">* 필수</span>
+            </div>
 
             <div className="field">
               <label>성함 <span className="required">*</span></label>
@@ -594,7 +607,10 @@ export default function Home() {
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-5 mt-6">
-            <h2 className="text-lg font-semibold border-b pb-3 mb-2">추가 정보</h2>
+            <div className="flex items-center justify-between border-b pb-3 mb-2">
+              <h2 className="text-lg font-semibold">추가 정보</h2>
+              <span className="text-xs text-red-500">* 필수</span>
+            </div>
 
             <div className="field">
               <label>산업군 <span className="required">*</span></label>

@@ -148,7 +148,7 @@ export default function UsersPage() {
               <th className="px-4 py-3 text-left font-medium text-gray-600">이름</th>
               <th className="px-4 py-3 text-left font-medium text-gray-600">이메일</th>
               <th className="px-4 py-3 text-left font-medium text-gray-600">역할</th>
-              <th className="px-4 py-3 text-left font-medium text-gray-600 w-32">작업</th>
+              <th className="px-4 py-3 text-left font-medium text-gray-600 w-48">작업</th>
             </tr>
           </thead>
           <tbody>
@@ -172,16 +172,16 @@ export default function UsersPage() {
                   </select>
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex gap-1">
+                  <div className="flex gap-1.5">
                     <button
                       onClick={() => { setPwUserId(u.id); setNewPassword(''); setPwResult(''); }}
-                      className="text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100"
+                      className="text-xs px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 whitespace-nowrap"
                     >
-                      접속 코드
+                      접속 코드 변경
                     </button>
                     <button
                       onClick={() => setDeleting(u.id)}
-                      className="text-xs px-2 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100"
+                      className="text-xs px-3 py-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 whitespace-nowrap"
                     >
                       삭제
                     </button>
