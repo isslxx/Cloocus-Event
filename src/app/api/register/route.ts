@@ -15,8 +15,8 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const {
       name, company_name, department, job_title,
-      email, phone, industry, company_size,
-      referral_source, referrer_name, inquiry, privacy_consent,
+      email, phone, industry, industry_etc, company_size,
+      referral_source, referral_source_etc, referrer_name, inquiry, privacy_consent,
       event_id,
     } = body;
 
@@ -57,9 +57,9 @@ export async function POST(req: NextRequest) {
       job_title: job_title.trim(),
       email: email.toLowerCase().trim(),
       phone,
-      industry,
+      industry: industry === '기타' && industry_etc ? `기타: ${industry_etc.trim()}` : industry,
       company_size,
-      referral_source,
+      referral_source: referral_source === '기타' && referral_source_etc ? `기타: ${referral_source_etc.trim()}` : referral_source,
       referrer_name: referrer_name?.trim() || '',
       inquiry: inquiry?.trim() || '',
       privacy_consent,

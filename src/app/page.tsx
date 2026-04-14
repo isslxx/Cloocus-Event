@@ -15,8 +15,10 @@ const EMPTY_FORM = {
   email: '',
   phone: '',
   industry: '',
+  industry_etc: '',
   company_size: '',
   referral_source: '',
+  referral_source_etc: '',
   referrer_name: '',
   inquiry: '',
   privacy_consent: false,
@@ -145,6 +147,9 @@ export default function Home() {
       if (field === 'referral_source' && value !== '클루커스 담당자 소개' && value !== '외부 담당자 소개') {
         next.referrer_name = '';
       }
+      // 기타가 아닌 값 선택 시 기타 입력값 초기화
+      if (field === 'industry' && value !== '기타') next.industry_etc = '';
+      if (field === 'referral_source' && value !== '기타') next.referral_source_etc = '';
       return next;
     });
     if (errors[field]) {
@@ -591,6 +596,16 @@ export default function Home() {
                 {(formOptions.industry || INDUSTRIES).map((v) => <option key={v} value={v}>{v}</option>)}
               </select>
               {errors.industry && <span className="error-msg">{errors.industry}</span>}
+              {form.industry === '기타' && (
+                <input
+                  type="text"
+                  value={form.industry_etc}
+                  onChange={(e) => handleChange('industry_etc', e.target.value)}
+                  placeholder="산업군을 입력해주세요"
+                  className="mt-2"
+                  style={{ padding: '10px 12px', border: '1px solid #e0e0e0', borderRadius: 8, fontSize: 14, width: '100%' }}
+                />
+              )}
             </div>
 
             <div className="field">
@@ -617,6 +632,16 @@ export default function Home() {
                 {(formOptions.referral_source || REFERRAL_SOURCES).map((v) => <option key={v} value={v}>{v}</option>)}
               </select>
               {errors.referral_source && <span className="error-msg">{errors.referral_source}</span>}
+              {form.referral_source === '기타' && (
+                <input
+                  type="text"
+                  value={form.referral_source_etc}
+                  onChange={(e) => handleChange('referral_source_etc', e.target.value)}
+                  placeholder="신청 경로를 입력해주세요"
+                  className="mt-2"
+                  style={{ padding: '10px 12px', border: '1px solid #e0e0e0', borderRadius: 8, fontSize: 14, width: '100%' }}
+                />
+              )}
             </div>
 
             {(form.referral_source === '클루커스 담당자 소개' || form.referral_source === '외부 담당자 소개') && (
