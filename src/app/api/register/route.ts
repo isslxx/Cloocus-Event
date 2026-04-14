@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
       name, company_name, department, job_title,
       email, phone, industry, industry_etc, company_size,
       referral_source, referral_source_etc, referrer_name, inquiry, privacy_consent,
-      event_id,
+      event_id, pin,
     } = body;
 
     // 서버 검증
@@ -55,6 +55,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '개인정보 수집 및 이용에 동의해주세요.' }, { status: 400 });
     }
 
+    if (!pin || !/^\d{4}$/.test(pin)) {
+      return NextResponse.json({ error: '개인 확인 암호 4자리 숫자를 입력해주세요.' }, { status: 400 });
+    }
+
     const supabase = getServiceSupabase();
 
     const normalizedCompany = normalizeCompanyName(company_name);
@@ -74,6 +78,7 @@ export async function POST(req: NextRequest) {
       inquiry: inquiry?.trim() || '',
       privacy_consent,
       event_id: event_id || null,
+      pin,
     };
 
     const { data: insertedData, error } = await supabase

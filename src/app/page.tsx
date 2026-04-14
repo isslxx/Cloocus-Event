@@ -22,6 +22,7 @@ const EMPTY_FORM = {
   referrer_name: '',
   inquiry: '',
   privacy_consent: false,
+  pin: '',
 };
 
 function BrandFooter() {
@@ -69,6 +70,13 @@ export default function Home() {
   const [registrationId, setRegistrationId] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [eventEditable, setEventEditable] = useState(false);
+
+  // 신청 내역 조회
+  const [showLookup, setShowLookup] = useState(false);
+  const [lookupEmail, setLookupEmail] = useState('');
+  const [lookupPin, setLookupPin] = useState('');
+  const [lookupError, setLookupError] = useState('');
+  const [lookupLoading, setLookupLoading] = useState(false);
 
   // 검증 오류 팝업
   const [validationPopup, setValidationPopup] = useState<string[]>([]);
@@ -317,9 +325,145 @@ export default function Home() {
               disabled={!selectedEvent || selectedEvent.status === 'closed'}
               className="btn-primary w-full mt-6"
             >
-              다음
+              등록하기
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowLookup(true)}
+              className="w-full mt-3 text-sm text-gray-400 hover:text-gray-600 hover:underline"
+            >
+              신청 내역 확인 / 수정하기
             </button>
           </div>
+
+          {/* 신청 내역 조회 모달 */}
+          {showLookup && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
+              <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-1">신청 내역 조회</h3>
+                <p className="text-sm text-gray-500 mb-5">등록 시 입력한 이메일과 확인 암호를 입력해주세요.</p>
+
+                <div className="space-y-4">
+                  <div className="field">
+                    <label className="text-sm font-medium text-gray-700">이메일 주소</label>
+                    <input
+                      type="email"
+                      value={lookupEmail}
+                      onChange={(e) => { setLookupEmail(e.target.value); setLookupError(''); }}
+                      placeholder="name@company.com"
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="field">
+                    <label className="text-sm font-medium text-gray-700">확인 암호 (숫자 4자리)</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={lookupPin}
+                      onChange={(e) => { setLookupPin(e.target.value.replace(/\D/g, '').slice(0, 4)); setLookupError(''); }}
+                      placeholder="0000"
+                      maxLength={4}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+
+                {lookupError && (
+                  <p className="text-sm text-red-500 mt-3">{lookupError}</p>
+                )}
+
+                <div className="flex gap-3 mt-6">
+                  <button
+                    type="button"
+                    onClick={() => { setShowLookup(false); setLookupEmail(''); setLookupPin(''); setLookupError(''); }}
+                    className="btn-secondary flex-1"
+                  >
+                    닫기
+                  </button>
+                  <button
+                    type="button"
+                    disabled={lookupLoading}
+                    onClick={async () => {
+                      if (!lookupEmail.trim()) { setLookupError('이메일을 입력해주세요.'); return; }
+                      if (!/^\d{4}$/.test(lookupPin)) { setLookupError('확인 암호 4자리 숫자를 입력해주세요.'); return; }
+                      setLookupLoading(true);
+                      setLookupError('');
+                      try {
+                        const res = await fetch('/api/register/lookup', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ email: lookupEmail, pin: lookupPin }),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) {
+                          setLookupError(data.error || '조회에 실패했습니다.');
+                          return;
+                        }
+                        const r = data.registration;
+                        // 기타 값 분리
+                        let industry = r.industry;
+                        let industry_etc = '';
+                        if (industry?.startsWith('기타: ')) {
+                          industry_etc = industry.replace('기타: ', '');
+                          industry = '기타';
+                        }
+                        let referral_source = r.referral_source;
+                        let referral_source_etc = '';
+                        if (referral_source?.startsWith('기타: ')) {
+                          referral_source_etc = referral_source.replace('기타: ', '');
+                          referral_source = '기타';
+                        }
+                        // 이벤트 정보 로드
+                        if (r.event_id) {
+                          const evt = events.find((e) => e.id === r.event_id);
+                          if (evt) setSelectedEvent(evt);
+                          try {
+                            const pRes = await fetch(`/api/privacy-policy?category=${encodeURIComponent(evt?.privacy_category || '기타')}`);
+                            const pData = await pRes.json();
+                            if (pData.content) setPrivacyContent(pData.content);
+                            if (pData.title) setPrivacyTitle(pData.title);
+                          } catch { /* ignore */ }
+                        }
+                        setForm({
+                          name: r.name || '',
+                          company_name: r.company_name || '',
+                          department: r.department || '',
+                          job_title: r.job_title || '',
+                          email: r.email || '',
+                          phone: r.phone || '',
+                          industry,
+                          industry_etc,
+                          company_size: r.company_size || '',
+                          referral_source,
+                          referral_source_etc,
+                          referrer_name: r.referrer_name || '',
+                          inquiry: r.inquiry || '',
+                          privacy_consent: true,
+                          pin: lookupPin,
+                        });
+                        setRegistrationId(r.id);
+                        setEventEditable(data.editable);
+                        setEditMode(true);
+                        setErrors({});
+                        setServerError('');
+                        setShowLookup(false);
+                        setLookupEmail('');
+                        setLookupPin('');
+                        setStep(2);
+                      } catch {
+                        setLookupError('네트워크 오류가 발생했습니다.');
+                      } finally {
+                        setLookupLoading(false);
+                      }
+                    }}
+                    className="btn-primary flex-1"
+                  >
+                    {lookupLoading ? '조회 중...' : '조회하기'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
         </div>
         <BrandFooter />
@@ -435,7 +579,7 @@ export default function Home() {
                   <button
                     onClick={async () => {
                       try {
-                        const res = await fetch(`/api/register/${registrationId}`);
+                        const res = await fetch(`/api/register/${registrationId}?pin=${encodeURIComponent(form.pin)}`);
                         const data = await res.json();
                         if (!res.ok) {
                           alert(data.error || '등록 정보를 불러올 수 없습니다.');
@@ -470,6 +614,7 @@ export default function Home() {
                           referrer_name: r.referrer_name || '',
                           inquiry: r.inquiry || '',
                           privacy_consent: true,
+                          pin: form.pin,
                         });
                         setEventEditable(data.editable);
                         setEditMode(true);
@@ -814,6 +959,29 @@ export default function Home() {
               <span className="error-msg mt-2 block">{errors.privacy_consent}</span>
             )}
           </div>
+
+          {!editMode && (
+            <div className="bg-white rounded-xl border border-gray-200 p-6 mt-6">
+              <h2 className="text-lg font-semibold border-b pb-3 mb-4">개인 확인 암호</h2>
+              <p className="text-sm text-gray-500 mb-3">
+                신청 내역을 추후 확인·수정할 때 사용할 숫자 4자리를 입력해주세요.
+              </p>
+              <div className="field">
+                <label>확인 암호 <span className="required">*</span></label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={form.pin}
+                  onChange={(e) => handleChange('pin', e.target.value.replace(/\D/g, '').slice(0, 4))}
+                  placeholder="숫자 4자리"
+                  maxLength={4}
+                  className={errors.pin ? 'error' : ''}
+                  style={{ maxWidth: 160, letterSpacing: '0.3em', textAlign: 'center', fontSize: 18 }}
+                />
+                {errors.pin && <span className="error-msg">{errors.pin}</span>}
+              </div>
+            </div>
+          )}
 
           <div className="mt-8 mb-12">
             {editMode && !eventEditable ? (

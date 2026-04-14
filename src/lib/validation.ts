@@ -72,5 +72,12 @@ export function validateRegistrationForm(form: {
   }
   if (!form.privacy_consent) errors.privacy_consent = '개인정보 수집 및 이용에 동의해주세요.';
 
+  if ('pin' in form) {
+    const pin = (form as { pin?: string }).pin;
+    if (!pin || !/^\d{4}$/.test(pin)) {
+      errors.pin = '개인 확인 암호 4자리 숫자를 입력해주세요.';
+    }
+  }
+
   return errors;
 }

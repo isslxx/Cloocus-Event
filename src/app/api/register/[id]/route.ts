@@ -10,24 +10,31 @@ function getServiceSupabase() {
   );
 }
 
-// 등록 정보 조회
+// 등록 정보 조회 (PIN 검증 필요)
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
+    const pin = req.nextUrl.searchParams.get('pin');
+
+    if (!pin || !/^\d{4}$/.test(pin)) {
+      return NextResponse.json({ error: '확인 암호 4자리를 입력해주세요.' }, { status: 400 });
+    }
+
     const supabase = getServiceSupabase();
 
     const { data, error } = await supabase
       .from('event_registrations')
       .select('*, events!event_registrations_event_id_fkey(status)')
       .eq('id', id)
+      .eq('pin', pin)
       .is('deleted_at', null)
       .single();
 
     if (error || !data) {
-      return NextResponse.json({ error: '등록 정보를 찾을 수 없습니다.' }, { status: 404 });
+      return NextResponse.json({ error: '등록 정보를 찾을 수 없거나 암호가 일치하지 않습니다.' }, { status: 404 });
     }
 
     const eventStatus = data.events?.status || 'closed';
@@ -66,8 +73,13 @@ export async function PUT(
     const {
       name, company_name, department, job_title,
       email, phone, industry, industry_etc, company_size,
-      referral_source, referral_source_etc, referrer_name, inquiry,
+      referral_source, referral_source_etc, referrer_name, inquiry, pin,
     } = body;
+
+    // PIN 검증
+    if (!pin || !/^\d{4}$/.test(pin)) {
+      return NextResponse.json({ error: '확인 암호 4자리를 입력해주세요.' }, { status: 400 });
+    }
 
     // 서버 검증
     if (!name?.trim() || !company_name?.trim() || !department?.trim() || !job_title?.trim()) {
@@ -100,16 +112,20 @@ export async function PUT(
 
     const supabase = getServiceSupabase();
 
-    // 이벤트 상태 확인 - open일 때만 수정 가능
+    // PIN 확인 + 이벤트 상태 확인
     const { data: reg } = await supabase
       .from('event_registrations')
-      .select('event_id')
+      .select('event_id, pin')
       .eq('id', id)
       .is('deleted_at', null)
       .single();
 
     if (!reg) {
       return NextResponse.json({ error: '등록 정보를 찾을 수 없습니다.' }, { status: 404 });
+    }
+
+    if (reg.pin !== pin) {
+      return NextResponse.json({ error: '확인 암호가 일치하지 않습니다.' }, { status: 403 });
     }
 
     if (reg.event_id) {
