@@ -449,7 +449,7 @@ export default function Home() {
       <main className="max-w-2xl mx-auto px-4 py-8">
         {/* 신청 행사 정보 */}
         {selectedEvent && (
-          <div className="mb-6 border-2 border-blue-500 bg-blue-50 rounded-xl px-5 py-4">
+          <div className="mb-6 border border-gray-200 bg-gray-50 rounded-xl px-5 py-4">
             <p className="text-base font-semibold text-gray-900">{selectedEvent.name}</p>
             <div className="flex items-center gap-3 mt-1.5">
               <span className="text-sm text-gray-500">
