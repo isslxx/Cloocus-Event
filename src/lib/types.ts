@@ -6,6 +6,7 @@ export type Event = {
   status: 'open' | 'closed';
   visible: boolean;
   capacity: number | null;
+  privacy_category: string;
   location: string;
   event_time: string;
   created_at: string;

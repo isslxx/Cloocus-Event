@@ -32,7 +32,9 @@ export default function FormManagePage() {
   const [newLabel, setNewLabel] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // 개인정보 동의 텍스트
+  // 개인정보 동의 카테고리별
+  const [privacyPolicies, setPrivacyPolicies] = useState<{ id: string; category: string; content: string }[]>([]);
+  const [privacyTab, setPrivacyTab] = useState('MS');
   const [privacyText, setPrivacyText] = useState('');
   const [privacySaving, setPrivacySaving] = useState(false);
   const [privacySaved, setPrivacySaved] = useState(false);
@@ -41,18 +43,20 @@ export default function FormManagePage() {
 
   const fetchOptions = useCallback(async () => {
     try {
-      const res = await fetch('/api/admin/form-options', {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      const data = await res.json();
-      const allOptions = Array.isArray(data) ? data : [];
-      setOptions(allOptions);
+      const [optRes, privRes] = await Promise.all([
+        fetch('/api/admin/form-options', { headers: { Authorization: `Bearer ${accessToken}` } }),
+        fetch('/api/admin/privacy-policies', { headers: { Authorization: `Bearer ${accessToken}` } }),
+      ]);
+      const data = await optRes.json();
+      setOptions(Array.isArray(data) ? data : []);
 
-      // 개인정보 동의 텍스트 로드
-      const privacyOption = allOptions.find((o: FormOption) => o.field_key === 'privacy_policy');
-      if (privacyOption) setPrivacyText(privacyOption.label);
+      const privData = await privRes.json();
+      const policies = Array.isArray(privData) ? privData : [];
+      setPrivacyPolicies(policies);
+      const current = policies.find((p: { category: string }) => p.category === privacyTab);
+      if (current) setPrivacyText(current.content);
     } catch { /* ignore */ } finally { setLoading(false); }
-  }, [accessToken]);
+  }, [accessToken, privacyTab]);
 
   useEffect(() => {
     if (accessToken) fetchOptions();
@@ -154,9 +158,33 @@ export default function FormManagePage() {
       {/* 개인정보 동의 편집 */}
       {activeTab === 'privacy_policy' ? (
         <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h3 className="font-semibold mb-4">개인정보 수집 및 이용 동의 내용</h3>
+          <h3 className="font-semibold mb-4">개인정보 수집 및 이용 동의 관리</h3>
+          <p className="text-xs text-gray-400 mb-4">행사 벤더에 따라 동의 문구를 다르게 설정할 수 있습니다. 이벤트 추가 시 카테고리를 선택하면 해당 동의 문구가 적용됩니다.</p>
+
+          {/* 카테고리 탭 */}
+          <div className="flex gap-2 mb-4">
+            {['MS', 'GCP', 'NCP', '기타'].map((cat) => (
+              <button
+                key={cat}
+                onClick={() => {
+                  setPrivacyTab(cat);
+                  const policy = privacyPolicies.find((p) => p.category === cat);
+                  setPrivacyText(policy?.content || '');
+                  setPrivacySaved(false);
+                }}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  privacyTab === cat
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
           <textarea
-            rows={12}
+            rows={14}
             value={privacyText}
             onChange={(e) => { setPrivacyText(e.target.value); setPrivacySaved(false); }}
             className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm leading-relaxed"
@@ -168,18 +196,12 @@ export default function FormManagePage() {
               <button
                 onClick={async () => {
                   setPrivacySaving(true);
-                  const existing = options.find((o) => o.field_key === 'privacy_policy');
+                  const existing = privacyPolicies.find((p) => p.category === privacyTab);
                   if (existing) {
-                    await fetch('/api/admin/form-options', {
+                    await fetch('/api/admin/privacy-policies', {
                       method: 'PUT',
                       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-                      body: JSON.stringify({ id: existing.id, label: privacyText }),
-                    });
-                  } else {
-                    await fetch('/api/admin/form-options', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-                      body: JSON.stringify({ field_key: 'privacy_policy', label: privacyText, sort_order: 1 }),
+                      body: JSON.stringify({ id: existing.id, content: privacyText }),
                     });
                   }
                   setPrivacySaving(false);
@@ -189,7 +211,7 @@ export default function FormManagePage() {
                 disabled={privacySaving}
                 className="btn-primary text-sm"
               >
-                {privacySaving ? '저장 중...' : '저장'}
+                {privacySaving ? '저장 중...' : `${privacyTab} 동의 문구 저장`}
               </button>
               {privacySaved && <span className="text-sm text-green-600">저장되었습니다.</span>}
             </div>

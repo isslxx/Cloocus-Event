@@ -55,6 +55,7 @@ export default function Home() {
 
   // 동적 폼 옵션
   const [formOptions, setFormOptions] = useState<Record<string, string[]>>({});
+  const [privacyContent, setPrivacyContent] = useState('');
 
   // Step 2: 폼
   const [form, setForm] = useState(EMPTY_FORM);
@@ -276,7 +277,15 @@ export default function Home() {
             )}
 
             <button
-              onClick={() => selectedEvent && selectedEvent.status === 'open' && setStep(2)}
+              onClick={async () => {
+                if (!selectedEvent || selectedEvent.status !== 'open') return;
+                try {
+                  const res = await fetch(`/api/privacy-policy?category=${encodeURIComponent(selectedEvent.privacy_category || '기타')}`);
+                  const data = await res.json();
+                  if (data.content) setPrivacyContent(data.content);
+                } catch { /* ignore */ }
+                setStep(2);
+              }}
               disabled={!selectedEvent || selectedEvent.status === 'closed'}
               className="btn-primary w-full mt-6"
             >
@@ -674,7 +683,7 @@ export default function Home() {
                 약관 전문 보기
               </summary>
               <pre className="mt-3 p-4 bg-gray-50 rounded-lg text-xs text-gray-600 whitespace-pre-wrap leading-relaxed">
-                {formOptions.privacy_policy?.[0] || PRIVACY_POLICY_TEXT}
+                {privacyContent || formOptions.privacy_policy?.[0] || PRIVACY_POLICY_TEXT}
               </pre>
             </details>
             <label className="flex items-start gap-3 cursor-pointer">

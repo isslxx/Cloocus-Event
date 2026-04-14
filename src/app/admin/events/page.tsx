@@ -21,6 +21,7 @@ export default function EventsPage() {
   const [formTime, setFormTime] = useState('');
   const [formVisible, setFormVisible] = useState(true);
   const [formCapacity, setFormCapacity] = useState('');
+  const [formPrivacy, setFormPrivacy] = useState('기타');
   const [saving, setSaving] = useState(false);
 
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -58,6 +59,7 @@ export default function EventsPage() {
     setFormTime('');
     setFormVisible(true);
     setFormCapacity('');
+    setFormPrivacy('기타');
   };
 
   const openEdit = (event: Event) => {
@@ -71,13 +73,14 @@ export default function EventsPage() {
     setFormTime(event.event_time || '');
     setFormVisible(event.visible !== false);
     setFormCapacity(event.capacity ? String(event.capacity) : '');
+    setFormPrivacy(event.privacy_category || '기타');
   };
 
   const handleSave = async () => {
     if (!formName.trim() || !formDate) return;
     setSaving(true);
     try {
-      const body = { name: formName.trim(), event_date: formDate, event_type: formType, status: formStatus, location: formLocation.trim(), event_time: formTime.trim(), visible: formVisible, capacity: formCapacity ? parseInt(formCapacity) : null };
+      const body = { name: formName.trim(), event_date: formDate, event_type: formType, status: formStatus, location: formLocation.trim(), event_time: formTime.trim(), visible: formVisible, capacity: formCapacity ? parseInt(formCapacity) : null, privacy_category: formPrivacy };
       if (isNew) {
         await fetch('/api/admin/events', {
           method: 'POST',
@@ -374,6 +377,15 @@ export default function EventsPage() {
                     <option value="false">숨김</option>
                   </select>
                 </div>
+              </div>
+              <div className="field">
+                <label>개인정보 동의</label>
+                <select value={formPrivacy} onChange={(e) => setFormPrivacy(e.target.value)}>
+                  <option value="MS">MS (Microsoft)</option>
+                  <option value="GCP">GCP (Google Cloud)</option>
+                  <option value="NCP">NCP (Naver Cloud)</option>
+                  <option value="기타">기타</option>
+                </select>
               </div>
             </div>
             <div className="flex gap-2 mt-6">
