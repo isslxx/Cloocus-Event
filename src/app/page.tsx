@@ -649,7 +649,7 @@ export default function Home() {
                 약관 전문 보기
               </summary>
               <pre className="mt-3 p-4 bg-gray-50 rounded-lg text-xs text-gray-600 whitespace-pre-wrap leading-relaxed">
-                {PRIVACY_POLICY_TEXT}
+                {formOptions.privacy_policy?.[0] || PRIVACY_POLICY_TEXT}
               </pre>
             </details>
             <label className="flex items-start gap-3 cursor-pointer">

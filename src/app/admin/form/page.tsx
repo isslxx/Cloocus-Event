@@ -15,9 +15,10 @@ const FIELD_LABELS: Record<string, string> = {
   industry: '산업군',
   company_size: '기업 규모',
   referral_source: '신청 경로',
+  privacy_policy: '개인정보 동의',
 };
 
-const FIELD_KEYS = ['industry', 'company_size', 'referral_source'];
+const FIELD_KEYS = ['industry', 'company_size', 'referral_source', 'privacy_policy'];
 
 export default function FormManagePage() {
   const { user: admin, accessToken } = useAdmin();
@@ -31,6 +32,11 @@ export default function FormManagePage() {
   const [newLabel, setNewLabel] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // 개인정보 동의 텍스트
+  const [privacyText, setPrivacyText] = useState('');
+  const [privacySaving, setPrivacySaving] = useState(false);
+  const [privacySaved, setPrivacySaved] = useState(false);
+
   const isAdmin = admin?.role === 'admin';
 
   const fetchOptions = useCallback(async () => {
@@ -39,7 +45,12 @@ export default function FormManagePage() {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       const data = await res.json();
-      setOptions(Array.isArray(data) ? data : []);
+      const allOptions = Array.isArray(data) ? data : [];
+      setOptions(allOptions);
+
+      // 개인정보 동의 텍스트 로드
+      const privacyOption = allOptions.find((o: FormOption) => o.field_key === 'privacy_policy');
+      if (privacyOption) setPrivacyText(privacyOption.label);
     } catch { /* ignore */ } finally { setLoading(false); }
   }, [accessToken]);
 
@@ -140,7 +151,53 @@ export default function FormManagePage() {
         ))}
       </div>
 
-      {/* 옵션 목록 */}
+      {/* 개인정보 동의 편집 */}
+      {activeTab === 'privacy_policy' ? (
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <h3 className="font-semibold mb-4">개인정보 수집 및 이용 동의 내용</h3>
+          <textarea
+            rows={12}
+            value={privacyText}
+            onChange={(e) => { setPrivacyText(e.target.value); setPrivacySaved(false); }}
+            className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm leading-relaxed"
+            placeholder="개인정보 수집 및 이용 동의 내용을 입력해주세요"
+            disabled={!isAdmin}
+          />
+          {isAdmin && (
+            <div className="flex items-center gap-3 mt-4">
+              <button
+                onClick={async () => {
+                  setPrivacySaving(true);
+                  const existing = options.find((o) => o.field_key === 'privacy_policy');
+                  if (existing) {
+                    await fetch('/api/admin/form-options', {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+                      body: JSON.stringify({ id: existing.id, label: privacyText }),
+                    });
+                  } else {
+                    await fetch('/api/admin/form-options', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+                      body: JSON.stringify({ field_key: 'privacy_policy', label: privacyText, sort_order: 1 }),
+                    });
+                  }
+                  setPrivacySaving(false);
+                  setPrivacySaved(true);
+                  fetchOptions();
+                }}
+                disabled={privacySaving}
+                className="btn-primary text-sm"
+              >
+                {privacySaving ? '저장 중...' : '저장'}
+              </button>
+              {privacySaved && <span className="text-sm text-green-600">저장되었습니다.</span>}
+            </div>
+          )}
+        </div>
+      ) : (
+
+      /* 옵션 목록 */
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
           <h3 className="font-semibold">{FIELD_LABELS[activeTab]} 옵션 관리</h3>
@@ -207,6 +264,7 @@ export default function FormManagePage() {
           </div>
         )}
       </div>
+      )}
 
       <p className="text-xs text-gray-400 mt-4">
         여기서 수정한 옵션은 이벤트 등록 페이지에 즉시 반영됩니다. 비활성화된 옵션은 등록 폼에 표시되지 않습니다.
