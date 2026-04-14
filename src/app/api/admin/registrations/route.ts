@@ -21,9 +21,17 @@ export async function GET(req: NextRequest) {
   const sort = url.searchParams.get('sort') || 'created_at';
   const order = url.searchParams.get('order') === 'asc' ? true : false;
 
+  const includeDeleted = url.searchParams.get('deleted') === 'true';
+
   let query = supabase
     .from('event_registrations')
     .select('*', { count: 'exact' });
+
+  if (includeDeleted) {
+    query = query.not('deleted_at', 'is', null);
+  } else {
+    query = query.is('deleted_at', null);
+  }
 
   if (search) {
     query = query.or(`name.ilike.%${search}%,company_name.ilike.%${search}%,email.ilike.%${search}%`);
@@ -56,22 +64,25 @@ export async function DELETE(req: NextRequest) {
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (!canDelete(admin.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const { id } = await req.json();
+  const { id, permanent } = await req.json();
   if (!id) return NextResponse.json({ error: 'ID required' }, { status: 400 });
 
   const supabase = getServiceSupabase();
 
-  // 삭제 전 레코드 저장 (감사 로그용)
   const { data: record } = await supabase
     .from('event_registrations')
     .select('*')
     .eq('id', id)
     .maybeSingle();
 
-  const { error } = await supabase
-    .from('event_registrations')
-    .delete()
-    .eq('id', id);
+  let error;
+  if (permanent) {
+    // 완전 삭제 (휴지통에서)
+    ({ error } = await supabase.from('event_registrations').delete().eq('id', id));
+  } else {
+    // 소프트 삭제 (휴지통으로 이동)
+    ({ error } = await supabase.from('event_registrations').update({ deleted_at: new Date().toISOString() }).eq('id', id));
+  }
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

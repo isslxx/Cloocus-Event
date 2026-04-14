@@ -78,7 +78,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const navItems = [
     { href: '/admin', label: '대시보드', icon: '📊' },
-    { href: '/admin/registrations', label: '등록 목록', icon: '📋' },
+    { href: '/admin/registrations', label: '등록 리스트', icon: '📋' },
+    { href: '/admin/trash', label: '휴지통', icon: '🗑️' },
     { href: '/admin/form', label: '등록 페이지 관리', icon: '📝' },
     { href: '/admin/events', label: '이벤트 관리', icon: '📅' },
     { href: '/admin/emails', label: '이메일 발송', icon: '✉️' },

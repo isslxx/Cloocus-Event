@@ -232,7 +232,7 @@ export default function RegistrationsPage() {
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <h1 className="text-2xl font-bold">등록 목록 ({total}건)</h1>
+        <h1 className="text-2xl font-bold">등록 리스트 ({total}건)</h1>
         <div className="flex gap-2 flex-wrap">
           {selected.size > 0 && canDeleteRecord && (
             <button

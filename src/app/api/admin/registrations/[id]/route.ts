@@ -21,6 +21,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
+  // 복구 처리
+  if (updates.restore === true) {
+    await supabase.from('event_registrations').update({ deleted_at: null }).eq('id', id);
+    return NextResponse.json({ success: true });
+  }
+
   // 허용 필드만 업데이트
   const allowedFields = [
     'name', 'company_name', 'company_name_raw', 'department', 'job_title',

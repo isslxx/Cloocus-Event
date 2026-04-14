@@ -104,7 +104,7 @@ export default function UsersPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        setPwResult('비밀번호가 변경되었습니다.');
+        setPwResult('접속 코드가 변경되었습니다.');
         setNewPassword('');
       } else {
         setPwResult(data.error || '변경 실패');
@@ -177,7 +177,7 @@ export default function UsersPage() {
                       onClick={() => { setPwUserId(u.id); setNewPassword(''); setPwResult(''); }}
                       className="text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100"
                     >
-                      암호
+                      접속 코드
                     </button>
                     <button
                       onClick={() => setDeleting(u.id)}
@@ -223,12 +223,12 @@ export default function UsersPage() {
                 />
               </div>
               <div className="field">
-                <label>초기 비밀번호</label>
+                <label>초기 접속 코드</label>
                 <input
                   type="password"
                   value={invitePassword}
                   onChange={(e) => setInvitePassword(e.target.value)}
-                  placeholder="초기 비밀번호 설정"
+                  placeholder="접속 코드 설정"
                 />
               </div>
               <div className="field">
@@ -270,12 +270,12 @@ export default function UsersPage() {
       {pwUserId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="bg-white rounded-xl w-full max-w-sm p-6">
-            <h2 className="text-lg font-bold mb-4">접속 암호 변경</h2>
+            <h2 className="text-lg font-bold mb-4">접속 코드 변경</h2>
             <p className="text-sm text-gray-500 mb-4">
               {users.find((u) => u.id === pwUserId)?.display_name} ({users.find((u) => u.id === pwUserId)?.email})
             </p>
             <div className="field mb-4">
-              <label>새 비밀번호</label>
+              <label>새 접속 코드</label>
               <input
                 type="password"
                 value={newPassword}
