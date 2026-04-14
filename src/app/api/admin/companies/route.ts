@@ -3,87 +3,73 @@ import { createClient } from '@supabase/supabase-js';
 import { normalizeCompanyName } from '@/lib/company-normalize';
 
 function getServiceSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 }
 
-// 내부 DB 검색
-async function searchInternal(q: string): Promise<{ name: string; official_name: string; status: string }[]> {
-  const supabase = getServiceSupabase();
-  const normalized = normalizeCompanyName(q);
+// 서버 메모리 캐시 (5분 TTL)
+let companyCache: { names: string[]; timestamp: number } | null = null;
+const CACHE_TTL = 5 * 60 * 1000;
 
-  // companies 테이블에서 검색
-  const { data: companies } = await supabase
-    .from('companies')
-    .select('name, official_name, status')
-    .or(`name.ilike.%${normalized}%,official_name.ilike.%${q}%`)
-    .order('name')
-    .limit(10);
-
-  // aliases에서도 검색
-  const { data: aliases } = await supabase
-    .from('company_aliases')
-    .select('alias_name, company_id, companies(name, official_name, status)')
-    .ilike('alias_name', `%${q}%`)
-    .limit(5);
-
-  const results = new Map<string, { name: string; official_name: string; status: string }>();
-
-  for (const c of companies || []) {
-    results.set(c.name, { name: c.name, official_name: c.official_name || c.name, status: c.status || 'verified' });
+async function getAllCompanyNames(): Promise<string[]> {
+  if (companyCache && Date.now() - companyCache.timestamp < CACHE_TTL) {
+    return companyCache.names;
   }
 
-  for (const a of aliases || []) {
-    const company = a.companies as unknown as { name: string; official_name: string; status: string } | null;
+  const supabase = getServiceSupabase();
+  const [companiesRes, aliasesRes] = await Promise.all([
+    supabase.from('companies').select('name, official_name').order('name'),
+    supabase.from('company_aliases').select('alias_name, companies(name, official_name)'),
+  ]);
+
+  const nameSet = new Map<string, string>();
+
+  for (const c of companiesRes.data || []) {
+    const display = c.official_name || c.name;
+    nameSet.set(display.toLowerCase(), display);
+  }
+
+  for (const a of aliasesRes.data || []) {
+    const company = a.companies as unknown as { name: string; official_name: string } | null;
     if (company) {
-      results.set(company.name, { name: company.name, official_name: company.official_name || company.name, status: company.status || 'verified' });
+      const display = company.official_name || company.name;
+      // alias를 키로, 실제 회사명을 값으로
+      nameSet.set(a.alias_name.toLowerCase(), display);
     }
   }
 
-  return Array.from(results.values()).slice(0, 10);
+  const names = [...new Set(nameSet.values())];
+  companyCache = { names, timestamp: Date.now() };
+  return names;
 }
 
-// 외부 검색 (공공데이터 - 국세청 사업자등록 API 대체로 simple search)
-async function searchExternal(q: string): Promise<string[]> {
-  // 한국 공공데이터 API 또는 무료 소스
-  // 현재는 빈 배열 반환 (추후 공공데이터 API 연동 가능)
-  // 예: data.go.kr 사업자등록정보 API
-  try {
-    // 무료 외부 소스가 없으면 graceful하게 빈 배열 반환
-    return [];
-  } catch {
-    return [];
+function fuzzyMatch(query: string, names: string[]): string[] {
+  const q = query.toLowerCase();
+  const exact: string[] = [];
+  const startsWith: string[] = [];
+  const contains: string[] = [];
+
+  for (const name of names) {
+    const lower = name.toLowerCase();
+    if (lower === q) { exact.push(name); continue; }
+    if (lower.startsWith(q)) { startsWith.push(name); continue; }
+    if (lower.includes(q)) { contains.push(name); continue; }
   }
+
+  return [...exact, ...startsWith, ...contains].slice(0, 10);
 }
 
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get('q')?.trim();
   if (!q || q.length < 1) {
-    return NextResponse.json({ internal: [], external: [], source: 'none' });
+    return NextResponse.json({ results: [], source: 'none' });
   }
 
-  // 1. 내부 DB 검색
-  const internal = await searchInternal(q);
-
-  if (internal.length > 0) {
-    return NextResponse.json({
-      results: internal.map((c) => c.official_name || c.name),
-      internal: internal.map((c) => ({ name: c.official_name || c.name, status: c.status })),
-      external: [],
-      source: 'internal',
-    });
-  }
-
-  // 2. 내부 결과 없으면 외부 검색
-  const external = await searchExternal(q);
+  const allNames = await getAllCompanyNames();
+  const results = fuzzyMatch(q, allNames);
 
   return NextResponse.json({
-    results: external,
-    internal: [],
-    external,
-    source: external.length > 0 ? 'external' : 'none',
+    results,
+    source: results.length > 0 ? 'internal' : 'none',
   });
 }
 
@@ -97,7 +83,6 @@ export async function POST(req: NextRequest) {
   const supabase = getServiceSupabase();
   const normalized = normalizeCompanyName(name);
 
-  // 중복 체크
   const { data: existing } = await supabase
     .from('companies')
     .select('id, name')
@@ -108,20 +93,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ id: existing.id, name: existing.name, status: 'existing' });
   }
 
-  // 새 회사 등록 (unverified)
   const { data, error } = await supabase
     .from('companies')
-    .insert({
-      name: normalized,
-      official_name: name.trim(),
-      status: 'unverified',
-    })
+    .insert({ name: normalized, official_name: name.trim(), status: 'unverified' })
     .select('id, name')
     .maybeSingle();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // 캐시 무효화
+  companyCache = null;
 
   return NextResponse.json({ id: data?.id, name: data?.name, status: 'created' });
 }

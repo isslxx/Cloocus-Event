@@ -33,8 +33,9 @@ export default function FormManagePage() {
   const [saving, setSaving] = useState(false);
 
   // 개인정보 동의 카테고리별
-  const [privacyPolicies, setPrivacyPolicies] = useState<{ id: string; category: string; content: string }[]>([]);
+  const [privacyPolicies, setPrivacyPolicies] = useState<{ id: string; category: string; content: string; title?: string }[]>([]);
   const [privacyTab, setPrivacyTab] = useState('MS');
+  const [privacyTitle, setPrivacyTitle] = useState('개인정보 수집 및 이용 동의');
   const [privacyText, setPrivacyText] = useState('');
   const [privacySaving, setPrivacySaving] = useState(false);
   const [privacySaved, setPrivacySaved] = useState(false);
@@ -54,7 +55,10 @@ export default function FormManagePage() {
       const policies = Array.isArray(privData) ? privData : [];
       setPrivacyPolicies(policies);
       const current = policies.find((p: { category: string }) => p.category === privacyTab);
-      if (current) setPrivacyText(current.content);
+      if (current) {
+        setPrivacyText(current.content);
+        setPrivacyTitle(current.title || '개인정보 수집 및 이용 동의');
+      }
     } catch { /* ignore */ } finally { setLoading(false); }
   }, [accessToken, privacyTab]);
 
@@ -170,6 +174,7 @@ export default function FormManagePage() {
                   setPrivacyTab(cat);
                   const policy = privacyPolicies.find((p) => p.category === cat);
                   setPrivacyText(policy?.content || '');
+                  setPrivacyTitle(policy?.title || '개인정보 수집 및 이용 동의');
                   setPrivacySaved(false);
                 }}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -183,6 +188,20 @@ export default function FormManagePage() {
             ))}
           </div>
 
+          <div className="field mb-4">
+            <label>동의 제목</label>
+            <input
+              type="text"
+              value={privacyTitle}
+              onChange={(e) => { setPrivacyTitle(e.target.value); setPrivacySaved(false); }}
+              placeholder="예: 개인정보 수집 및 이용 동의"
+              disabled={!isAdmin}
+            />
+          </div>
+
+          <div className="field">
+            <label>동의 내용</label>
+          </div>
           <textarea
             rows={14}
             value={privacyText}
@@ -201,7 +220,7 @@ export default function FormManagePage() {
                     await fetch('/api/admin/privacy-policies', {
                       method: 'PUT',
                       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-                      body: JSON.stringify({ id: existing.id, content: privacyText }),
+                      body: JSON.stringify({ id: existing.id, content: privacyText, title: privacyTitle }),
                     });
                   }
                   setPrivacySaving(false);

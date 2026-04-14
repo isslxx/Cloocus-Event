@@ -56,6 +56,7 @@ export default function Home() {
   // 동적 폼 옵션
   const [formOptions, setFormOptions] = useState<Record<string, string[]>>({});
   const [privacyContent, setPrivacyContent] = useState('');
+  const [privacyTitle, setPrivacyTitle] = useState('');
 
   // Step 2: 폼
   const [form, setForm] = useState(EMPTY_FORM);
@@ -283,6 +284,7 @@ export default function Home() {
                   const res = await fetch(`/api/privacy-policy?category=${encodeURIComponent(selectedEvent.privacy_category || '기타')}`);
                   const data = await res.json();
                   if (data.content) setPrivacyContent(data.content);
+                  if (data.title) setPrivacyTitle(data.title);
                 } catch { /* ignore */ }
                 setStep(2);
               }}
@@ -677,7 +679,7 @@ export default function Home() {
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-6 mt-6">
-            <h2 className="text-lg font-semibold border-b pb-3 mb-4">개인정보 수집 및 이용 동의</h2>
+            <h2 className="text-lg font-semibold border-b pb-3 mb-4">{privacyTitle || '개인정보 수집 및 이용 동의'}</h2>
             <details className="mb-4">
               <summary className="text-sm text-blue-600 cursor-pointer hover:underline">
                 약관 전문 보기

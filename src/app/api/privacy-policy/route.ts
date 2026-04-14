@@ -7,9 +7,9 @@ export async function GET(req: NextRequest) {
 
   const { data } = await supabase
     .from('privacy_policies')
-    .select('content')
+    .select('content, title')
     .eq('category', category)
     .maybeSingle();
 
-  return NextResponse.json({ content: data?.content || '' });
+  return NextResponse.json({ content: data?.content || '', title: data?.title || '개인정보 수집 및 이용 동의' });
 }
