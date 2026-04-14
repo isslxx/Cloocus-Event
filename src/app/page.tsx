@@ -449,22 +449,21 @@ export default function Home() {
       <main className="max-w-2xl mx-auto px-4 py-8">
         {/* 신청 행사 정보 */}
         {selectedEvent && (
-          <div className="mb-6 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl px-6 py-5 text-white shadow-lg">
-            <p className="text-xs font-medium opacity-80 mb-1">신청 행사</p>
-            <p className="text-xl font-bold">{selectedEvent.name}</p>
-            <div className="flex items-center gap-3 mt-2">
-              <span className="text-sm opacity-90">
+          <div className="mb-6 border-2 border-blue-500 bg-blue-50 rounded-xl px-5 py-4">
+            <p className="text-base font-semibold text-gray-900">{selectedEvent.name}</p>
+            <div className="flex items-center gap-3 mt-1.5">
+              <span className="text-sm text-gray-500">
                 {(() => { const d = new Date(selectedEvent.event_date); const day = ['일','월','화','수','목','금','토'][d.getDay()]; return `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${day})`; })()}
               </span>
               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                 selectedEvent.event_type === 'online'
-                  ? 'bg-white/20 text-white'
-                  : 'bg-white/20 text-white'
+                  ? 'bg-green-100 text-green-700'
+                  : 'bg-purple-100 text-purple-700'
               }`}>
                 {selectedEvent.event_type === 'online' ? 'Online' : 'Offline'}
               </span>
               {selectedEvent.capacity && (
-                <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-white/20 text-white">
+                <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700">
                   정원 {selectedEvent.capacity}명
                 </span>
               )}
