@@ -20,6 +20,12 @@ export default function UsersPage() {
 
   const [deleting, setDeleting] = useState<string | null>(null);
 
+  // 비밀번호 변경
+  const [pwUserId, setPwUserId] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [pwSaving, setPwSaving] = useState(false);
+  const [pwResult, setPwResult] = useState('');
+
   const fetchUsers = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/users', {
@@ -86,6 +92,26 @@ export default function UsersPage() {
     fetchUsers();
   };
 
+  const handlePasswordChange = async () => {
+    if (!pwUserId || !newPassword) return;
+    setPwSaving(true);
+    setPwResult('');
+    try {
+      const res = await fetch(`/api/admin/users/${pwUserId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ password: newPassword }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setPwResult('비밀번호가 변경되었습니다.');
+        setNewPassword('');
+      } else {
+        setPwResult(data.error || '변경 실패');
+      }
+    } catch { setPwResult('네트워크 오류'); } finally { setPwSaving(false); }
+  };
+
   const handleDelete = async (id: string) => {
     try {
       await fetch('/api/admin/users', {
@@ -122,7 +148,7 @@ export default function UsersPage() {
               <th className="px-4 py-3 text-left font-medium text-gray-600">이름</th>
               <th className="px-4 py-3 text-left font-medium text-gray-600">이메일</th>
               <th className="px-4 py-3 text-left font-medium text-gray-600">역할</th>
-              <th className="px-4 py-3 text-left font-medium text-gray-600 w-20">작업</th>
+              <th className="px-4 py-3 text-left font-medium text-gray-600 w-32">작업</th>
             </tr>
           </thead>
           <tbody>
@@ -146,12 +172,20 @@ export default function UsersPage() {
                   </select>
                 </td>
                 <td className="px-4 py-3">
-                  <button
-                    onClick={() => setDeleting(u.id)}
-                    className="text-xs px-2 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100"
-                  >
-                    삭제
-                  </button>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => { setPwUserId(u.id); setNewPassword(''); setPwResult(''); }}
+                      className="text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100"
+                    >
+                      암호
+                    </button>
+                    <button
+                      onClick={() => setDeleting(u.id)}
+                      className="text-xs px-2 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100"
+                    >
+                      삭제
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -227,6 +261,39 @@ export default function UsersPage() {
             <div className="flex gap-2">
               <button onClick={() => handleDelete(deleting)} className="btn-danger flex-1">삭제</button>
               <button onClick={() => setDeleting(null)} className="btn-secondary flex-1">취소</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 비밀번호 변경 모달 */}
+      {pwUserId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-xl w-full max-w-sm p-6">
+            <h2 className="text-lg font-bold mb-4">접속 암호 변경</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              {users.find((u) => u.id === pwUserId)?.display_name} ({users.find((u) => u.id === pwUserId)?.email})
+            </p>
+            <div className="field mb-4">
+              <label>새 비밀번호</label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="6자 이상 입력"
+                minLength={6}
+              />
+            </div>
+            {pwResult && (
+              <p className={`text-sm mb-4 ${pwResult.includes('변경') ? 'text-green-600' : 'text-red-600'}`}>
+                {pwResult}
+              </p>
+            )}
+            <div className="flex gap-2">
+              <button onClick={handlePasswordChange} disabled={pwSaving || newPassword.length < 6} className="btn-primary flex-1 disabled:opacity-40">
+                {pwSaving ? '변경 중...' : '변경'}
+              </button>
+              <button onClick={() => { setPwUserId(null); setPwResult(''); }} className="btn-secondary flex-1">닫기</button>
             </div>
           </div>
         </div>

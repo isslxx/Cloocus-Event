@@ -494,9 +494,9 @@ export default function Home() {
                   }}
                   onFocus={() => companySuggestions.length > 0 && setShowSuggestions(true)}
                   placeholder="회사명을 검색해주세요"
-                  className={errors.company_name ? 'error' : ''}
+                  className={`w-full ${errors.company_name ? 'error' : ''}`}
                   autoComplete="off"
-                  style={{ paddingLeft: 34 }}
+                  style={{ paddingLeft: 34, boxSizing: 'border-box' }}
                 />
                 {showSuggestions && form.company_name.length >= 1 && (
                   <ul className="absolute z-10 top-full left-0 right-0 bg-white border border-gray-200 rounded-lg mt-1 shadow-lg max-h-56 overflow-y-auto">

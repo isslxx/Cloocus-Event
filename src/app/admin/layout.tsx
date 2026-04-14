@@ -56,7 +56,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     checkAuth();
-  }, [checkAuth]);
+  }, [checkAuth, pathname]);
 
   const handleLogout = async () => {
     const supabase = getSupabase();
