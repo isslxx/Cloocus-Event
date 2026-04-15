@@ -2,7 +2,7 @@ export type Event = {
   id: string;
   name: string;
   event_date: string;
-  event_type: 'online' | 'offline';
+  event_type: 'online' | 'offline' | 'none';
   status: 'open' | 'closed';
   visible: boolean;
   capacity: number | null;

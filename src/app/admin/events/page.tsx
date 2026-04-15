@@ -15,7 +15,7 @@ export default function EventsPage() {
   const [isNew, setIsNew] = useState(false);
   const [formName, setFormName] = useState('');
   const [formDate, setFormDate] = useState('');
-  const [formType, setFormType] = useState<'online' | 'offline'>('offline');
+  const [formType, setFormType] = useState<'online' | 'offline' | 'none'>('offline');
   const [formStatus, setFormStatus] = useState<'open' | 'closed'>('open');
   const [formLocation, setFormLocation] = useState('');
   const [formTime, setFormTime] = useState('');
@@ -270,13 +270,17 @@ export default function EventsPage() {
                   {(event.category === '프로모션' ? '~' : '') + new Date(event.event_date).toLocaleDateString('ko-KR')}
                 </td>
                 <td className="px-4 py-3">
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                    event.event_type === 'online'
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-purple-100 text-purple-700'
-                  }`}>
-                    {event.event_type === 'online' ? 'Online' : 'Offline'}
-                  </span>
+                  {event.event_type === 'none' ? (
+                    <span className="text-xs text-gray-400">-</span>
+                  ) : (
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                      event.event_type === 'online'
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-purple-100 text-purple-700'
+                    }`}>
+                      {event.event_type === 'online' ? 'Online' : 'Offline'}
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-gray-600 text-sm">
                   {event.capacity ? `${event.capacity}명` : '-'}
@@ -365,47 +369,30 @@ export default function EventsPage() {
                 )}
               </div>
               {formCategory !== '프로모션' && (
-                <div className="field">
-                  <label>장소</label>
-                  <input type="text" value={formLocation} onChange={(e) => setFormLocation(e.target.value)} placeholder="예: 서울 강남구 역삼동 (선택)" />
-                </div>
+                <>
+                  <div className="field">
+                    <label>장소</label>
+                    <input type="text" value={formLocation} onChange={(e) => setFormLocation(e.target.value)} placeholder="예: 서울 강남구 역삼동 (선택)" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="field">
+                      <label>시간</label>
+                      <input type="text" value={formTime} onChange={(e) => setFormTime(e.target.value)} placeholder="예: 14:00 ~ 17:00" />
+                    </div>
+                    <div className="field">
+                      <label>정원</label>
+                      <input type="number" value={formCapacity} onChange={(e) => setFormCapacity(e.target.value)} placeholder="예: 30 (미입력 시 제한없음)" min="1" />
+                    </div>
+                  </div>
+                </>
               )}
-              {formCategory === '프로모션' && (
-                <div className="field">
-                  <label>장소 <span className="text-xs text-gray-400">(선택)</span></label>
-                  <input type="text" value={formLocation} onChange={(e) => setFormLocation(e.target.value)} placeholder="미입력 시 생략" />
-                </div>
-              )}
-              <div className="grid grid-cols-2 gap-4">
-                {formCategory !== '프로모션' ? (
-                  <div className="field">
-                    <label>시간</label>
-                    <input type="text" value={formTime} onChange={(e) => setFormTime(e.target.value)} placeholder="예: 14:00 ~ 17:00" />
-                  </div>
-                ) : (
-                  <div className="field">
-                    <label>시간 <span className="text-xs text-gray-400">(선택)</span></label>
-                    <input type="text" value={formTime} onChange={(e) => setFormTime(e.target.value)} placeholder="미입력 시 생략" />
-                  </div>
-                )}
-                {formCategory !== '프로모션' ? (
-                  <div className="field">
-                    <label>정원</label>
-                    <input type="number" value={formCapacity} onChange={(e) => setFormCapacity(e.target.value)} placeholder="예: 30 (미입력 시 제한없음)" min="1" />
-                  </div>
-                ) : (
-                  <div className="field">
-                    <label>정원 <span className="text-xs text-gray-400">(선택)</span></label>
-                    <input type="number" value={formCapacity} onChange={(e) => setFormCapacity(e.target.value)} placeholder="미입력 시 제한없음" min="1" />
-                  </div>
-                )}
-              </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="field">
-                  <label>유형 {formCategory === '프로모션' && <span className="text-xs text-gray-400">(선택)</span>}</label>
+                  <label>유형</label>
                   <select value={formType} onChange={(e) => setFormType(e.target.value as 'online' | 'offline')}>
                     <option value="offline">Offline</option>
                     <option value="online">Online</option>
+                    <option value="none">미노출</option>
                   </select>
                 </div>
                 <div className="field">
