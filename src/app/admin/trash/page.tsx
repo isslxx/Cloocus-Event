@@ -11,8 +11,6 @@ export default function TrashPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showBulkDelete, setShowBulkDelete] = useState(false);
   const [showBulkRestore, setShowBulkRestore] = useState(false);
-  const [showAllDelete, setShowAllDelete] = useState(false);
-  const [showAllRestore, setShowAllRestore] = useState(false);
   const [processing, setProcessing] = useState(false);
 
   const canDelete = admin?.role === 'admin';
@@ -76,8 +74,6 @@ export default function TrashPage() {
     setSelected(new Set());
     setShowBulkDelete(false);
     setShowBulkRestore(false);
-    setShowAllDelete(false);
-    setShowAllRestore(false);
     fetchTrash();
   };
 
@@ -110,23 +106,19 @@ export default function TrashPage() {
           <p className="text-sm text-gray-400 mt-1">삭제된 등록 정보는 3일간 보관 후 자동 삭제됩니다.</p>
         </div>
         {records.length > 0 && (
-          <div className="flex gap-2 flex-wrap">
-            {selected.size > 0 && (
-              <button onClick={() => setShowBulkRestore(true)} className="text-sm px-3 py-2 rounded-lg font-medium border border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100">
-                선택 복구 ({selected.size})
-              </button>
-            )}
-            {selected.size > 0 && canDelete && (
-              <button onClick={() => setShowBulkDelete(true)} className="btn-danger text-sm">
-                선택 완전삭제 ({selected.size})
-              </button>
-            )}
-            <button onClick={() => setShowAllRestore(true)} className="btn-secondary text-sm">
-              전체 복구
+          <div className="flex gap-2">
+            <button
+              onClick={() => { if (selected.size === 0) { setSelected(new Set(records.map((r) => r.id))); } setShowBulkRestore(true); }}
+              className="btn-secondary text-sm"
+            >
+              복구{selected.size > 0 ? ` (${selected.size})` : ''}
             </button>
             {canDelete && (
-              <button onClick={() => setShowAllDelete(true)} className="btn-danger text-sm">
-                전체 완전삭제
+              <button
+                onClick={() => { if (selected.size === 0) { setSelected(new Set(records.map((r) => r.id))); } setShowBulkDelete(true); }}
+                className="btn-danger text-sm"
+              >
+                완전삭제{selected.size > 0 ? ` (${selected.size})` : ''}
               </button>
             )}
           </div>
@@ -229,38 +221,6 @@ export default function TrashPage() {
         </div>
       )}
 
-      {/* 전체 복구 확인 */}
-      {showAllRestore && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-xl w-full max-w-sm p-6 text-center">
-            <h2 className="text-lg font-bold mb-2">전체 복구</h2>
-            <p className="text-gray-500 text-sm mb-6">휴지통의 모든 항목({records.length}건)을 복구하시겠습니까?</p>
-            <div className="flex gap-2">
-              <button onClick={() => handleBulkAction('restore', records.map((r) => r.id))} disabled={processing} className="btn-primary flex-1">
-                {processing ? '처리 중...' : '전체 복구'}
-              </button>
-              <button onClick={() => setShowAllRestore(false)} className="btn-secondary flex-1">취소</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 전체 완전삭제 확인 */}
-      {showAllDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-xl w-full max-w-sm p-6 text-center">
-            <h2 className="text-lg font-bold mb-2">전체 완전삭제</h2>
-            <p className="text-gray-500 text-sm mb-2">휴지통의 모든 항목({records.length}건)을 완전히 삭제하시겠습니까?</p>
-            <p className="text-xs text-red-500 mb-6">이 작업은 되돌릴 수 없습니다.</p>
-            <div className="flex gap-2">
-              <button onClick={() => handleBulkAction('delete', records.map((r) => r.id))} disabled={processing} className="btn-danger flex-1">
-                {processing ? '처리 중...' : '전체 완전삭제'}
-              </button>
-              <button onClick={() => setShowAllDelete(false)} className="btn-secondary flex-1">취소</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
