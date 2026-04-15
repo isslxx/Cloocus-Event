@@ -188,11 +188,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <p className="text-xs text-gray-500 mt-1">이벤트 관리 시스템</p>
           </div>
 
-          <div className="flex items-center justify-between px-4 pt-3 pb-1">
-            <span className="text-[10px] text-gray-400 uppercase tracking-wider">메뉴</span>
+          <div className="flex items-center justify-end px-4 pt-3 pb-1">
             <button
               onClick={() => { if (editMode) setEditMode(false); else setEditMode(true); setEditingLabel(null); }}
-              className={`text-[10px] px-1.5 py-0.5 rounded ${editMode ? 'bg-blue-100 text-blue-700 font-bold' : 'text-gray-400 hover:text-gray-600'}`}
+              className={`text-xs px-2 py-0.5 rounded ${editMode ? 'bg-blue-100 text-blue-700 font-bold' : 'text-gray-400 hover:text-gray-600'}`}
             >
               {editMode ? 'Done' : 'Edit'}
             </button>
