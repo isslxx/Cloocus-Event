@@ -41,6 +41,11 @@ export default function RegistrationsPage() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [showBulkDelete, setShowBulkDelete] = useState(false);
 
+  // 일괄 등록 상태 변경
+  const [showBulkStatus, setShowBulkStatus] = useState(false);
+  const [bulkStatus, setBulkStatus] = useState<'confirmed' | 'rejected'>('confirmed');
+  const [bulkStatusApplying, setBulkStatusApplying] = useState(false);
+
   // 이메일 발송 모달
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailType, setEmailType] = useState<'confirmed' | 'rejected'>('confirmed');
@@ -246,6 +251,14 @@ export default function RegistrationsPage() {
               className="btn-danger text-sm"
             >
               선택 삭제 ({selected.size})
+            </button>
+          )}
+          {selected.size > 0 && canEditRecord && (
+            <button
+              onClick={() => setShowBulkStatus(true)}
+              className="text-sm px-3 py-2 rounded-lg font-medium border border-green-300 text-green-700 bg-green-50 hover:bg-green-100"
+            >
+              등록 상태 변경 ({selected.size})
             </button>
           )}
           {selected.size > 0 && canEditRecord && (
@@ -537,6 +550,48 @@ export default function RegistrationsPage() {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+      {/* 일괄 등록 상태 변경 모달 */}
+      {showBulkStatus && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-xl w-full max-w-sm p-6">
+            <h2 className="text-lg font-bold mb-4">등록 상태 일괄 변경</h2>
+            <p className="text-sm text-gray-500 mb-4">선택한 <strong>{selected.size}건</strong>의 등록 상태를 변경합니다.</p>
+            <div className="field mb-4">
+              <label>변경할 상태</label>
+              <select value={bulkStatus} onChange={(e) => setBulkStatus(e.target.value as 'confirmed' | 'rejected')}>
+                <option value="confirmed">등록 확정</option>
+                <option value="rejected">등록 불가</option>
+              </select>
+            </div>
+            <div className="flex gap-2">
+              <button
+                disabled={bulkStatusApplying}
+                onClick={async () => {
+                  setBulkStatusApplying(true);
+                  const ids = Array.from(selected);
+                  await Promise.all(
+                    ids.map((id) =>
+                      fetch(`/api/admin/registrations/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+                        body: JSON.stringify({ registration_status: bulkStatus }),
+                      })
+                    )
+                  );
+                  setBulkStatusApplying(false);
+                  setShowBulkStatus(false);
+                  setSelected(new Set());
+                  fetchRecords();
+                }}
+                className="btn-primary flex-1"
+              >
+                {bulkStatusApplying ? '적용 중...' : '적용'}
+              </button>
+              <button onClick={() => setShowBulkStatus(false)} className="btn-secondary flex-1">취소</button>
+            </div>
           </div>
         </div>
       )}

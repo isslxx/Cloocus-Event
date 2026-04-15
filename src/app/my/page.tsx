@@ -310,7 +310,9 @@ export default function MyDashboard() {
   if (!registration) return null;
 
   const status = statusLabel(registration.registration_status || 'pending');
-  const qrData = JSON.stringify({ id: registration.id, name: registration.name, email: registration.email, event: registration.event_name });
+  const verifyUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/verify/${registration.id}`
+    : `/verify/${registration.id}`;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -372,18 +374,22 @@ export default function MyDashboard() {
 
         {/* QR 코드 (등록 확정 + 오프라인 카테고리) */}
         {showQr && (
-          <div className="bg-white rounded-xl border border-gray-200 p-5 mb-4 text-center">
-            <h2 className="text-sm font-medium text-gray-500 mb-3">참석자 QR코드</h2>
-            <p className="text-xs text-gray-400 mb-3">이벤트 현장에서 이 QR코드를 제시해주세요.</p>
+          <div className="bg-white rounded-xl border-2 border-green-200 p-6 mb-4 text-center">
+            <div className="bg-green-50 rounded-lg p-3 mb-4">
+              <p className="text-green-700 font-bold text-lg">등록이 확정되었습니다</p>
+              <p className="text-green-600 text-sm mt-1">{registration.event_name}</p>
+            </div>
+            <p className="text-xs text-gray-500 mb-3">이벤트 현장에서 아래 QR코드를 제시해주세요.</p>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData)}`}
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(verifyUrl)}`}
               alt="QR Code"
-              className="mx-auto"
+              className="mx-auto border border-gray-100 rounded-lg p-2"
               width={200}
               height={200}
             />
-            <p className="text-xs text-gray-400 mt-2">{registration.name} | {registration.email}</p>
+            <p className="text-xs text-gray-400 mt-3">{registration.name} | {registration.company_name}</p>
+            <p className="text-[10px] text-gray-300 mt-1">QR 스캔 시 참석자 검증 페이지로 연결됩니다</p>
           </div>
         )}
 
@@ -509,25 +515,16 @@ export default function MyDashboard() {
         {/* 버튼 그룹 */}
         {!editMode && (
           <div className="flex gap-3 mb-4">
-            {editable && (
-              <button
-                onClick={startEdit}
-                className="btn-primary flex-1 text-sm"
-              >
-                수정하기
-              </button>
-            )}
-            <a
-              href="/"
-              className="btn-secondary flex-1 text-center text-sm"
-            >
+            <a href="/" className="btn-primary flex-1 text-center">
               확인 완료
             </a>
             {editable && (
-              <button
-                onClick={() => setShowCancelConfirm(true)}
-                className="btn-danger flex-1 text-sm"
-              >
+              <button onClick={startEdit} className="btn-secondary flex-1">
+                수정하기
+              </button>
+            )}
+            {editable && (
+              <button onClick={() => setShowCancelConfirm(true)} className="flex-1 py-2.5 rounded-lg text-sm font-medium border border-red-200 text-red-500 hover:bg-red-50 transition-colors">
                 등록 취소
               </button>
             )}
