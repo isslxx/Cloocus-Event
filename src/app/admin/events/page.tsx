@@ -267,7 +267,7 @@ export default function EventsPage() {
                   </span>
                 </td>
                 <td className="px-4 py-3 text-gray-500">
-                  {new Date(event.event_date).toLocaleDateString('ko-KR')}
+                  {(event.category === '프로모션' ? '~' : '') + new Date(event.event_date).toLocaleDateString('ko-KR')}
                 </td>
                 <td className="px-4 py-3">
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
@@ -291,7 +291,7 @@ export default function EventsPage() {
                     } ${isAdmin ? 'cursor-pointer hover:opacity-80' : ''}`}
                     disabled={!isAdmin}
                   >
-                    {event.status === 'open' ? '모집중' : '마감'}
+                    {event.status === 'open' ? (event.category === '프로모션' ? '진행중' : '모집중') : (event.category === '프로모션' ? '종료' : '마감')}
                   </button>
                 </td>
                 <td className="px-4 py-3">
@@ -358,22 +358,47 @@ export default function EventsPage() {
                 </select>
               </div>
               <div className="field">
-                <label>날짜</label>
+                <label>{formCategory === '프로모션' ? '기한' : '날짜'}</label>
                 <input type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} />
+                {formCategory === '프로모션' && formDate && (
+                  <p className="text-xs text-gray-400 mt-1">{new Date(formDate).toLocaleDateString('ko-KR')}까지 진행</p>
+                )}
               </div>
-              <div className="field">
-                <label>장소</label>
-                <input type="text" value={formLocation} onChange={(e) => setFormLocation(e.target.value)} placeholder="예: 서울 강남구 역삼동 (선택)" />
-              </div>
+              {formCategory !== '프로모션' && (
+                <div className="field">
+                  <label>장소</label>
+                  <input type="text" value={formLocation} onChange={(e) => setFormLocation(e.target.value)} placeholder="예: 서울 강남구 역삼동 (선택)" />
+                </div>
+              )}
+              {formCategory === '프로모션' && (
+                <div className="field">
+                  <label>장소 <span className="text-xs text-gray-400">(선택)</span></label>
+                  <input type="text" value={formLocation} onChange={(e) => setFormLocation(e.target.value)} placeholder="미입력 시 생략" />
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
-                <div className="field">
-                  <label>시간</label>
-                  <input type="text" value={formTime} onChange={(e) => setFormTime(e.target.value)} placeholder="예: 14:00 ~ 17:00" />
-                </div>
-                <div className="field">
-                  <label>정원</label>
-                  <input type="number" value={formCapacity} onChange={(e) => setFormCapacity(e.target.value)} placeholder="예: 30 (미입력 시 제한없음)" min="1" />
-                </div>
+                {formCategory !== '프로모션' ? (
+                  <div className="field">
+                    <label>시간</label>
+                    <input type="text" value={formTime} onChange={(e) => setFormTime(e.target.value)} placeholder="예: 14:00 ~ 17:00" />
+                  </div>
+                ) : (
+                  <div className="field">
+                    <label>시간 <span className="text-xs text-gray-400">(선택)</span></label>
+                    <input type="text" value={formTime} onChange={(e) => setFormTime(e.target.value)} placeholder="미입력 시 생략" />
+                  </div>
+                )}
+                {formCategory !== '프로모션' ? (
+                  <div className="field">
+                    <label>정원</label>
+                    <input type="number" value={formCapacity} onChange={(e) => setFormCapacity(e.target.value)} placeholder="예: 30 (미입력 시 제한없음)" min="1" />
+                  </div>
+                ) : (
+                  <div className="field">
+                    <label>정원 <span className="text-xs text-gray-400">(선택)</span></label>
+                    <input type="number" value={formCapacity} onChange={(e) => setFormCapacity(e.target.value)} placeholder="미입력 시 제한없음" min="1" />
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="field">
@@ -386,8 +411,8 @@ export default function EventsPage() {
                 <div className="field">
                   <label>상태</label>
                   <select value={formStatus} onChange={(e) => setFormStatus(e.target.value as 'open' | 'closed')}>
-                    <option value="open">모집중</option>
-                    <option value="closed">마감</option>
+                    <option value="open">{formCategory === '프로모션' ? '진행중' : '모집중'}</option>
+                    <option value="closed">{formCategory === '프로모션' ? '종료' : '마감'}</option>
                   </select>
                 </div>
                 <div className="field">
