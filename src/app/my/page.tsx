@@ -359,15 +359,31 @@ export default function MyDashboard() {
 
         {/* 등록 상태 */}
         {showStatus && (
-          <div className="bg-white rounded-xl border border-gray-200 p-5 mb-4">
-            <h2 className="text-sm font-medium text-gray-500 mb-2">등록 여부</h2>
-            <div className="flex items-center gap-3">
-              <span className={`text-lg px-4 py-2 rounded-lg font-bold ${status.bg}`}>
-                {status.icon} {status.text}
-              </span>
+          <div className={`bg-white rounded-xl border p-5 mb-4 ${registration.registration_status === 'rejected' ? 'border-red-200' : 'border-gray-200'}`}>
+            <h2 className="text-sm font-medium text-gray-500 mb-3">등록 여부</h2>
+            <div className={`w-full text-center py-3 rounded-lg font-bold text-base ${status.bg}`}>
+              {status.icon} {status.text}
             </div>
             {registration.registration_status === 'pending' && (
-              <p className="text-xs text-gray-400 mt-2">관리자가 등록 상태를 확정하면 업데이트됩니다.</p>
+              <p className="text-xs text-gray-400 mt-3 text-center">관리자가 등록 상태를 확정하면 업데이트됩니다.</p>
+            )}
+            {registration.registration_status === 'rejected' && (
+              <div className="mt-4 p-4 bg-gray-50 rounded-lg text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">
+{`안녕하세요, 클루커스입니다.
+클루커스 이벤트에 관심 가지고 신청해 주셔서 진심으로 감사드립니다.
+
+준비된 환경 범위 내에서 참석 인원이 마감됨에 따라
+귀하의 본 이벤트 등록이 어려운 점 너른 양해 부탁드립니다.
+
+금번 이벤트에는 함께 모시지 못하지만,
+궁금하신 사항이나 기술 도입과 관련해 논의가 필요하시면 언제든지 편히 문의해 주세요.
+
+귀사의 비즈니스 환경에 최적화된 방향으로 상세히 안내 드리겠습니다.
+
+감사합니다.
+클루커스 드림`}
+                <p className="mt-3 text-gray-500 text-xs">문의사항 | 📧 marketing@cloocus.com</p>
+              </div>
             )}
           </div>
         )}
@@ -515,16 +531,16 @@ export default function MyDashboard() {
         {/* 버튼 그룹 */}
         {!editMode && (
           <div className="flex gap-3 mb-4">
-            <a href="/" className="btn-primary flex-1 text-center" style={{ padding: '12px 0' }}>
+            <a href="/" className="btn-primary flex-1 text-center" style={{ padding: '12px 0', fontSize: 15 }}>
               확인 완료
             </a>
             {editable && (
-              <button onClick={startEdit} className="btn-secondary flex-1" style={{ padding: '12px 0', fontSize: 14 }}>
+              <button onClick={startEdit} className="btn-secondary flex-1" style={{ padding: '12px 0', fontSize: 15, fontWeight: 600 }}>
                 수정하기
               </button>
             )}
             {editable && (
-              <button onClick={() => setShowCancelConfirm(true)} className="btn-danger flex-1" style={{ padding: '12px 0', fontSize: 14 }}>
+              <button onClick={() => setShowCancelConfirm(true)} className="btn-danger flex-1" style={{ padding: '12px 0', fontSize: 15, fontWeight: 600 }}>
                 등록 취소
               </button>
             )}
