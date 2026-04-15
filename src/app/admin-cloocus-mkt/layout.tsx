@@ -104,7 +104,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // 로그인 페이지는 레이아웃 무시
   const isLoginPage = pathname === '/admin-cloocus-mkt/login';
 
+  const authChecked = useRef(false);
+
   const checkAuth = useCallback(async () => {
+    // 이미 인증 완료된 상태면 스킵
+    if (authChecked.current && admin && accessToken) {
+      setLoading(false);
+      return;
+    }
+
     const supabase = getSupabase();
     const { data: { session } } = await supabase.auth.getSession();
 
@@ -115,6 +123,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
 
     setAccessToken(session.access_token);
+
+    // 이미 admin 정보가 있고 같은 유저면 DB 재조회 스킵
+    if (admin && admin.id === session.user.id) {
+      authChecked.current = true;
+      setLoading(false);
+      return;
+    }
 
     const { data } = await supabase
       .from('admin_users')
@@ -130,12 +145,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
 
     setAdmin(data as AdminUser);
+    authChecked.current = true;
     setLoading(false);
-  }, [isLoginPage, router]);
+  }, [isLoginPage, router, admin, accessToken]);
 
   useEffect(() => {
     checkAuth();
-  }, [checkAuth, pathname]);
+  }, [checkAuth]);
 
   const handleLogout = async () => {
     const supabase = getSupabase();

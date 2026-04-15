@@ -62,13 +62,13 @@ export default function TrashPage() {
         })
       ));
     } else {
-      for (const id of ids) {
-        await fetch('/api/admin/registrations', {
+      await Promise.all(ids.map((id) =>
+        fetch('/api/admin/registrations', {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
           body: JSON.stringify({ id, permanent: true }),
-        });
-      }
+        }).catch(() => {})
+      ));
     }
     setProcessing(false);
     setSelected(new Set());

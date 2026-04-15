@@ -6,7 +6,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
 } from 'recharts';
-import type { Registration, Event } from '@/lib/types';
+import type { Event } from '@/lib/types';
 
 const COLORS = ['#2563eb', '#7c3aed', '#059669', '#d97706', '#dc2626', '#0891b2', '#be185d', '#65a30d', '#c026d3', '#ea580c', '#0369a1', '#4f46e5', '#84cc16'];
 
@@ -21,56 +21,8 @@ type Metrics = {
   byEvent: { name: string; value: number }[];
 };
 
-function computeMetrics(records: Registration[], events: Event[]): Metrics {
-  const eventMap = new Map(events.map((e) => [e.id, e.name]));
-  const today = new Date().toISOString().slice(0, 10);
-  const todayCount = records.filter((r) => r.created_at.slice(0, 10) === today).length;
-
-  const dayMap: Record<string, number> = {};
-  records.forEach((r) => {
-    const d = r.created_at.slice(0, 10);
-    dayMap[d] = (dayMap[d] || 0) + 1;
-  });
-  const byDay = Object.entries(dayMap)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([date, count]) => ({ date: date.slice(5), count }));
-
-  const indMap: Record<string, number> = {};
-  records.forEach((r) => { indMap[r.industry] = (indMap[r.industry] || 0) + 1; });
-  const byIndustry = Object.entries(indMap)
-    .sort(([, a], [, b]) => b - a)
-    .map(([name, value]) => ({ name, value }));
-
-  const srcMap: Record<string, number> = {};
-  records.forEach((r) => { srcMap[r.referral_source] = (srcMap[r.referral_source] || 0) + 1; });
-  const bySource = Object.entries(srcMap)
-    .sort(([, a], [, b]) => b - a)
-    .map(([name, value]) => ({ name, value }));
-
-  const evtMap: Record<string, number> = {};
-  records.forEach((r) => {
-    const name = r.event_id ? (eventMap.get(r.event_id) || '기타') : '미지정';
-    evtMap[name] = (evtMap[name] || 0) + 1;
-  });
-  const byEvent = Object.entries(evtMap)
-    .sort(([, a], [, b]) => b - a)
-    .map(([name, value]) => ({ name, value }));
-
-  return {
-    total: records.length,
-    today: todayCount,
-    topIndustry: byIndustry[0]?.name || '-',
-    topSource: bySource[0]?.name || '-',
-    byDay,
-    byIndustry,
-    bySource,
-    byEvent,
-  };
-}
-
 export default function AdminDashboard() {
   const { accessToken } = useAdmin();
-  const [allRecords, setAllRecords] = useState<Registration[]>([]);
   const [allEvents, setAllEvents] = useState<Event[]>([]);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -279,46 +231,32 @@ export default function AdminDashboard() {
     }
   };
 
-  const applyFilter = useCallback((records: Registration[], events: Event[], f: string) => {
-    const eventMap = new Map(events.map((e) => [e.id, e]));
-    let filtered = records;
-    if (f === 'online') {
-      filtered = records.filter((r) => r.event_id && eventMap.get(r.event_id)?.event_type === 'online');
-    } else if (f === 'offline') {
-      filtered = records.filter((r) => r.event_id && eventMap.get(r.event_id)?.event_type === 'offline');
-    } else if (f !== 'all') {
-      filtered = records.filter((r) => r.event_id === f);
-    }
-    setMetrics(computeMetrics(filtered, events));
-  }, []);
-
-  const fetchData = useCallback(async () => {
+  const fetchDashboard = useCallback(async (f: string) => {
     try {
-      const [regRes, evtRes] = await Promise.all([
-        fetch('/api/admin/registrations?limit=10000', { headers: { Authorization: `Bearer ${accessToken}` } }),
-        fetch('/api/admin/events', { headers: { Authorization: `Bearer ${accessToken}` } }),
+      const [dashRes, evtRes] = await Promise.all([
+        fetch(`/api/admin/dashboard?filter=${encodeURIComponent(f)}`, { headers: { Authorization: `Bearer ${accessToken}` } }),
+        allEvents.length > 0 ? Promise.resolve(null) : fetch('/api/admin/events', { headers: { Authorization: `Bearer ${accessToken}` } }),
       ]);
-      const { data } = await regRes.json();
-      const evtData = await evtRes.json();
-      const records = data || [];
-      const events = Array.isArray(evtData) ? evtData : [];
-      setAllRecords(records);
-      setAllEvents(events);
-      applyFilter(records, events, 'all');
+      const dashData = await dashRes.json();
+      setMetrics(dashData);
+      if (evtRes) {
+        const evtData = await evtRes.json();
+        setAllEvents(Array.isArray(evtData) ? evtData : []);
+      }
     } catch {
       // ignore
     } finally {
       setLoading(false);
     }
-  }, [accessToken, applyFilter]);
+  }, [accessToken, allEvents.length]);
 
   useEffect(() => {
-    if (accessToken) fetchData();
-  }, [accessToken, fetchData]);
+    if (accessToken) fetchDashboard('all');
+  }, [accessToken, fetchDashboard]);
 
   const handleFilterChange = (f: string) => {
     setFilter(f);
-    applyFilter(allRecords, allEvents, f);
+    fetchDashboard(f);
   };
 
   if (loading) {

@@ -68,7 +68,11 @@ export default function RegistrationsPage() {
   }, [accessToken]);
 
   const initialLoad = useRef(true);
+  const abortRef = useRef<AbortController | null>(null);
   const fetchRecords = useCallback(async () => {
+    if (abortRef.current) abortRef.current.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     if (initialLoad.current) setLoading(true);
     try {
       const params = new URLSearchParams({
@@ -87,6 +91,7 @@ export default function RegistrationsPage() {
 
       const res = await fetch(`/api/admin/registrations?${params}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
+        signal: controller.signal,
       });
       const data = await res.json();
       setRecords(data.data || []);
@@ -158,15 +163,13 @@ export default function RegistrationsPage() {
   const handleBulkDelete = async () => {
     setShowBulkDelete(false);
     const ids = Array.from(selected);
-    for (const id of ids) {
-      try {
-        await fetch('/api/admin/registrations', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-          body: JSON.stringify({ id }),
-        });
-      } catch { /* ignore */ }
-    }
+    await Promise.all(ids.map((id) =>
+      fetch('/api/admin/registrations', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ id }),
+      }).catch(() => {})
+    ));
     setSelected(new Set());
     fetchRecords();
   };
