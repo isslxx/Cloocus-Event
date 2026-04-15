@@ -83,8 +83,8 @@ export default function TrashPage() {
                     <td className="px-4 py-3 font-medium">{r.name}</td>
                     <td className="px-4 py-3">{r.company_name}</td>
                     <td className="px-4 py-3 text-gray-500">{r.email}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{new Date(r.updated_at).toLocaleDateString('ko-KR')}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{new Date(r.updated_at).toLocaleDateString('ko-KR')}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${daysLeft <= 1 ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700'}`}>
                         {daysLeft}일 남음
                       </span>
