@@ -42,7 +42,7 @@ export default function AdminLoginPage() {
       }
     }
 
-    router.push('/admin');
+    router.push('/admin-cloocus-mkt');
   };
 
   return (

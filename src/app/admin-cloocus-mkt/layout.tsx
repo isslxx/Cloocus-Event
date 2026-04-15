@@ -17,12 +17,12 @@ export const useAdmin = () => useContext(AdminContext);
 type NavItem = { href: string; label: string; icon: string };
 
 const DEFAULT_NAV: NavItem[] = [
-  { href: '/admin', label: '대시보드', icon: '📊' },
-  { href: '/admin/registrations', label: '등록 리스트', icon: '📋' },
-  { href: '/admin/form', label: '등록 페이지 관리', icon: '📝' },
-  { href: '/admin/events', label: '이벤트 관리', icon: '📅' },
-  { href: '/admin/emails', label: '이메일 발송', icon: '✉️' },
-  { href: '/admin/faqs', label: 'FAQ 관리', icon: '❓' },
+  { href: '/admin-cloocus-mkt', label: '대시보드', icon: '📊' },
+  { href: '/admin-cloocus-mkt/registrations', label: '등록 리스트', icon: '📋' },
+  { href: '/admin-cloocus-mkt/form', label: '등록 페이지 관리', icon: '📝' },
+  { href: '/admin-cloocus-mkt/events', label: '이벤트 관리', icon: '📅' },
+  { href: '/admin-cloocus-mkt/emails', label: '이메일 발송', icon: '✉️' },
+  { href: '/admin-cloocus-mkt/faqs', label: 'FAQ 관리', icon: '❓' },
 ];
 
 function loadNavOrder(): NavItem[] {
@@ -102,14 +102,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   };
 
   // 로그인 페이지는 레이아웃 무시
-  const isLoginPage = pathname === '/admin/login';
+  const isLoginPage = pathname === '/admin-cloocus-mkt/login';
 
   const checkAuth = useCallback(async () => {
     const supabase = getSupabase();
     const { data: { session } } = await supabase.auth.getSession();
 
     if (!session) {
-      if (!isLoginPage) router.push('/admin/login');
+      if (!isLoginPage) router.push('/admin-cloocus-mkt/login');
       setLoading(false);
       return;
     }
@@ -124,7 +124,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     if (!data) {
       await supabase.auth.signOut();
-      if (!isLoginPage) router.push('/admin/login');
+      if (!isLoginPage) router.push('/admin-cloocus-mkt/login');
       setLoading(false);
       return;
     }
@@ -140,7 +140,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const handleLogout = async () => {
     const supabase = getSupabase();
     await supabase.auth.signOut();
-    router.push('/admin/login');
+    router.push('/admin-cloocus-mkt/login');
   };
 
   if (isLoginPage) return <>{children}</>;
@@ -157,10 +157,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const allNavItems = [
     ...navItems,
-    ...(admin.role === 'admin' ? [{ href: '/admin/users', label: '사용자 관리', icon: '👤' }] : []),
+    ...(admin.role === 'admin' ? [{ href: '/admin-cloocus-mkt/users', label: '사용자 관리', icon: '👤' }] : []),
   ];
 
-  const bottomNavItem = { href: '/admin/trash', label: '휴지통', icon: '🗑️' };
+  const bottomNavItem = { href: '/admin-cloocus-mkt/trash', label: '휴지통', icon: '🗑️' };
 
   const roleBadge: Record<string, string> = {
     admin: 'bg-red-100 text-red-700',
@@ -199,7 +199,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
           <nav className="px-3 pb-3 space-y-1">
             {allNavItems.map((item, index) => {
-              const isAdminOnly = item.href === '/admin/users';
+              const isAdminOnly = item.href === '/admin-cloocus-mkt/users';
               const isDraggable = editMode && !isAdminOnly;
 
               if (editMode && editingLabel === item.href) {
