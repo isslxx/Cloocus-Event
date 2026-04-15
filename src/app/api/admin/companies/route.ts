@@ -2,20 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { normalizeCompanyName } from '@/lib/company-normalize';
 import { getAdminFromToken } from '@/lib/supabase-auth';
+import dartCompanies from '@/data/dart-companies.json';
 
 function getServiceSupabase() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 }
 
-const DART_API_KEY = process.env.COMPANY_API_KEY || 'bee8746f34f2e3e1429a6c29070de77aad56cab9';
-
 // 내부 DB 캐시 (5분 TTL)
 let companyCache: { names: string[]; timestamp: number } | null = null;
 const CACHE_TTL = 5 * 60 * 1000;
 
-// DART 기업 목록 캐시 (1시간 TTL - 11만건 메모리 보관)
-let dartCache: { names: string[]; timestamp: number } | null = null;
-const DART_CACHE_TTL = 60 * 60 * 1000;
+// DART 데이터: 정적 JSON에서 로드 (서버 시작 시 메모리 적재, 네트워크 호출 없음)
+const dartNames: string[] = dartCompanies as string[];
 
 function stripCompanyPrefix(name: string): string {
   return name
@@ -61,84 +59,6 @@ async function getAllCompanyNames(): Promise<string[]> {
   return names;
 }
 
-// DART 전체 기업코드 XML에서 회사명 목록 로드
-async function getDartCompanyNames(): Promise<string[]> {
-  if (dartCache && Date.now() - dartCache.timestamp < DART_CACHE_TTL) {
-    return dartCache.names;
-  }
-
-  try {
-    const res = await fetch(
-      `https://opendart.fss.or.kr/api/corpCode.xml?crtfc_key=${DART_API_KEY}`,
-      { signal: AbortSignal.timeout(15000) }
-    );
-    if (!res.ok) return dartCache?.names || [];
-
-    const buffer = await res.arrayBuffer();
-
-    // ZIP 해제 - corpCode.xml 추출
-    const zipData = new Uint8Array(buffer);
-    const names = parseCorpNamesFromZip(zipData);
-
-    dartCache = { names, timestamp: Date.now() };
-    return names;
-  } catch {
-    return dartCache?.names || [];
-  }
-}
-
-// 간이 ZIP 파서 (단일 파일 ZIP 전용)
-function parseCorpNamesFromZip(zip: Uint8Array): string[] {
-  // ZIP local file header: 50 4B 03 04
-  // Find compressed data and use DecompressionStream
-  const names: string[] = [];
-
-  try {
-    // Local file header 파싱
-    const view = new DataView(zip.buffer);
-    if (view.getUint32(0, true) !== 0x04034b50) return [];
-
-    const compressedSize = view.getUint32(18, true);
-    const fileNameLen = view.getUint16(26, true);
-    const extraLen = view.getUint16(28, true);
-    const dataOffset = 30 + fileNameLen + extraLen;
-    const compressionMethod = view.getUint16(8, true);
-
-    let xmlText: string;
-
-    if (compressionMethod === 0) {
-      // 비압축
-      xmlText = new TextDecoder('utf-8').decode(zip.slice(dataOffset, dataOffset + compressedSize));
-    } else {
-      // Deflate 압축 해제 (동기 방식 - 서버에서 실행)
-      // DecompressionStream은 브라우저 API이므로 서버에서는 다른 방법 필요
-      // raw deflate → zlib inflate 사용
-      const { inflateRawSync } = require('zlib');
-      const compressed = zip.slice(dataOffset, dataOffset + compressedSize);
-      const decompressed = inflateRawSync(Buffer.from(compressed));
-      xmlText = decompressed.toString('utf-8');
-    }
-
-    // 간단 XML 파싱 - <corp_name>...</corp_name> 추출
-    const regex = /<corp_name>([^<]+)<\/corp_name>/g;
-    let match;
-    const seen = new Set<string>();
-    while ((match = regex.exec(xmlText)) !== null) {
-      const raw = match[1].trim();
-      if (!raw) continue;
-      const clean = stripCompanyPrefix(raw);
-      if (clean && !seen.has(clean.toLowerCase())) {
-        seen.add(clean.toLowerCase());
-        names.push(clean);
-      }
-    }
-  } catch {
-    // 파싱 실패 시 빈 배열
-  }
-
-  return names;
-}
-
 function fuzzyMatch(query: string, names: string[]): string[] {
   const q = query.toLowerCase();
   const exact: string[] = [];
@@ -163,20 +83,15 @@ export async function GET(req: NextRequest) {
 
   const strippedQ = stripCompanyPrefix(q);
 
-  // 내부 DB + DART 병렬 검색
-  const [internalNames, dartNames] = await Promise.all([
-    getAllCompanyNames(),
-    getDartCompanyNames(),
-  ]);
-
+  // 내부 DB 검색
+  const internalNames = await getAllCompanyNames();
   const internalResults = fuzzyMatch(strippedQ, internalNames);
 
-  // 내부 결과가 충분하면 바로 반환
   if (internalResults.length >= 10) {
     return NextResponse.json({ results: internalResults, source: 'internal' });
   }
 
-  // DART에서 추가 검색
+  // DART 정적 데이터에서 검색 (메모리 내 즉시 검색, 네트워크 없음)
   const dartResults = fuzzyMatch(strippedQ, dartNames);
 
   // 병합 + 중복 제거 (내부 우선)
