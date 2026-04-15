@@ -7,15 +7,15 @@ function getServiceSupabase() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 }
 
-const OPEN_API_KEY = process.env.COMPANY_API_KEY || 'bee8746f34f2e3e1429a6c29070de77aad56cab9';
+const DART_API_KEY = process.env.COMPANY_API_KEY || 'bee8746f34f2e3e1429a6c29070de77aad56cab9';
 
-// 서버 메모리 캐시 (5분 TTL)
+// 내부 DB 캐시 (5분 TTL)
 let companyCache: { names: string[]; timestamp: number } | null = null;
 const CACHE_TTL = 5 * 60 * 1000;
 
-// 외부 API 캐시 (10분 TTL)
-const externalCache = new Map<string, { results: string[]; timestamp: number }>();
-const EXT_CACHE_TTL = 10 * 60 * 1000;
+// DART 기업 목록 캐시 (1시간 TTL - 11만건 메모리 보관)
+let dartCache: { names: string[]; timestamp: number } | null = null;
+const DART_CACHE_TTL = 60 * 60 * 1000;
 
 function stripCompanyPrefix(name: string): string {
   return name
@@ -61,33 +61,82 @@ async function getAllCompanyNames(): Promise<string[]> {
   return names;
 }
 
-async function searchExternalAPI(query: string): Promise<string[]> {
-  const cacheKey = query.toLowerCase();
-  const cached = externalCache.get(cacheKey);
-  if (cached && Date.now() - cached.timestamp < EXT_CACHE_TTL) {
-    return cached.results;
+// DART 전체 기업코드 XML에서 회사명 목록 로드
+async function getDartCompanyNames(): Promise<string[]> {
+  if (dartCache && Date.now() - dartCache.timestamp < DART_CACHE_TTL) {
+    return dartCache.names;
   }
 
   try {
-    const url = `https://apis.data.go.kr/1160100/service/GetCorpBasicInfoService_V2/getCorpOutline_V2?serviceKey=${encodeURIComponent(OPEN_API_KEY)}&numOfRows=10&resultType=json&corpNm=${encodeURIComponent(query)}`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
-    if (!res.ok) return [];
+    const res = await fetch(
+      `https://opendart.fss.or.kr/api/corpCode.xml?crtfc_key=${DART_API_KEY}`,
+      { signal: AbortSignal.timeout(15000) }
+    );
+    if (!res.ok) return dartCache?.names || [];
 
-    const data = await res.json();
-    const items = data?.response?.body?.items?.item;
-    if (!items) return [];
+    const buffer = await res.arrayBuffer();
 
-    const list = Array.isArray(items) ? items : [items];
-    const names = list
-      .map((item: Record<string, string>) => stripCompanyPrefix(item.corpNm || ''))
-      .filter((n: string) => n.length > 0);
+    // ZIP 해제 - corpCode.xml 추출
+    const zipData = new Uint8Array(buffer);
+    const names = parseCorpNamesFromZip(zipData);
 
-    const unique = [...new Set(names)] as string[];
-    externalCache.set(cacheKey, { results: unique, timestamp: Date.now() });
-    return unique;
+    dartCache = { names, timestamp: Date.now() };
+    return names;
   } catch {
-    return [];
+    return dartCache?.names || [];
   }
+}
+
+// 간이 ZIP 파서 (단일 파일 ZIP 전용)
+function parseCorpNamesFromZip(zip: Uint8Array): string[] {
+  // ZIP local file header: 50 4B 03 04
+  // Find compressed data and use DecompressionStream
+  const names: string[] = [];
+
+  try {
+    // Local file header 파싱
+    const view = new DataView(zip.buffer);
+    if (view.getUint32(0, true) !== 0x04034b50) return [];
+
+    const compressedSize = view.getUint32(18, true);
+    const fileNameLen = view.getUint16(26, true);
+    const extraLen = view.getUint16(28, true);
+    const dataOffset = 30 + fileNameLen + extraLen;
+    const compressionMethod = view.getUint16(8, true);
+
+    let xmlText: string;
+
+    if (compressionMethod === 0) {
+      // 비압축
+      xmlText = new TextDecoder('utf-8').decode(zip.slice(dataOffset, dataOffset + compressedSize));
+    } else {
+      // Deflate 압축 해제 (동기 방식 - 서버에서 실행)
+      // DecompressionStream은 브라우저 API이므로 서버에서는 다른 방법 필요
+      // raw deflate → zlib inflate 사용
+      const { inflateRawSync } = require('zlib');
+      const compressed = zip.slice(dataOffset, dataOffset + compressedSize);
+      const decompressed = inflateRawSync(Buffer.from(compressed));
+      xmlText = decompressed.toString('utf-8');
+    }
+
+    // 간단 XML 파싱 - <corp_name>...</corp_name> 추출
+    const regex = /<corp_name>([^<]+)<\/corp_name>/g;
+    let match;
+    const seen = new Set<string>();
+    while ((match = regex.exec(xmlText)) !== null) {
+      const raw = match[1].trim();
+      if (!raw) continue;
+      const clean = stripCompanyPrefix(raw);
+      if (clean && !seen.has(clean.toLowerCase())) {
+        seen.add(clean.toLowerCase());
+        names.push(clean);
+      }
+    }
+  } catch {
+    // 파싱 실패 시 빈 배열
+  }
+
+  return names;
 }
 
 function fuzzyMatch(query: string, names: string[]): string[] {
@@ -114,31 +163,36 @@ export async function GET(req: NextRequest) {
 
   const strippedQ = stripCompanyPrefix(q);
 
-  // 내부 DB 검색
-  const allNames = await getAllCompanyNames();
-  const internalResults = fuzzyMatch(strippedQ, allNames);
+  // 내부 DB + DART 병렬 검색
+  const [internalNames, dartNames] = await Promise.all([
+    getAllCompanyNames(),
+    getDartCompanyNames(),
+  ]);
+
+  const internalResults = fuzzyMatch(strippedQ, internalNames);
 
   // 내부 결과가 충분하면 바로 반환
-  if (internalResults.length >= 5) {
+  if (internalResults.length >= 10) {
     return NextResponse.json({ results: internalResults, source: 'internal' });
   }
 
-  // 부족하면 외부 API 병행 검색
-  const externalResults = await searchExternalAPI(strippedQ);
+  // DART에서 추가 검색
+  const dartResults = fuzzyMatch(strippedQ, dartNames);
 
-  // 병합 + 중복 제거
+  // 병합 + 중복 제거 (내부 우선)
   const seen = new Set(internalResults.map((n) => n.toLowerCase()));
   const merged = [...internalResults];
-  for (const name of externalResults) {
+  for (const name of dartResults) {
     if (!seen.has(name.toLowerCase())) {
       merged.push(name);
       seen.add(name.toLowerCase());
     }
+    if (merged.length >= 10) break;
   }
 
   return NextResponse.json({
     results: merged.slice(0, 10),
-    source: internalResults.length > 0 ? 'internal' : externalResults.length > 0 ? 'external' : 'none',
+    source: internalResults.length > 0 ? 'internal' : merged.length > 0 ? 'external' : 'none',
   });
 }
 
