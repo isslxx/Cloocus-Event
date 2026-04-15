@@ -382,7 +382,6 @@ export default function MyDashboard() {
 
 감사합니다.
 클루커스 드림`}
-                <p className="mt-3 text-gray-500 text-xs">문의사항 | 📧 marketing@cloocus.com</p>
               </div>
             )}
           </div>
@@ -433,6 +432,13 @@ export default function MyDashboard() {
             ))}
           </div>
         </div>
+
+        {/* 문의 이메일 (등록 불가 시) */}
+        {registration.registration_status === 'rejected' && showStatus && (
+          <div className="mb-4 text-center py-3">
+            <p className="text-sm text-gray-500">문의사항 | 📧 <a href="mailto:marketing@cloocus.com" className="text-blue-600 hover:underline">marketing@cloocus.com</a></p>
+          </div>
+        )}
 
         {/* 수정 폼 */}
         {editMode && (
