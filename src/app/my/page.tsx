@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { INDUSTRIES, COMPANY_SIZES, REFERRAL_SOURCES } from '@/lib/constants';
+import { formatPhone } from '@/lib/validation';
 
 type RegistrationData = {
   id: string;
@@ -69,6 +71,102 @@ export default function MyDashboard() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelled, setCancelled] = useState(false);
+
+  // 수정 모드
+  const [editMode, setEditMode] = useState(false);
+  const [editForm, setEditForm] = useState<Record<string, string>>({});
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({});
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editServerError, setEditServerError] = useState('');
+
+  // 폼 옵션
+  const [formOptions, setFormOptions] = useState<Record<string, string[]>>({});
+
+  useEffect(() => {
+    fetch('/api/form-options')
+      .then((r) => r.json())
+      .then((d) => setFormOptions(d))
+      .catch(() => {});
+  }, []);
+
+  const startEdit = () => {
+    if (!registration) return;
+    // 기타 값 분리
+    let industry = registration.industry;
+    let industry_etc = '';
+    if (industry?.startsWith('기타: ')) { industry_etc = industry.replace('기타: ', ''); industry = '기타'; }
+    let referral_source = registration.referral_source;
+    let referral_source_etc = '';
+    if (referral_source?.startsWith('기타: ')) { referral_source_etc = referral_source.replace('기타: ', ''); referral_source = '기타'; }
+
+    setEditForm({
+      name: registration.name,
+      company_name: registration.company_name,
+      department: registration.department,
+      job_title: registration.job_title,
+      email: registration.email,
+      phone: registration.phone,
+      industry,
+      industry_etc,
+      company_size: registration.company_size,
+      referral_source,
+      referral_source_etc,
+      referrer_name: registration.referrer_name || '',
+      inquiry: registration.inquiry || '',
+    });
+    setEditErrors({});
+    setEditServerError('');
+    setEditMode(true);
+  };
+
+  const handleEditSubmit = async () => {
+    // 간단 검증
+    const errs: Record<string, string> = {};
+    if (!editForm.name?.trim()) errs.name = '성함을 입력해주세요.';
+    if (!editForm.company_name?.trim()) errs.company_name = '회사명을 입력해주세요.';
+    if (!editForm.department?.trim()) errs.department = '부서명을 입력해주세요.';
+    if (!editForm.job_title?.trim()) errs.job_title = '직급을 입력해주세요.';
+    if (!editForm.email?.trim()) errs.email = '이메일을 입력해주세요.';
+    if (!editForm.phone?.trim()) errs.phone = '연락처를 입력해주세요.';
+    if (!editForm.industry) errs.industry = '산업군을 선택해주세요.';
+    if (!editForm.company_size) errs.company_size = '기업 규모를 선택해주세요.';
+    if (!editForm.referral_source) errs.referral_source = '신청 경로를 선택해주세요.';
+    if (editForm.industry === '기타' && !editForm.industry_etc?.trim()) errs.industry_etc = '산업군을 입력해주세요.';
+    if (editForm.referral_source === '기타' && !editForm.referral_source_etc?.trim()) errs.referral_source_etc = '신청 경로를 입력해주세요.';
+    setEditErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+
+    setEditSubmitting(true);
+    setEditServerError('');
+    try {
+      const res = await fetch(`/api/register/${registration!.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...editForm, pin }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setEditServerError(data.error || '수정에 실패했습니다.');
+        return;
+      }
+      // 수정 성공 → 다시 조회
+      const lookupRes = await fetch('/api/register/lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: editForm.email || registration!.email, pin }),
+      });
+      const lookupData = await lookupRes.json();
+      if (lookupRes.ok) {
+        setRegistration(lookupData.registration);
+        setEditable(lookupData.editable);
+      }
+      setEditMode(false);
+    } catch {
+      setEditServerError('네트워크 오류가 발생했습니다.');
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
 
   const offlineCategories = ['세미나', '워크샵', '전시회', '스프린트'];
   const showStatus = registration && !['프로모션', '이벤트'].includes(registration.event_category);
@@ -314,25 +412,127 @@ export default function MyDashboard() {
           </div>
         </div>
 
+        {/* 수정 폼 */}
+        {editMode && (
+          <div className="bg-white rounded-xl border border-gray-200 p-5 mb-4">
+            <h2 className="text-lg font-semibold border-b pb-3 mb-4">신청 내역 수정</h2>
+            {editServerError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{editServerError}</div>
+            )}
+            <div className="space-y-4">
+              {[
+                ['name', '성함', 'text'],
+                ['company_name', '회사명', 'text'],
+                ['department', '부서명', 'text'],
+                ['job_title', '직급', 'text'],
+                ['email', '이메일', 'email'],
+              ].map(([key, label, type]) => (
+                <div key={key} className="field">
+                  <label className="text-sm font-medium text-gray-700">{label} <span className="text-red-500">*</span></label>
+                  <input
+                    type={type}
+                    value={editForm[key] || ''}
+                    onChange={(e) => { setEditForm({ ...editForm, [key]: e.target.value }); setEditErrors({ ...editErrors, [key]: '' }); }}
+                    className={editErrors[key] ? 'error' : ''}
+                  />
+                  {editErrors[key] && <span className="error-msg">{editErrors[key]}</span>}
+                </div>
+              ))}
+              <div className="field">
+                <label className="text-sm font-medium text-gray-700">연락처 <span className="text-red-500">*</span></label>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  value={editForm.phone || ''}
+                  onChange={(e) => { setEditForm({ ...editForm, phone: formatPhone(e.target.value) }); setEditErrors({ ...editErrors, phone: '' }); }}
+                  maxLength={13}
+                  className={editErrors.phone ? 'error' : ''}
+                />
+                {editErrors.phone && <span className="error-msg">{editErrors.phone}</span>}
+              </div>
+              <div className="field">
+                <label className="text-sm font-medium text-gray-700">산업군 <span className="text-red-500">*</span></label>
+                <select value={editForm.industry || ''} onChange={(e) => setEditForm({ ...editForm, industry: e.target.value, industry_etc: '' })} className={editErrors.industry ? 'error' : ''}>
+                  <option value="">선택해주세요</option>
+                  {(formOptions.industry || INDUSTRIES).map((v) => <option key={v} value={v}>{v}</option>)}
+                </select>
+                {editErrors.industry && <span className="error-msg">{editErrors.industry}</span>}
+                {editForm.industry === '기타' && (
+                  <>
+                    <input type="text" value={editForm.industry_etc || ''} onChange={(e) => setEditForm({ ...editForm, industry_etc: e.target.value })} placeholder="산업군을 입력해주세요 *" className="mt-2" style={{ padding: '10px 12px', border: `1px solid ${editErrors.industry_etc ? '#ef4444' : '#e0e0e0'}`, borderRadius: 8, fontSize: 14, width: '100%' }} />
+                    {editErrors.industry_etc && <span className="error-msg">{editErrors.industry_etc}</span>}
+                  </>
+                )}
+              </div>
+              <div className="field">
+                <label className="text-sm font-medium text-gray-700">기업 규모 <span className="text-red-500">*</span></label>
+                <select value={editForm.company_size || ''} onChange={(e) => setEditForm({ ...editForm, company_size: e.target.value })} className={editErrors.company_size ? 'error' : ''}>
+                  <option value="">선택해주세요</option>
+                  {(formOptions.company_size || COMPANY_SIZES).map((v) => <option key={v} value={v}>{v}</option>)}
+                </select>
+                {editErrors.company_size && <span className="error-msg">{editErrors.company_size}</span>}
+              </div>
+              <div className="field">
+                <label className="text-sm font-medium text-gray-700">신청 경로 <span className="text-red-500">*</span></label>
+                <select value={editForm.referral_source || ''} onChange={(e) => setEditForm({ ...editForm, referral_source: e.target.value, referral_source_etc: '', referrer_name: '' })} className={editErrors.referral_source ? 'error' : ''}>
+                  <option value="">선택해주세요</option>
+                  {(formOptions.referral_source || REFERRAL_SOURCES).map((v) => <option key={v} value={v}>{v}</option>)}
+                </select>
+                {editErrors.referral_source && <span className="error-msg">{editErrors.referral_source}</span>}
+                {editForm.referral_source === '기타' && (
+                  <>
+                    <input type="text" value={editForm.referral_source_etc || ''} onChange={(e) => setEditForm({ ...editForm, referral_source_etc: e.target.value })} placeholder="신청 경로를 입력해주세요 *" className="mt-2" style={{ padding: '10px 12px', border: `1px solid ${editErrors.referral_source_etc ? '#ef4444' : '#e0e0e0'}`, borderRadius: 8, fontSize: 14, width: '100%' }} />
+                    {editErrors.referral_source_etc && <span className="error-msg">{editErrors.referral_source_etc}</span>}
+                  </>
+                )}
+              </div>
+              {(editForm.referral_source === '클루커스 담당자 소개' || editForm.referral_source === '외부 담당자 소개') && (
+                <div className="field">
+                  <label className="text-sm font-medium text-gray-700">추천인 성명</label>
+                  <input type="text" value={editForm.referrer_name || ''} onChange={(e) => setEditForm({ ...editForm, referrer_name: e.target.value })} placeholder="추천인 성명" />
+                </div>
+              )}
+              <div className="field">
+                <label className="text-sm font-medium text-gray-700">문의사항</label>
+                <textarea rows={3} value={editForm.inquiry || ''} onChange={(e) => setEditForm({ ...editForm, inquiry: e.target.value })} placeholder="문의사항 (선택)" />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button onClick={handleEditSubmit} disabled={editSubmitting} className="btn-primary flex-1">
+                {editSubmitting ? '저장 중...' : '저장하기'}
+              </button>
+              <button onClick={() => setEditMode(false)} className="btn-secondary flex-1">취소</button>
+            </div>
+          </div>
+        )}
+
         {/* 버튼 그룹 */}
-        <div className="flex gap-3 mb-4">
-          {editable && (
+        {!editMode && (
+          <div className="flex gap-3 mb-4">
+            {editable && (
+              <button
+                onClick={startEdit}
+                className="btn-primary flex-1 text-sm"
+              >
+                수정하기
+              </button>
+            )}
             <a
               href="/"
-              className="btn-primary flex-1 text-center text-sm"
+              className="btn-secondary flex-1 text-center text-sm"
             >
-              수정하기
+              확인 완료
             </a>
-          )}
-          {editable && (
-            <button
-              onClick={() => setShowCancelConfirm(true)}
-              className="btn-danger flex-1 text-sm"
-            >
-              등록 취소
-            </button>
-          )}
-        </div>
+            {editable && (
+              <button
+                onClick={() => setShowCancelConfirm(true)}
+                className="btn-danger flex-1 text-sm"
+              >
+                등록 취소
+              </button>
+            )}
+          </div>
+        )}
 
         {/* FAQ */}
         {faqs.length > 0 && (

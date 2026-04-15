@@ -581,61 +581,9 @@ export default function Home() {
               </p>
 
               <div className="flex flex-col gap-3 mt-10" style={{ position: 'relative', zIndex: 60 }}>
-                {registrationId && (
-                  <button
-                    onClick={async () => {
-                      try {
-                        const res = await fetch(`/api/register/${registrationId}?pin=${encodeURIComponent(form.pin)}`);
-                        const data = await res.json();
-                        if (!res.ok) {
-                          alert(data.error || '등록 정보를 불러올 수 없습니다.');
-                          return;
-                        }
-                        const r = data.registration;
-                        // 기타 값 분리
-                        let industry = r.industry;
-                        let industry_etc = '';
-                        if (industry?.startsWith('기타: ')) {
-                          industry_etc = industry.replace('기타: ', '');
-                          industry = '기타';
-                        }
-                        let referral_source = r.referral_source;
-                        let referral_source_etc = '';
-                        if (referral_source?.startsWith('기타: ')) {
-                          referral_source_etc = referral_source.replace('기타: ', '');
-                          referral_source = '기타';
-                        }
-                        setForm({
-                          name: r.name || '',
-                          company_name: r.company_name || '',
-                          department: r.department || '',
-                          job_title: r.job_title || '',
-                          email: r.email || '',
-                          phone: r.phone || '',
-                          industry,
-                          industry_etc,
-                          company_size: r.company_size || '',
-                          referral_source,
-                          referral_source_etc,
-                          referrer_name: r.referrer_name || '',
-                          inquiry: r.inquiry || '',
-                          privacy_consent: true,
-                          pin: form.pin,
-                        });
-                        setEventEditable(data.editable);
-                        setEditMode(true);
-                        setErrors({});
-                        setServerError('');
-                        setStep(2);
-                      } catch {
-                        alert('네트워크 오류가 발생했습니다.');
-                      }
-                    }}
-                    className="btn-primary"
-                  >
-                    내 응답 확인 / 수정
-                  </button>
-                )}
+                <a href="/my" className="btn-primary text-center">
+                  내 응답 확인 / 수정
+                </a>
                 <button
                   onClick={() => {
                     setForm(EMPTY_FORM);
