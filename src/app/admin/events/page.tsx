@@ -402,7 +402,7 @@ export default function EventsPage() {
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="field">
-                  <label>유형</label>
+                  <label>유형 {formCategory === '프로모션' && <span className="text-xs text-gray-400">(선택)</span>}</label>
                   <select value={formType} onChange={(e) => setFormType(e.target.value as 'online' | 'offline')}>
                     <option value="offline">Offline</option>
                     <option value="online">Online</option>

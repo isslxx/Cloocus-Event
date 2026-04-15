@@ -290,17 +290,25 @@ export default function Home() {
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-3 mt-1.5">
-                          <span className="text-sm text-gray-500">
-                            {(() => { const d = new Date(event.event_date); const day = ['일','월','화','수','목','금','토'][d.getDay()]; const dateStr = `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${day})`; return event.category === '프로모션' ? `~${dateStr}까지` : dateStr; })()}
-                          </span>
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                            event.event_type === 'online'
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-purple-100 text-purple-700'
-                          }`}>
-                            {event.event_type === 'online' ? 'Online' : 'Offline'}
-                          </span>
+                        <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                          {event.category === '프로모션' ? (
+                            <span className="text-sm font-bold text-orange-600">
+                              기한: {(() => { const d = new Date(event.event_date); const day = ['일','월','화','수','목','금','토'][d.getDay()]; return `${d.getMonth()+1}/${d.getDate()}(${day})까지`; })()}
+                            </span>
+                          ) : (
+                            <span className="text-sm text-gray-500">
+                              {(() => { const d = new Date(event.event_date); const day = ['일','월','화','수','목','금','토'][d.getDay()]; return `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${day})`; })()}
+                            </span>
+                          )}
+                          {event.event_type && event.category !== '프로모션' && (
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                              event.event_type === 'online'
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-purple-100 text-purple-700'
+                            }`}>
+                              {event.event_type === 'online' ? 'Online' : 'Offline'}
+                            </span>
+                          )}
                           {event.capacity && (
                             <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700">
                               정원 {event.capacity}명
@@ -635,17 +643,25 @@ export default function Home() {
         {selectedEvent && (
           <div className="mb-6 border border-gray-200 rounded-xl px-5 py-4" style={{ backgroundColor: '#e0f2fe' }}>
             <p className="text-base font-semibold text-gray-900">{selectedEvent.name}</p>
-            <div className="flex items-center gap-3 mt-1.5">
-              <span className="text-sm text-gray-500">
-                {(() => { const d = new Date(selectedEvent.event_date); const day = ['일','월','화','수','목','금','토'][d.getDay()]; const dateStr = `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${day})`; return selectedEvent.category === '프로모션' ? `~${dateStr}까지` : dateStr; })()}
-              </span>
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                selectedEvent.event_type === 'online'
-                  ? 'bg-green-100 text-green-700'
-                  : 'bg-purple-100 text-purple-700'
-              }`}>
-                {selectedEvent.event_type === 'online' ? 'Online' : 'Offline'}
-              </span>
+            <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+              {selectedEvent.category === '프로모션' ? (
+                <span className="text-sm font-bold text-orange-600">
+                  기한: {(() => { const d = new Date(selectedEvent.event_date); const day = ['일','월','화','수','목','금','토'][d.getDay()]; return `${d.getMonth()+1}/${d.getDate()}(${day})까지`; })()}
+                </span>
+              ) : (
+                <span className="text-sm text-gray-500">
+                  {(() => { const d = new Date(selectedEvent.event_date); const day = ['일','월','화','수','목','금','토'][d.getDay()]; return `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${day})`; })()}
+                </span>
+              )}
+              {selectedEvent.category !== '프로모션' && (
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                  selectedEvent.event_type === 'online'
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-purple-100 text-purple-700'
+                }`}>
+                  {selectedEvent.event_type === 'online' ? 'Online' : 'Offline'}
+                </span>
+              )}
               {selectedEvent.capacity && (
                 <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700">
                   정원 {selectedEvent.capacity}명
