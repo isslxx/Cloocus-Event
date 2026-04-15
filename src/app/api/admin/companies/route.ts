@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { normalizeCompanyName } from '@/lib/company-normalize';
+import { getAdminFromToken } from '@/lib/supabase-auth';
 
 function getServiceSupabase() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -141,8 +142,12 @@ export async function GET(req: NextRequest) {
   });
 }
 
-// 수동 입력 회사 등록
+// 회사 등록 (관리자 전용)
 export async function POST(req: NextRequest) {
+  const admin = await getAdminFromToken(req.headers.get('authorization'));
+  if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (admin.role === 'viewer') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
   const { name } = await req.json();
   if (!name?.trim()) {
     return NextResponse.json({ error: 'Company name required' }, { status: 400 });
