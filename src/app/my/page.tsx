@@ -360,10 +360,19 @@ export default function MyDashboard() {
         {/* 등록 상태 */}
         {showStatus && (
           <div className={`bg-white rounded-xl border p-5 mb-4 ${registration.registration_status === 'rejected' ? 'border-red-200' : 'border-gray-200'}`}>
-            <h2 className="text-sm font-medium text-gray-500 mb-3">등록 여부</h2>
-            <div className={`w-full text-center py-3 rounded-lg font-bold text-base ${status.bg}`}>
-              {status.icon} {status.text}
-            </div>
+            {registration.registration_status !== 'rejected' && (
+              <>
+                <h2 className="text-sm font-medium text-gray-500 mb-3">등록 여부</h2>
+                <div className={`w-full text-center py-3 rounded-lg font-bold text-base ${status.bg}`}>
+                  {status.icon} {status.text}
+                </div>
+              </>
+            )}
+            {registration.registration_status === 'rejected' && (
+              <div className="w-full text-center py-3 rounded-lg font-bold text-base bg-red-100 text-red-600">
+                귀하의 본 이벤트 등록이 어려운 점 안내드립니다.
+              </div>
+            )}
             {registration.registration_status === 'pending' && (
               <p className="text-xs text-gray-400 mt-3 text-center">관리자가 등록 상태를 확정하면 업데이트됩니다.</p>
             )}
