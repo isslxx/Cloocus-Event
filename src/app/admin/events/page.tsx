@@ -22,6 +22,7 @@ export default function EventsPage() {
   const [formVisible, setFormVisible] = useState(true);
   const [formCapacity, setFormCapacity] = useState('');
   const [formPrivacy, setFormPrivacy] = useState('기타');
+  const [formCategory, setFormCategory] = useState('이벤트');
   const [saving, setSaving] = useState(false);
 
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -60,6 +61,7 @@ export default function EventsPage() {
     setFormVisible(true);
     setFormCapacity('');
     setFormPrivacy('기타');
+    setFormCategory('이벤트');
   };
 
   const openEdit = (event: Event) => {
@@ -74,13 +76,14 @@ export default function EventsPage() {
     setFormVisible(event.visible !== false);
     setFormCapacity(event.capacity ? String(event.capacity) : '');
     setFormPrivacy(event.privacy_category || '기타');
+    setFormCategory(event.category || '이벤트');
   };
 
   const handleSave = async () => {
     if (!formName.trim() || !formDate) return;
     setSaving(true);
     try {
-      const body = { name: formName.trim(), event_date: formDate, event_type: formType, status: formStatus, location: formLocation.trim(), event_time: formTime.trim(), visible: formVisible, capacity: formCapacity ? parseInt(formCapacity) : null, privacy_category: formPrivacy };
+      const body = { name: formName.trim(), event_date: formDate, event_type: formType, status: formStatus, location: formLocation.trim(), event_time: formTime.trim(), visible: formVisible, capacity: formCapacity ? parseInt(formCapacity) : null, privacy_category: formPrivacy, category: formCategory };
       if (isNew) {
         await fetch('/api/admin/events', {
           method: 'POST',
@@ -231,6 +234,7 @@ export default function EventsPage() {
                 </th>
               )}
               <th className="px-4 py-3 text-left font-medium text-gray-600">이벤트명</th>
+              <th className="px-4 py-3 text-left font-medium text-gray-600">카테고리</th>
               <th className="px-4 py-3 text-left font-medium text-gray-600">날짜</th>
               <th className="px-4 py-3 text-left font-medium text-gray-600">유형</th>
               <th className="px-4 py-3 text-left font-medium text-gray-600">정원</th>
@@ -241,9 +245,9 @@ export default function EventsPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8} className="px-4 py-12 text-center text-gray-400">로딩 중...</td></tr>
+              <tr><td colSpan={9} className="px-4 py-12 text-center text-gray-400">로딩 중...</td></tr>
             ) : events.length === 0 ? (
-              <tr><td colSpan={8} className="px-4 py-12 text-center text-gray-400">등록된 이벤트가 없습니다.</td></tr>
+              <tr><td colSpan={9} className="px-4 py-12 text-center text-gray-400">등록된 이벤트가 없습니다.</td></tr>
             ) : events.map((event) => (
               <tr key={event.id} className={`border-b border-gray-100 hover:bg-gray-50 ${selected.has(event.id) ? 'bg-blue-50/50' : ''}`}>
                 {isAdmin && (
@@ -257,6 +261,11 @@ export default function EventsPage() {
                   </td>
                 )}
                 <td className="px-4 py-3 font-medium">{event.name}</td>
+                <td className="px-4 py-3">
+                  <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-blue-50 text-blue-600">
+                    {event.category || '이벤트'}
+                  </span>
+                </td>
                 <td className="px-4 py-3 text-gray-500">
                   {new Date(event.event_date).toLocaleDateString('ko-KR')}
                 </td>
@@ -336,6 +345,17 @@ export default function EventsPage() {
                   onChange={(e) => setFormName(e.target.value)}
                   placeholder="예: 4/28(화) 스프린트 - Azure 인프라 입문"
                 />
+              </div>
+              <div className="field">
+                <label>카테고리</label>
+                <select value={formCategory} onChange={(e) => setFormCategory(e.target.value)}>
+                  <option value="스프린트">스프린트</option>
+                  <option value="전시회">전시회</option>
+                  <option value="세미나">세미나</option>
+                  <option value="워크샵">워크샵</option>
+                  <option value="프로모션">프로모션</option>
+                  <option value="이벤트">이벤트</option>
+                </select>
               </div>
               <div className="field">
                 <label>날짜</label>

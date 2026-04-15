@@ -74,7 +74,7 @@ export default function AdminDashboard() {
   const [allEvents, setAllEvents] = useState<Event[]>([]);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [loading, setLoading] = useState(true);
-  const [exporting, setExporting] = useState<'pdf' | 'xlsx' | null>(null);
+  const [exporting, setExporting] = useState<'pdf' | 'xlsx' | 'pptx' | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [filter, setFilter] = useState<string>('all'); // 'all' | 'online' | 'offline' | event_id
   const exportMenuRef = useRef<HTMLDivElement>(null);
@@ -217,6 +217,68 @@ export default function AdminDashboard() {
     }
   };
 
+  const exportAsPptx = async () => {
+    if (!dashboardRef.current || !metrics) return;
+    setExporting('pptx');
+    setShowExportMenu(false);
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const PptxGenJS = (await import('pptxgenjs')).default;
+
+      const el = dashboardRef.current;
+      const allElements = el.querySelectorAll('*');
+      const originalStyles: { el: HTMLElement; prop: string; value: string }[] = [];
+      allElements.forEach((node) => {
+        const htmlEl = node as HTMLElement;
+        const computed = getComputedStyle(htmlEl);
+        ['color', 'backgroundColor', 'borderColor'].forEach((prop) => {
+          const val = computed.getPropertyValue(prop === 'backgroundColor' ? 'background-color' : prop === 'borderColor' ? 'border-color' : prop);
+          if (val && val.includes('lab(')) {
+            originalStyles.push({ el: htmlEl, prop, value: htmlEl.style.getPropertyValue(prop) });
+            if (prop === 'backgroundColor') htmlEl.style.backgroundColor = '#f9fafb';
+            else if (prop === 'borderColor') htmlEl.style.borderColor = '#e5e7eb';
+            else htmlEl.style.color = '#333333';
+          }
+        });
+      });
+
+      const canvas = await html2canvas(el, { backgroundColor: '#f9fafb', scale: 2, useCORS: true, logging: false });
+
+      originalStyles.forEach(({ el: htmlEl, prop, value }) => {
+        if (value) htmlEl.style.setProperty(prop, value);
+        else htmlEl.style.removeProperty(prop);
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pptx = new PptxGenJS();
+      pptx.layout = 'LAYOUT_WIDE';
+
+      // 타이틀 슬라이드
+      const titleSlide = pptx.addSlide();
+      titleSlide.addText('Cloocus 이벤트 대시보드', { x: 0.5, y: 1.5, w: 12, fontSize: 32, bold: true, color: '2563eb' });
+      titleSlide.addText(new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }), { x: 0.5, y: 2.5, w: 12, fontSize: 16, color: '666666' });
+      titleSlide.addText(`총 등록수: ${metrics.total}  |  오늘: ${metrics.today}  |  최다 산업군: ${metrics.topIndustry}`, { x: 0.5, y: 3.5, w: 12, fontSize: 14, color: '444444' });
+
+      // 대시보드 이미지 슬라이드
+      const imgWidth = 12.5;
+      const imgHeight = (canvas.height / canvas.width) * imgWidth;
+      const pageHeight = 7.5;
+      let yOffset = 0;
+
+      while (yOffset * (canvas.width / imgWidth) < canvas.height) {
+        const slide = pptx.addSlide();
+        slide.addImage({ data: imgData, x: 0.15, y: -yOffset, w: imgWidth, h: imgHeight });
+        yOffset += pageHeight;
+      }
+
+      await pptx.writeFile({ fileName: `cloocus_dashboard_${new Date().toISOString().slice(0, 10)}.pptx` });
+    } catch (err) {
+      alert('PPT 오류: ' + String(err));
+    } finally {
+      setExporting(null);
+    }
+  };
+
   const applyFilter = useCallback((records: Registration[], events: Event[], f: string) => {
     const eventMap = new Map(events.map((e) => [e.id, e]));
     let filtered = records;
@@ -315,9 +377,15 @@ export default function AdminDashboard() {
               </button>
               <button
                 onClick={exportAsExcel}
-                className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 rounded-b-lg border-t border-gray-100"
+                className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 border-t border-gray-100"
               >
                 📊 엑셀 (XLSX)
+              </button>
+              <button
+                onClick={exportAsPptx}
+                className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 rounded-b-lg border-t border-gray-100"
+              >
+                📽️ PPT (PPTX)
               </button>
             </div>
           )}

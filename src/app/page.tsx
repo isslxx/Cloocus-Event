@@ -250,7 +250,7 @@ export default function Home() {
           <div className="bg-white rounded-xl border border-gray-200 p-8">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/cloocus-logo.png" alt="Cloocus" className="h-7 mx-auto mb-5" />
-            <h1 className="text-2xl font-bold text-center mb-2">클루커스 이벤트 등록하기</h1>
+            <h1 className="text-2xl font-bold text-center mb-2">클루커스 이벤트</h1>
             <p className="text-gray-500 text-center mb-8">참여하실 이벤트를 선택해주세요.</p>
 
             {eventsLoading ? (
@@ -276,7 +276,14 @@ export default function Home() {
                         }`}
                       >
                         <div className="flex items-center justify-between">
-                          <p className={`font-semibold text-base ${isClosed ? 'text-gray-400' : ''}`}>{event.name}</p>
+                          <div className="flex items-center gap-2">
+                            {event.category && (
+                              <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-blue-50 text-blue-600 shrink-0">
+                                {event.category}
+                              </span>
+                            )}
+                            <p className={`font-semibold text-base ${isClosed ? 'text-gray-400' : ''}`}>{event.name}</p>
+                          </div>
                           {isClosed && (
                             <span className="text-xs px-2.5 py-1 rounded-full font-bold bg-red-100 text-red-600 shrink-0">
                               마감
@@ -327,13 +334,12 @@ export default function Home() {
             >
               등록하기
             </button>
-            <button
-              type="button"
-              onClick={() => setShowLookup(true)}
-              className="w-full mt-3 text-sm text-gray-400 hover:text-gray-600 hover:underline"
+            <a
+              href="/my"
+              className="w-full mt-3 text-sm text-gray-400 hover:text-gray-600 hover:underline block text-center"
             >
               신청 내역 확인 / 수정하기
-            </button>
+            </a>
           </div>
 
           {/* 신청 내역 조회 모달 */}
@@ -679,7 +685,7 @@ export default function Home() {
       <main className="max-w-2xl mx-auto px-4 py-8">
         {/* 신청 행사 정보 */}
         {selectedEvent && (
-          <div className="mb-6 border border-gray-200 rounded-xl px-5 py-4" style={{ backgroundColor: '#eef6ff' }}>
+          <div className="mb-6 border border-gray-200 rounded-xl px-5 py-4" style={{ backgroundColor: '#e0f2fe' }}>
             <p className="text-base font-semibold text-gray-900">{selectedEvent.name}</p>
             <div className="flex items-center gap-3 mt-1.5">
               <span className="text-sm text-gray-500">

@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { getSupabase } from '@/lib/supabase';
 import { useRouter, usePathname } from 'next/navigation';
 import type { AdminUser } from '@/lib/types';
@@ -14,6 +14,37 @@ type AdminCtx = {
 const AdminContext = createContext<AdminCtx>({ user: null, accessToken: '' });
 export const useAdmin = () => useContext(AdminContext);
 
+type NavItem = { href: string; label: string; icon: string };
+
+const DEFAULT_NAV: NavItem[] = [
+  { href: '/admin', label: '대시보드', icon: '📊' },
+  { href: '/admin/registrations', label: '등록 리스트', icon: '📋' },
+  { href: '/admin/form', label: '등록 페이지 관리', icon: '📝' },
+  { href: '/admin/events', label: '이벤트 관리', icon: '📅' },
+  { href: '/admin/emails', label: '이메일 발송', icon: '✉️' },
+  { href: '/admin/faqs', label: 'FAQ 관리', icon: '❓' },
+];
+
+function loadNavOrder(): NavItem[] {
+  if (typeof window === 'undefined') return DEFAULT_NAV;
+  try {
+    const saved = localStorage.getItem('admin_nav_order');
+    if (!saved) return DEFAULT_NAV;
+    const parsed = JSON.parse(saved) as NavItem[];
+    // 새로 추가된 메뉴가 있을 수 있으므로 병합
+    const savedHrefs = new Set(parsed.map((n) => n.href));
+    const merged = [...parsed];
+    for (const item of DEFAULT_NAV) {
+      if (!savedHrefs.has(item.href)) merged.push(item);
+    }
+    // 삭제된 메뉴 제거
+    const defaultHrefs = new Set(DEFAULT_NAV.map((n) => n.href));
+    return merged.filter((n) => defaultHrefs.has(n.href));
+  } catch {
+    return DEFAULT_NAV;
+  }
+}
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [admin, setAdmin] = useState<AdminUser | null>(null);
   const [accessToken, setAccessToken] = useState('');
@@ -21,6 +52,54 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+
+  // 사이드바 편집 모드
+  const [editMode, setEditMode] = useState(false);
+  const [navItems, setNavItems] = useState<NavItem[]>(DEFAULT_NAV);
+  const [editingLabel, setEditingLabel] = useState<string | null>(null);
+  const [editLabelValue, setEditLabelValue] = useState('');
+  const dragItem = useRef<number | null>(null);
+  const dragOverItem = useRef<number | null>(null);
+
+  useEffect(() => {
+    setNavItems(loadNavOrder());
+  }, []);
+
+  const saveNavOrder = (items: NavItem[]) => {
+    setNavItems(items);
+    localStorage.setItem('admin_nav_order', JSON.stringify(items));
+  };
+
+  const handleDragStart = (index: number) => {
+    dragItem.current = index;
+  };
+
+  const handleDragEnter = (index: number) => {
+    dragOverItem.current = index;
+  };
+
+  const handleDragEnd = () => {
+    if (dragItem.current === null || dragOverItem.current === null) return;
+    const items = [...navItems];
+    const dragged = items.splice(dragItem.current, 1)[0];
+    items.splice(dragOverItem.current, 0, dragged);
+    dragItem.current = null;
+    dragOverItem.current = null;
+    saveNavOrder(items);
+  };
+
+  const handleLabelSave = (href: string) => {
+    if (!editLabelValue.trim()) { setEditingLabel(null); return; }
+    const items = navItems.map((n) => n.href === href ? { ...n, label: editLabelValue.trim() } : n);
+    saveNavOrder(items);
+    setEditingLabel(null);
+  };
+
+  const resetNav = () => {
+    localStorage.removeItem('admin_nav_order');
+    setNavItems(DEFAULT_NAV);
+    setEditMode(false);
+  };
 
   // 로그인 페이지는 레이아웃 무시
   const isLoginPage = pathname === '/admin/login';
@@ -76,12 +155,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   if (!admin) return null;
 
-  const navItems = [
-    { href: '/admin', label: '대시보드', icon: '📊' },
-    { href: '/admin/registrations', label: '등록 리스트', icon: '📋' },
-    { href: '/admin/form', label: '등록 페이지 관리', icon: '📝' },
-    { href: '/admin/events', label: '이벤트 관리', icon: '📅' },
-    { href: '/admin/emails', label: '이메일 발송', icon: '✉️' },
+  const allNavItems = [
+    ...navItems,
     ...(admin.role === 'admin' ? [{ href: '/admin/users', label: '사용자 관리', icon: '👤' }] : []),
   ];
 
@@ -96,7 +171,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <AdminContext.Provider value={{ user: admin, accessToken }}>
       <div className="min-h-screen flex bg-gray-50">
-        {/* 사이드바 오버레이 (모바일) */}
         {sidebarOpen && (
           <div
             className="fixed inset-0 bg-black/30 z-40 lg:hidden"
@@ -104,7 +178,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           />
         )}
 
-        {/* 사이드바 */}
         <aside className={`
           fixed lg:static inset-y-0 left-0 z-50 w-60 bg-white border-r border-gray-200
           transform transition-transform lg:translate-x-0
@@ -115,26 +188,84 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <p className="text-xs text-gray-500 mt-1">이벤트 관리 시스템</p>
           </div>
 
-          <nav className="p-3 space-y-1">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  pathname === item.href
-                    ? 'bg-blue-50 text-blue-700'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <span>{item.icon}</span>
-                {item.label}
-              </Link>
-            ))}
+          <div className="flex items-center justify-between px-4 pt-3 pb-1">
+            <span className="text-[10px] text-gray-400 uppercase tracking-wider">메뉴</span>
+            <button
+              onClick={() => { if (editMode) setEditMode(false); else setEditMode(true); setEditingLabel(null); }}
+              className={`text-[10px] px-1.5 py-0.5 rounded ${editMode ? 'bg-blue-100 text-blue-700 font-bold' : 'text-gray-400 hover:text-gray-600'}`}
+            >
+              {editMode ? 'Done' : 'Edit'}
+            </button>
+          </div>
+
+          <nav className="px-3 pb-3 space-y-1">
+            {allNavItems.map((item, index) => {
+              const isAdminOnly = item.href === '/admin/users';
+              const isDraggable = editMode && !isAdminOnly;
+
+              if (editMode && editingLabel === item.href) {
+                return (
+                  <div key={item.href} className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg">
+                    <span>{item.icon}</span>
+                    <input
+                      type="text"
+                      value={editLabelValue}
+                      onChange={(e) => setEditLabelValue(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleLabelSave(item.href); if (e.key === 'Escape') setEditingLabel(null); }}
+                      onBlur={() => handleLabelSave(item.href)}
+                      className="flex-1 text-sm border border-blue-300 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      autoFocus
+                    />
+                  </div>
+                );
+              }
+
+              return (
+                <div
+                  key={item.href}
+                  draggable={isDraggable}
+                  onDragStart={isDraggable ? () => handleDragStart(index) : undefined}
+                  onDragEnter={isDraggable ? () => handleDragEnter(index) : undefined}
+                  onDragEnd={isDraggable ? handleDragEnd : undefined}
+                  onDragOver={isDraggable ? (e) => e.preventDefault() : undefined}
+                  className="flex items-center gap-1"
+                >
+                  {isDraggable && (
+                    <span className="text-gray-300 cursor-grab active:cursor-grabbing text-xs px-0.5" title="드래그하여 순서 변경">⠿</span>
+                  )}
+                  <Link
+                    href={editMode ? '#' : item.href}
+                    onClick={(e) => {
+                      if (editMode) {
+                        e.preventDefault();
+                        setEditingLabel(item.href);
+                        setEditLabelValue(item.label);
+                      } else {
+                        setSidebarOpen(false);
+                      }
+                    }}
+                    className={`flex-1 flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                      !editMode && pathname === item.href
+                        ? 'bg-blue-50 text-blue-700'
+                        : editMode
+                          ? 'text-gray-600 hover:bg-yellow-50 cursor-text'
+                          : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    <span>{item.icon}</span>
+                    {item.label}
+                  </Link>
+                </div>
+              );
+            })}
+            {editMode && (
+              <button onClick={resetNav} className="w-full text-[10px] text-gray-400 hover:text-red-500 py-1 mt-1">
+                순서/이름 초기화
+              </button>
+            )}
           </nav>
 
           <div className="absolute bottom-0 left-0 right-0 border-t border-gray-200">
-            {/* 휴지통 - 하단 축소 표시 */}
             <Link
               href={bottomNavItem.href}
               onClick={() => setSidebarOpen(false)}
@@ -166,14 +297,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </aside>
 
-        {/* 메인 */}
         <div className="flex-1 flex flex-col min-w-0">
-          {/* 모바일 헤더 */}
           <header className="lg:hidden sticky top-0 z-30 bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="p-1"
-            >
+            <button onClick={() => setSidebarOpen(true)} className="p-1">
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>

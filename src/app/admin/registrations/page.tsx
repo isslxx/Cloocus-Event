@@ -223,6 +223,12 @@ export default function RegistrationsPage() {
   const currentYear = new Date().getFullYear();
   const yearOptions = Array.from({ length: 5 }, (_, i) => String(currentYear - i));
 
+  const registrationStatusLabel = (status: string | null) => {
+    if (status === 'confirmed') return <span className="text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-700 font-medium">등록 확정</span>;
+    if (status === 'rejected') return <span className="text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-600 font-medium">등록 불가</span>;
+    return <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 font-medium">등록 대기</span>;
+  };
+
   const emailStatusLabel = (status: string | null) => {
     if (status === 'confirmed') return <span className="text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-700">확정 발송</span>;
     if (status === 'rejected') return <span className="text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-600">불가 발송</span>;
@@ -310,6 +316,7 @@ export default function RegistrationsPage() {
                   { key: 'industry' as SortKey, label: '산업군' },
                   { key: 'referral_source' as SortKey, label: '신청 경로' },
                   { key: 'created_at' as SortKey, label: '등록일' },
+                  { key: 'registration_status' as SortKey, label: '등록 상태' },
                 ].map((col) => (
                   <th key={col.key} className="px-4 py-3 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 whitespace-nowrap" onClick={() => handleSort(col.key)}>
                     {col.label}{sortIcon(col.key)}
@@ -323,9 +330,9 @@ export default function RegistrationsPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={12} className="px-4 py-12 text-center text-gray-400">로딩 중...</td></tr>
+                <tr><td colSpan={13} className="px-4 py-12 text-center text-gray-400">로딩 중...</td></tr>
               ) : records.length === 0 ? (
-                <tr><td colSpan={12} className="px-4 py-12 text-center text-gray-400">등록 데이터가 없습니다.</td></tr>
+                <tr><td colSpan={13} className="px-4 py-12 text-center text-gray-400">등록 데이터가 없습니다.</td></tr>
               ) : records.map((r) => (
                 <tr key={r.id} className={`border-b border-gray-100 hover:bg-gray-50 ${selected.has(r.id) ? 'bg-blue-50/50' : ''}`}>
                   <td className="px-3 py-3">
@@ -339,6 +346,28 @@ export default function RegistrationsPage() {
                   <td className="px-4 py-3 whitespace-nowrap">{r.industry}</td>
                   <td className="px-4 py-3 whitespace-nowrap">{r.referral_source}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-gray-500">{new Date(r.created_at).toLocaleDateString('ko-KR')}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {canEditRecord ? (
+                      <select
+                        value={r.registration_status || 'pending'}
+                        onChange={async (e) => {
+                          await fetch(`/api/admin/registrations/${r.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+                            body: JSON.stringify({ registration_status: e.target.value }),
+                          });
+                          fetchRecords();
+                        }}
+                        className="text-xs border border-gray-200 rounded px-1.5 py-1"
+                      >
+                        <option value="pending">등록 대기</option>
+                        <option value="confirmed">등록 확정</option>
+                        <option value="rejected">등록 불가</option>
+                      </select>
+                    ) : (
+                      registrationStatusLabel(r.registration_status)
+                    )}
+                  </td>
                   <td className="px-4 py-3 whitespace-nowrap">{emailStatusLabel(r.email_status)}</td>
                   {(canEditRecord || canDeleteRecord) && (
                     <td className="px-4 py-3 whitespace-nowrap">

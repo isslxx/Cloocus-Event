@@ -7,6 +7,7 @@ export type Event = {
   visible: boolean;
   capacity: number | null;
   privacy_category: string;
+  category: string;
   location: string;
   event_time: string;
   created_at: string;
@@ -30,6 +31,7 @@ export type Registration = {
   privacy_consent: boolean;
   email_status: 'confirmed' | 'rejected' | null;
   email_sent_at: string | null;
+  registration_status: 'pending' | 'confirmed' | 'rejected';
   created_at: string;
   updated_at: string;
 };
@@ -53,6 +55,15 @@ export type EmailLog = {
   status: 'pending' | 'sent' | 'failed';
   error_message: string;
   sent_by: string;
+  created_at: string;
+};
+
+export type FAQ = {
+  id: string;
+  question: string;
+  answer: string;
+  sort_order: number;
+  active: boolean;
   created_at: string;
 };
 

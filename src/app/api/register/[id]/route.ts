@@ -62,6 +62,64 @@ export async function GET(
   }
 }
 
+// 등록 취소 (soft delete)
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const { pin } = await req.json();
+
+    if (!pin || !/^\d{4}$/.test(pin)) {
+      return NextResponse.json({ error: '확인 암호 4자리를 입력해주세요.' }, { status: 400 });
+    }
+
+    const supabase = getServiceSupabase();
+
+    const { data: reg } = await supabase
+      .from('event_registrations')
+      .select('pin, event_id')
+      .eq('id', id)
+      .is('deleted_at', null)
+      .single();
+
+    if (!reg) {
+      return NextResponse.json({ error: '등록 정보를 찾을 수 없습니다.' }, { status: 404 });
+    }
+
+    if (reg.pin !== pin) {
+      return NextResponse.json({ error: '확인 암호가 일치하지 않습니다.' }, { status: 403 });
+    }
+
+    // Check if event is still open
+    if (reg.event_id) {
+      const { data: evt } = await supabase
+        .from('events')
+        .select('status')
+        .eq('id', reg.event_id)
+        .single();
+
+      if (evt?.status !== 'open') {
+        return NextResponse.json({ error: '이벤트가 마감되어 취소할 수 없습니다.' }, { status: 403 });
+      }
+    }
+
+    const { error } = await supabase
+      .from('event_registrations')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id);
+
+    if (error) {
+      return NextResponse.json({ error: '취소 중 오류가 발생했습니다.' }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch {
+    return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 });
+  }
+}
+
 // 등록 정보 수정
 export async function PUT(
   req: NextRequest,
