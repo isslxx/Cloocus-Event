@@ -103,7 +103,7 @@ export default function VerifyPage({ params }: { params: Promise<{ id: string }>
         </div>
 
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/cloocus-logo.png" alt="Cloocus" className="h-5 mx-auto mt-6 opacity-50" />
+        <img src="/cloocus-logo.png" alt="Cloocus" className="h-5 mx-auto mt-6" />
       </div>
     </div>
   );

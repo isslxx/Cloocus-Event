@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useAdmin } from '../layout';
 import { INDUSTRIES, COMPANY_SIZES, REFERRAL_SOURCES } from '@/lib/constants';
 import { formatPhone } from '@/lib/validation';
@@ -17,6 +17,8 @@ export default function RegistrationsPage() {
 
   // 필터
   const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const searchDebounce = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [filterIndustry, setFilterIndustry] = useState('');
   const [filterSize, setFilterSize] = useState('');
   const [filterSource, setFilterSource] = useState('');
@@ -65,8 +67,9 @@ export default function RegistrationsPage() {
       .catch(() => {});
   }, [accessToken]);
 
+  const initialLoad = useRef(true);
   const fetchRecords = useCallback(async () => {
-    setLoading(true);
+    if (initialLoad.current) setLoading(true);
     try {
       const params = new URLSearchParams({
         page: String(page),
@@ -92,6 +95,7 @@ export default function RegistrationsPage() {
       // ignore
     } finally {
       setLoading(false);
+      initialLoad.current = false;
     }
   }, [accessToken, page, sortKey, sortAsc, search, filterEvent, filterIndustry, filterSize, filterSource, filterYear, filterEmailStatus]);
 
@@ -279,8 +283,12 @@ export default function RegistrationsPage() {
         <input
           type="text"
           placeholder="이름, 회사, 이메일 검색..."
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          value={searchInput}
+          onChange={(e) => {
+            setSearchInput(e.target.value);
+            clearTimeout(searchDebounce.current);
+            searchDebounce.current = setTimeout(() => { setSearch(e.target.value); setPage(1); }, 300);
+          }}
           className="flex-1 min-w-[180px] px-3 py-2 border border-gray-200 rounded-lg text-sm"
         />
         <select value={filterEvent} onChange={(e) => { setFilterEvent(e.target.value); setPage(1); }} className="px-3 py-2 border border-gray-200 rounded-lg text-sm">
@@ -364,12 +372,14 @@ export default function RegistrationsPage() {
                       <select
                         value={r.registration_status || 'pending'}
                         onChange={async (e) => {
-                          await fetch(`/api/admin/registrations/${r.id}`, {
+                          const newStatus = e.target.value;
+                          // 옵티미스틱 업데이트
+                          setRecords((prev) => prev.map((rec) => rec.id === r.id ? { ...rec, registration_status: newStatus as Registration['registration_status'] } : rec));
+                          fetch(`/api/admin/registrations/${r.id}`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-                            body: JSON.stringify({ registration_status: e.target.value }),
+                            body: JSON.stringify({ registration_status: newStatus }),
                           });
-                          fetchRecords();
                         }}
                         className="text-xs border border-gray-200 rounded px-1.5 py-1"
                       >

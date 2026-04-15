@@ -515,16 +515,16 @@ export default function MyDashboard() {
         {/* 버튼 그룹 */}
         {!editMode && (
           <div className="flex gap-3 mb-4">
-            <a href="/" className="btn-primary flex-1 text-center">
+            <a href="/" className="btn-primary flex-1 text-center" style={{ padding: '12px 0' }}>
               확인 완료
             </a>
             {editable && (
-              <button onClick={startEdit} className="btn-secondary flex-1">
+              <button onClick={startEdit} className="btn-secondary flex-1" style={{ padding: '12px 0', fontSize: 14 }}>
                 수정하기
               </button>
             )}
             {editable && (
-              <button onClick={() => setShowCancelConfirm(true)} className="flex-1 py-2.5 rounded-lg text-sm font-medium border border-red-200 text-red-500 hover:bg-red-50 transition-colors">
+              <button onClick={() => setShowCancelConfirm(true)} className="btn-danger flex-1" style={{ padding: '12px 0', fontSize: 14 }}>
                 등록 취소
               </button>
             )}
