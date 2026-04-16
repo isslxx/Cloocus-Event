@@ -410,7 +410,7 @@ export default function MyDashboard() {
         )}
 
         {/* 등록 확정 영역 */}
-        {showQr && (
+        {registration.registration_status === 'confirmed' && (
           <>
             {/* 설문조사 미완료 + 설문 활성화 → 설문조사 버튼 */}
             {registration.survey_enabled && !registration.survey_completed && !surveySubmitted && !showSurvey && (
@@ -723,17 +723,21 @@ export default function MyDashboard() {
                   <p className="text-green-700 font-bold text-lg">등록이 확정되었습니다</p>
                   <p className="text-green-600 text-sm mt-1">{registration.event_name}</p>
                 </div>
-                <p className="text-xs text-gray-500 mb-3">이벤트 현장에서 아래 QR코드를 제시해주세요.</p>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(verifyUrl)}`}
-                  alt="QR Code"
-                  className="mx-auto border border-gray-100 rounded-lg p-2"
-                  width={200}
-                  height={200}
-                />
-                <p className="text-xs text-gray-400 mt-3">{registration.name} | {registration.company_name}</p>
-                <p className="text-[10px] text-gray-300 mt-1">QR 스캔 시 참석자 검증 페이지로 연결됩니다</p>
+                {showQr && (
+                  <>
+                    <p className="text-xs text-gray-500 mb-3">이벤트 현장에서 아래 QR코드를 제시해주세요.</p>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(verifyUrl)}`}
+                      alt="QR Code"
+                      className="mx-auto border border-gray-100 rounded-lg p-2"
+                      width={200}
+                      height={200}
+                    />
+                    <p className="text-xs text-gray-400 mt-3">{registration.name} | {registration.company_name}</p>
+                    <p className="text-[10px] text-gray-300 mt-1">QR 스캔 시 참석자 검증 페이지로 연결됩니다</p>
+                  </>
+                )}
               </div>
             )}
           </>

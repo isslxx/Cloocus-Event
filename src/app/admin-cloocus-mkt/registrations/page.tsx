@@ -45,6 +45,9 @@ export default function RegistrationsPage() {
 
   // 일괄 등록 상태 변경
   const [showBulkStatus, setShowBulkStatus] = useState(false);
+  // 일괄 설문조사 On/Off
+  const [showBulkSurvey, setShowBulkSurvey] = useState(false);
+  const [bulkSurveyApplying, setBulkSurveyApplying] = useState(false);
   const [bulkStatus, setBulkStatus] = useState<'confirmed' | 'rejected'>('confirmed');
   const [bulkStatusApplying, setBulkStatusApplying] = useState(false);
 
@@ -266,6 +269,14 @@ export default function RegistrationsPage() {
               className="text-sm px-3 py-2 rounded-lg font-medium border border-green-300 text-green-700 bg-green-50 hover:bg-green-100"
             >
               등록 상태 변경 ({selected.size})
+            </button>
+          )}
+          {selected.size > 0 && canEditRecord && (
+            <button
+              onClick={() => setShowBulkSurvey(true)}
+              className="text-sm px-3 py-2 rounded-lg font-medium border border-purple-300 text-purple-700 bg-purple-50 hover:bg-purple-100"
+            >
+              설문조사 ({selected.size})
             </button>
           )}
           {selected.size > 0 && canEditRecord && (
@@ -625,6 +636,61 @@ export default function RegistrationsPage() {
                 {bulkStatusApplying ? '적용 중...' : '적용'}
               </button>
               <button onClick={() => setShowBulkStatus(false)} className="btn-secondary flex-1">취소</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 일괄 설문조사 On/Off 모달 */}
+      {showBulkSurvey && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-xl w-full max-w-sm p-6">
+            <h2 className="text-lg font-bold mb-4">설문조사 일괄 설정</h2>
+            <p className="text-sm text-gray-500 mb-4">선택한 <strong>{selected.size}건</strong>의 설문조사 상태를 변경합니다.</p>
+            <div className="flex gap-2">
+              <button
+                disabled={bulkSurveyApplying}
+                onClick={async () => {
+                  setBulkSurveyApplying(true);
+                  const ids = Array.from(selected);
+                  await Promise.all(ids.map((id) =>
+                    fetch(`/api/admin/registrations/${id}`, {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+                      body: JSON.stringify({ survey_enabled: true }),
+                    })
+                  ));
+                  setRecords((prev) => prev.map((r) => ids.includes(r.id) ? { ...r, survey_enabled: true } as Registration : r));
+                  setBulkSurveyApplying(false);
+                  setShowBulkSurvey(false);
+                  setSelected(new Set());
+                }}
+                className="btn-primary flex-1"
+              >
+                {bulkSurveyApplying ? '적용 중...' : '일괄 On'}
+              </button>
+              <button
+                disabled={bulkSurveyApplying}
+                onClick={async () => {
+                  setBulkSurveyApplying(true);
+                  const ids = Array.from(selected);
+                  await Promise.all(ids.map((id) =>
+                    fetch(`/api/admin/registrations/${id}`, {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+                      body: JSON.stringify({ survey_enabled: false }),
+                    })
+                  ));
+                  setRecords((prev) => prev.map((r) => ids.includes(r.id) ? { ...r, survey_enabled: false } as Registration : r));
+                  setBulkSurveyApplying(false);
+                  setShowBulkSurvey(false);
+                  setSelected(new Set());
+                }}
+                className="btn-danger flex-1"
+              >
+                {bulkSurveyApplying ? '적용 중...' : '일괄 Off'}
+              </button>
+              <button onClick={() => setShowBulkSurvey(false)} className="btn-secondary flex-1">취소</button>
             </div>
           </div>
         </div>
