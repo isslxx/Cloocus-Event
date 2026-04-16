@@ -605,121 +605,88 @@ export default function MyDashboard() {
                 <button
                   onClick={async () => {
                     try {
+                      const html2canvas = (await import('html2canvas')).default;
                       const { jsPDF } = await import('jspdf');
-                      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
-                      // A4 landscape: 297 x 210
-                      const W = 297, H = 210;
-                      const leftW = W * 0.6;
-
-                      // Right section - dark gradient bg
-                      doc.setFillColor(45, 27, 105);
-                      doc.rect(leftW, 0, W - leftW, H, 'F');
-                      // Gradient overlay
-                      doc.setFillColor(75, 50, 160);
-                      doc.rect(leftW, 0, W - leftW, H * 0.3, 'F');
-
-                      // Left section - white
-                      doc.setFillColor(255, 255, 255);
-                      doc.rect(0, 0, leftW, H, 'F');
-
-                      // Border line between sections
-                      doc.setDrawColor(220, 220, 230);
-                      doc.setLineWidth(0.3);
-                      doc.line(leftW, 15, leftW, H - 15);
-
-                      // Header - Logo text (since we can't embed image easily)
-                      doc.setFont('helvetica', 'bold');
-                      doc.setFontSize(14);
-                      doc.setTextColor(37, 99, 235);
-                      doc.text('Cloocus', 20, 25);
-
-                      // Left section content
-                      doc.setFont('helvetica', 'bold');
-                      doc.setFontSize(36);
-                      doc.setTextColor(30, 30, 30);
-                      doc.text('CERTIFICATE', 20, 70);
-
-                      doc.setFontSize(14);
-                      doc.setTextColor(120, 120, 120);
-                      doc.text('of Cloocus Seminar', 20, 82);
-
-                      // Decorative line
-                      doc.setDrawColor(37, 99, 235);
-                      doc.setLineWidth(1);
-                      doc.line(20, 90, 80, 90);
-
-                      // Issuance info
-                      doc.setFont('helvetica', 'normal');
-                      doc.setFontSize(10);
-                      doc.setTextColor(100, 100, 100);
                       const issueDate = new Date();
-                      doc.text('Date of Issuance', 20, 160);
-                      doc.setFont('helvetica', 'bold');
-                      doc.text(`${issueDate.getFullYear()}. ${issueDate.getMonth()+1}. ${issueDate.getDate()}`, 20, 167);
-
-                      doc.setFont('helvetica', 'normal');
-                      doc.text('Issued by', 20, 180);
-                      doc.setFont('helvetica', 'bold');
-                      doc.text('Cloocus Inc.', 20, 187);
-
-                      // Right section content
-                      // Badge circle
-                      doc.setFillColor(100, 70, 200);
-                      doc.circle(W - (W - leftW) / 2, 40, 18, 'F');
-                      doc.setFillColor(255, 255, 255);
-                      doc.setFont('helvetica', 'bold');
-                      doc.setFontSize(10);
-                      doc.setTextColor(255, 255, 255);
-                      doc.text('CERTIFIED', W - (W - leftW) / 2, 38, { align: 'center' });
-                      doc.setFontSize(7);
-                      doc.text('COMPLETION', W - (W - leftW) / 2, 44, { align: 'center' });
-
-                      const rx = leftW + 15;
-                      const rw = W - leftW - 30;
-
-                      // NAME
-                      doc.setFontSize(9);
-                      doc.setTextColor(180, 180, 220);
-                      doc.text('NAME', rx, 80);
-                      doc.setFontSize(16);
-                      doc.setTextColor(255, 255, 255);
-                      doc.setFont('helvetica', 'bold');
-                      doc.text(registration.name, rx, 92);
-
-                      // COURSE NAME
-                      doc.setFontSize(9);
-                      doc.setTextColor(180, 180, 220);
-                      doc.setFont('helvetica', 'normal');
-                      doc.text('COURSE NAME', rx, 110);
-                      doc.setFontSize(12);
-                      doc.setTextColor(255, 255, 255);
-                      doc.setFont('helvetica', 'bold');
-                      // Word wrap for long course names
-                      const courseLines = doc.splitTextToSize(registration.event_name, rw);
-                      doc.text(courseLines, rx, 120);
-
-                      // PERIOD
-                      const periodY = 120 + courseLines.length * 7 + 10;
-                      doc.setFontSize(9);
-                      doc.setTextColor(180, 180, 220);
-                      doc.setFont('helvetica', 'normal');
-                      doc.text('PERIOD', rx, periodY);
-                      doc.setFontSize(12);
-                      doc.setTextColor(255, 255, 255);
-                      doc.setFont('helvetica', 'bold');
                       const evtDate = new Date(registration.event_date);
-                      doc.text(`${evtDate.getFullYear()}. ${evtDate.getMonth()+1}. ${evtDate.getDate()}`, rx, periodY + 10);
+                      const issueDateStr = `${issueDate.getFullYear()}. ${issueDate.getMonth()+1}. ${issueDate.getDate()}`;
+                      const periodStr = `${evtDate.getFullYear()}. ${evtDate.getMonth()+1}. ${evtDate.getDate()}`;
 
-                      // Certification text (Korean - rendered as-is, jsPDF default font may not support Korean perfectly)
-                      // Use a simple approach
-                      doc.setFontSize(8);
-                      doc.setTextColor(200, 200, 230);
-                      doc.setFont('helvetica', 'normal');
-                      const certText = `This certifies that ${registration.name} has successfully completed the "${registration.event_name}" program by Cloocus.`;
-                      const certLines = doc.splitTextToSize(certText, rw);
-                      doc.text(certLines, rx, H - 30);
+                      // 숨겨진 수료증 HTML 요소 생성
+                      const certEl = document.createElement('div');
+                      certEl.style.cssText = 'position:fixed;left:-9999px;top:0;width:1122px;height:794px;font-family:"Noto Sans KR",sans-serif;overflow:hidden;';
+                      certEl.innerHTML = `
+                        <div style="display:flex;width:100%;height:100%;background:#fff;">
+                          <!-- 좌측 60% -->
+                          <div style="width:60%;height:100%;padding:50px 45px;display:flex;flex-direction:column;justify-content:space-between;position:relative;box-sizing:border-box;">
+                            <!-- 로고 -->
+                            <img src="/cloocus-logo.png" style="width:120px;height:auto;position:absolute;top:40px;left:45px;" crossorigin="anonymous" />
 
+                            <!-- 타이틀 -->
+                            <div style="margin-top:100px;">
+                              <p style="font-size:42px;font-weight:800;color:#1a1a1a;letter-spacing:3px;margin:0;">CERTIFICATE</p>
+                              <p style="font-size:16px;font-weight:400;color:#999;margin:8px 0 0 2px;">of Cloocus Seminar</p>
+                              <div style="width:70px;height:3px;background:#2563eb;margin-top:20px;border-radius:2px;"></div>
+                            </div>
+
+                            <!-- 발급 정보 -->
+                            <div style="display:flex;gap:60px;align-items:flex-end;">
+                              <div>
+                                <p style="font-size:10px;color:#aaa;margin:0 0 4px 0;text-transform:uppercase;letter-spacing:1px;">Date of Issuance</p>
+                                <p style="font-size:14px;font-weight:700;color:#333;margin:0;">${issueDateStr}</p>
+                              </div>
+                              <div>
+                                <p style="font-size:10px;color:#aaa;margin:0 0 4px 0;text-transform:uppercase;letter-spacing:1px;">Issued by</p>
+                                <p style="font-size:14px;font-weight:700;color:#333;margin:0;">Cloocus Inc.</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- 우측 40% -->
+                          <div style="width:40%;height:100%;background:linear-gradient(160deg,#4c2d96 0%,#2d1b69 50%,#1a1045 100%);padding:40px 35px;display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box;position:relative;">
+                            <!-- 인증 배지 -->
+                            <div style="width:80px;height:80px;border-radius:50%;border:3px solid rgba(255,255,255,0.3);display:flex;flex-direction:column;align-items:center;justify-content:center;position:absolute;top:30px;right:35px;">
+                              <p style="font-size:11px;font-weight:800;color:#fff;margin:0;letter-spacing:1px;">CERTIFIED</p>
+                              <div style="width:30px;height:1px;background:rgba(255,255,255,0.4);margin:3px 0;"></div>
+                              <p style="font-size:7px;font-weight:600;color:rgba(255,255,255,0.7);margin:0;letter-spacing:1.5px;">COMPLETION</p>
+                            </div>
+
+                            <!-- 수료자 정보 -->
+                            <div style="margin-top:100px;">
+                              <p style="font-size:10px;color:rgba(180,170,220,0.8);margin:0 0 6px 0;letter-spacing:2px;text-transform:uppercase;">Name</p>
+                              <p style="font-size:22px;font-weight:700;color:#fff;margin:0 0 30px 0;">${registration.name}</p>
+
+                              <p style="font-size:10px;color:rgba(180,170,220,0.8);margin:0 0 6px 0;letter-spacing:2px;text-transform:uppercase;">Course Name</p>
+                              <p style="font-size:16px;font-weight:700;color:#fff;margin:0 0 30px 0;line-height:1.4;word-break:keep-all;">${registration.event_name}</p>
+
+                              <p style="font-size:10px;color:rgba(180,170,220,0.8);margin:0 0 6px 0;letter-spacing:2px;text-transform:uppercase;">Period</p>
+                              <p style="font-size:15px;font-weight:700;color:#fff;margin:0;">${periodStr}</p>
+                            </div>
+
+                            <!-- 인증 문구 -->
+                            <div style="border-top:1px solid rgba(255,255,255,0.15);padding-top:15px;">
+                              <p style="font-size:11px;color:rgba(200,190,230,0.9);margin:0;line-height:1.7;word-break:keep-all;">
+                                위 사람은 클루커스의 "${registration.event_name}"에 참석하시어 성실히 이수하였기에 이 증서를 수여합니다.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      `;
+                      document.body.appendChild(certEl);
+
+                      // 로고 로드 대기
+                      const logoImg = certEl.querySelector('img');
+                      if (logoImg && !logoImg.complete) {
+                        await new Promise<void>((resolve) => { logoImg.onload = () => resolve(); logoImg.onerror = () => resolve(); setTimeout(resolve, 2000); });
+                      }
+
+                      const canvas = await html2canvas(certEl, { scale: 2, backgroundColor: '#fff', useCORS: true, logging: false });
+                      document.body.removeChild(certEl);
+
+                      const imgData = canvas.toDataURL('image/png');
+                      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+                      doc.addImage(imgData, 'PNG', 0, 0, 297, 210);
                       doc.save(`수료증_${registration.name}_${registration.event_name}.pdf`);
                     } catch (err) {
                       alert('PDF 생성 중 오류: ' + String(err));
