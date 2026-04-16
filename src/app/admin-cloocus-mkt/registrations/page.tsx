@@ -497,10 +497,10 @@ export default function RegistrationsPage() {
       {showBulkDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="bg-white rounded-xl w-full max-w-sm p-6 text-center">
-            <h2 className="text-lg font-bold mb-2">등록 일괄 삭제</h2>
+            <h2 className="text-lg font-bold mb-2">선택 삭제</h2>
             <p className="text-gray-500 text-sm mb-6">
               선택한 {selected.size}건의 등록 정보를 삭제하시겠습니까?<br />
-              <span className="text-xs text-red-500 mt-1 block">이 작업은 되돌릴 수 없습니다.</span>
+              <span className="text-xs text-gray-400 mt-1 block">삭제된 항목은 휴지통에서 복구할 수 있습니다.</span>
             </p>
             <div className="flex gap-2">
               <button onClick={handleBulkDelete} className="btn-danger flex-1">삭제</button>
@@ -645,7 +645,7 @@ export default function RegistrationsPage() {
       {showBulkSurvey && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="bg-white rounded-xl w-full max-w-sm p-6">
-            <h2 className="text-lg font-bold mb-4">설문조사 일괄 설정</h2>
+            <h2 className="text-lg font-bold mb-4">설문조사 설정</h2>
             <p className="text-sm text-gray-500 mb-4">선택한 <strong>{selected.size}건</strong>의 설문조사 상태를 변경합니다.</p>
             <div className="flex gap-2">
               <button
@@ -667,7 +667,7 @@ export default function RegistrationsPage() {
                 }}
                 className="btn-primary flex-1"
               >
-                {bulkSurveyApplying ? '적용 중...' : '일괄 On'}
+                {bulkSurveyApplying ? '적용 중...' : 'On'}
               </button>
               <button
                 disabled={bulkSurveyApplying}
@@ -688,7 +688,7 @@ export default function RegistrationsPage() {
                 }}
                 className="btn-danger flex-1"
               >
-                {bulkSurveyApplying ? '적용 중...' : '일괄 Off'}
+                {bulkSurveyApplying ? '적용 중...' : 'Off'}
               </button>
               <button onClick={() => setShowBulkSurvey(false)} className="btn-secondary flex-1">취소</button>
             </div>

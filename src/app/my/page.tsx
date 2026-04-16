@@ -64,6 +64,10 @@ export default function MyDashboard() {
   const [lookupLoading, setLookupLoading] = useState(false);
   const [pin, setPin] = useState('');
 
+  // 여러 이벤트 선택
+  const [multipleEvents, setMultipleEvents] = useState<{ id: string; event_name: string; event_date: string; registration_status: string }[]>([]);
+  const [showEventSelect, setShowEventSelect] = useState(false);
+
   const [registration, setRegistration] = useState<RegistrationData | null>(null);
   const [editable, setEditable] = useState(false);
   const [faqs, setFaqs] = useState<FAQItem[]>([]);
@@ -202,9 +206,18 @@ export default function MyDashboard() {
       });
       const data = await res.json();
       if (!res.ok) { setLookupError(data.error || '조회에 실패했습니다.'); return; }
+      setPin(lookupPin);
+
+      // 여러 이벤트에 등록한 경우
+      if (data.multiple) {
+        setMultipleEvents(data.registrations);
+        setShowEventSelect(true);
+        setAuthenticated(true);
+        return;
+      }
+
       setRegistration(data.registration);
       setEditable(data.editable);
-      setPin(lookupPin);
       setAuthenticated(true);
 
       // Load FAQs
@@ -297,6 +310,77 @@ export default function MyDashboard() {
               <a href="/" className="block text-center text-sm text-gray-400 hover:text-gray-600 mt-4">
                 ← 이벤트 등록하기
               </a>
+            </div>
+          </div>
+        </div>
+        <BrandFooter />
+      </div>
+    );
+  }
+
+  // 이벤트 선택 화면 (동일 이메일로 여러 이벤트 신청한 경우)
+  if (showEventSelect && !registration) {
+    const loadRegistration = async (regId: string) => {
+      try {
+        const res = await fetch(`/api/register/${regId}?pin=${encodeURIComponent(pin)}`);
+        const data = await res.json();
+        if (!res.ok) { alert(data.error || '조회에 실패했습니다.'); return; }
+        setRegistration(data.registration);
+        setEditable(data.editable);
+        setShowEventSelect(false);
+        try {
+          const faqRes = await fetch('/api/faqs');
+          const faqData = await faqRes.json();
+          setFaqs(Array.isArray(faqData) ? faqData : []);
+        } catch { /* ignore */ }
+      } catch { alert('네트워크 오류가 발생했습니다.'); }
+    };
+
+    const statusBadge = (s: string) => {
+      if (s === 'confirmed') return { text: '등록 확정', cls: 'bg-green-100 text-green-700' };
+      if (s === 'rejected') return { text: '등록 불가', cls: 'bg-red-100 text-red-600' };
+      return { text: '등록 대기', cls: 'bg-yellow-100 text-yellow-700' };
+    };
+
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="w-full max-w-md">
+            <div className="bg-white rounded-xl border border-gray-200 p-8">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/cloocus-logo.png" alt="Cloocus" className="h-7 mx-auto mb-5" />
+              <h1 className="text-xl font-bold text-center mb-1">이벤트 선택</h1>
+              <p className="text-gray-500 text-center text-sm mb-6">조회할 이벤트를 선택해주세요.</p>
+
+              <div className="space-y-3">
+                {multipleEvents.map((evt) => {
+                  const badge = statusBadge(evt.registration_status);
+                  return (
+                    <button
+                      key={evt.id}
+                      onClick={() => loadRegistration(evt.id)}
+                      className="w-full text-left p-4 rounded-lg border-2 border-gray-200 hover:border-blue-400 hover:bg-blue-50 transition-all"
+                    >
+                      <p className="font-semibold text-base text-gray-900">{evt.event_name}</p>
+                      <div className="flex items-center gap-2 mt-1.5">
+                        {evt.event_date && (
+                          <span className="text-sm text-gray-500">
+                            {(() => { const d = new Date(evt.event_date); const day = ['일','월','화','수','목','금','토'][d.getDay()]; return `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${day})`; })()}
+                          </span>
+                        )}
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${badge.cls}`}>{badge.text}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                onClick={() => { setAuthenticated(false); setShowEventSelect(false); setMultipleEvents([]); }}
+                className="w-full mt-4 text-sm text-gray-400 hover:text-gray-600 hover:underline"
+              >
+                ← 뒤로가기
+              </button>
             </div>
           </div>
         </div>

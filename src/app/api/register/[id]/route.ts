@@ -27,7 +27,7 @@ export async function GET(
 
     const { data, error } = await supabase
       .from('event_registrations')
-      .select('*, events!event_registrations_event_id_fkey(status)')
+      .select('*, events!event_registrations_event_id_fkey(name, status, event_date, event_type, capacity, location, event_time, category)')
       .eq('id', id)
       .eq('pin', pin)
       .is('deleted_at', null)
@@ -37,7 +37,8 @@ export async function GET(
       return NextResponse.json({ error: '등록 정보를 찾을 수 없거나 암호가 일치하지 않습니다.' }, { status: 404 });
     }
 
-    const eventStatus = data.events?.status || 'closed';
+    const evt = Array.isArray(data.events) ? data.events[0] : data.events;
+    const eventStatus = evt?.status || 'closed';
 
     return NextResponse.json({
       registration: {
@@ -54,6 +55,15 @@ export async function GET(
         referrer_name: data.referrer_name,
         inquiry: data.inquiry,
         event_id: data.event_id,
+        event_name: evt?.name || '',
+        event_date: evt?.event_date || '',
+        event_type: evt?.event_type || '',
+        event_category: evt?.category || '이벤트',
+        event_location: evt?.location || '',
+        event_time: evt?.event_time || '',
+        registration_status: data.registration_status || 'pending',
+        survey_enabled: data.survey_enabled || false,
+        survey_completed: data.survey_completed || false,
       },
       editable: eventStatus === 'open',
     });
