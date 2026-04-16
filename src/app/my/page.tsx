@@ -723,37 +723,37 @@ export default function MyDashboard() {
                             <!-- 좌측 상단: 로고 -->
                             <img src="/cloocus-logo.png" style="width:120px;height:auto;" crossorigin="anonymous" />
 
-                            <!-- 좌측 중심: CERTIFICATE OF COMPLETION (2배 확대) -->
-                            <div style="margin-top:-10px;">
-                              <p style="font-size:64px;font-weight:800;color:#1a1a1a;letter-spacing:5px;margin:0;line-height:1.1;">CERTIFICATE</p>
-                              <p style="font-size:22px;font-weight:500;color:#999;margin:8px 0 0 3px;letter-spacing:4px;">OF COMPLETION</p>
-                              <div style="width:80px;height:3px;background:#4c2d96;margin-top:16px;border-radius:2px;"></div>
+                            <!-- 좌측 중심: CERTIFICATE OF COMPLETION -->
+                            <div>
+                              <p style="font-size:64px;font-weight:800;color:#1a1a1a;letter-spacing:5px;margin:0 0 14px;line-height:1;">CERTIFICATE</p>
+                              <p style="font-size:22px;font-weight:500;color:#999;margin:0 0 0 3px;letter-spacing:4px;">OF COMPLETION</p>
+                              <div style="width:80px;height:3px;background:#4c2d96;margin-top:20px;border-radius:2px;"></div>
                             </div>
 
-                            <!-- 좌측 하단: CEO + Issued on + Issued by + QR (1열) -->
-                            <div style="display:flex;gap:28px;align-items:flex-end;">
+                            <!-- 좌측 하단: CEO + Issued on + Issued by + QR (1열, 동일 레벨) -->
+                            <div style="display:flex;gap:30px;align-items:flex-start;">
                               <!-- CEO + 날인 -->
-                              <div style="text-align:left;">
-                                <p style="font-size:10px;color:#4c2d96;margin:0 0 3px;font-weight:600;letter-spacing:1px;">Cloocus CEO</p>
-                                <p style="font-size:14px;font-weight:700;color:#222;margin:0;">Steve Hong</p>
-                                <img src="/stamp.png" style="width:50px;height:auto;margin-top:2px;opacity:0.85;" crossorigin="anonymous" />
+                              <div>
+                                <p style="font-size:10px;color:#4c2d96;margin:0 0 4px;font-weight:600;letter-spacing:1px;">Cloocus CEO</p>
+                                <p style="font-size:14px;font-weight:700;color:#222;margin:0 0 4px;">Steve Hong</p>
+                                <img src="/stamp.png" style="width:50px;height:auto;opacity:0.85;" crossorigin="anonymous" />
                               </div>
                               <!-- Issued on -->
                               <div>
-                                <p style="font-size:10px;color:#4c2d96;margin:0 0 3px;font-weight:600;letter-spacing:1px;">Issued on</p>
+                                <p style="font-size:10px;color:#4c2d96;margin:0 0 4px;font-weight:600;letter-spacing:1px;">Issued on</p>
                                 <p style="font-size:14px;font-weight:700;color:#222;margin:0;">${issueDateStr}</p>
                               </div>
                               <!-- Issued by -->
                               <div>
-                                <p style="font-size:10px;color:#4c2d96;margin:0 0 3px;font-weight:600;letter-spacing:1px;">Issued by</p>
+                                <p style="font-size:10px;color:#4c2d96;margin:0 0 4px;font-weight:600;letter-spacing:1px;">Issued by</p>
                                 <p style="font-size:14px;font-weight:700;color:#222;margin:0;">Cloocus co.,Ltd.</p>
                               </div>
                               <!-- 위조방지 QR + 인증번호 -->
-                              <div style="display:flex;align-items:center;gap:8px;margin-left:auto;">
-                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(verifyQr)}" style="width:48px;height:48px;" crossorigin="anonymous" />
-                                <div>
-                                  <p style="font-size:7px;color:#ccc;margin:0;">Certificate ID</p>
-                                  <p style="font-size:8px;color:#aaa;margin:2px 0 0;font-family:monospace;letter-spacing:0.3px;">${certId}</p>
+                              <div style="display:flex;align-items:flex-start;gap:10px;margin-left:auto;">
+                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(verifyQr)}" style="width:52px;height:52px;" crossorigin="anonymous" />
+                                <div style="padding-top:2px;">
+                                  <p style="font-size:9px;color:#999;margin:0 0 2px;font-weight:600;">Certificate ID</p>
+                                  <p style="font-size:10px;color:#666;margin:0;font-family:monospace;letter-spacing:0.5px;">${certId}</p>
                                 </div>
                               </div>
                             </div>
@@ -764,7 +764,7 @@ export default function MyDashboard() {
 
                           <!-- 우측 40% -->
                           <div style="width:40%;height:100%;background:linear-gradient(160deg,#5b35a8 0%,#3a1d80 40%,#1a1045 100%);padding:35px 32px;display:flex;flex-direction:column;box-sizing:border-box;position:relative;">
-                            <!-- 인증 마크 (우측 상단, 2배 크기) -->
+                            <!-- 인증 마크 -->
                             <div style="width:150px;height:150px;border-radius:50%;border:3px solid rgba(255,255,255,0.2);display:flex;flex-direction:column;align-items:center;justify-content:center;position:absolute;top:20px;right:20px;background:radial-gradient(circle,rgba(100,70,200,0.35) 0%,transparent 70%);">
                               <div style="width:125px;height:125px;border-radius:50%;border:2px solid rgba(255,255,255,0.35);display:flex;flex-direction:column;align-items:center;justify-content:center;">
                                 <div style="width:100px;height:100px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.25);display:flex;flex-direction:column;align-items:center;justify-content:center;">
@@ -776,20 +776,22 @@ export default function MyDashboard() {
                             </div>
 
                             <!-- 수료자 정보 -->
-                            <div style="margin-top:160px;flex:1;">
+                            <div style="margin-top:160px;">
                               <p style="font-size:10px;color:rgba(180,170,220,0.8);margin:0 0 6px;letter-spacing:2px;text-transform:uppercase;">Name</p>
-                              <p style="font-size:24px;font-weight:700;color:#fff;margin:0 0 24px;border-bottom:1px solid rgba(255,255,255,0.15);padding-bottom:12px;">${registration.name}</p>
+                              <p style="font-size:24px;font-weight:700;color:#fff;margin:0 0 22px;border-bottom:1px solid rgba(255,255,255,0.15);padding-bottom:12px;">${registration.name}</p>
 
                               <p style="font-size:10px;color:rgba(180,170,220,0.8);margin:0 0 6px;letter-spacing:2px;text-transform:uppercase;">Course Name</p>
-                              <p style="font-size:15px;font-weight:600;color:#fff;margin:0 0 24px;line-height:1.5;word-break:keep-all;">${registration.event_name}</p>
+                              <p style="font-size:15px;font-weight:600;color:#fff;margin:0 0 22px;line-height:1.5;word-break:keep-all;">${registration.event_name}</p>
 
                               <p style="font-size:10px;color:rgba(180,170,220,0.8);margin:0 0 6px;letter-spacing:2px;text-transform:uppercase;">Period</p>
-                              <p style="font-size:15px;font-weight:600;color:#fff;margin:0 0 20px;">${periodStr}</p>
+                              <p style="font-size:15px;font-weight:600;color:#fff;margin:0 0 24px;">${periodStr}</p>
+                            </div>
 
-                              <!-- 인증 문구 (PERIOD 바로 아래, 흰색) -->
-                              <p style="font-size:11.5px;color:#fff;margin:0;line-height:2;word-break:keep-all;">
-                                위 사람은 클루커스의 &ldquo;${registration.event_name}&rdquo;에 참석하시어 성실히 이수하였기에 이 증서를 수여합니다.
-                              </p>
+                            <!-- 인증 문구 (PERIOD 아래, 흰색, 크게) -->
+                            <div style="margin-top:auto;padding-top:12px;">
+                              <p style="font-size:16px;font-weight:600;color:#fff;margin:0;line-height:2;word-break:keep-all;">위 사람은 클루커스의 &ldquo;${registration.event_name}&rdquo;에</p>
+                              <p style="font-size:16px;font-weight:600;color:#fff;margin:0;line-height:2;">참석하시어 성실히 이수하였기에</p>
+                              <p style="font-size:16px;font-weight:600;color:#fff;margin:0;line-height:2;">이 증서를 수여합니다.</p>
                             </div>
                           </div>
                         </div>
