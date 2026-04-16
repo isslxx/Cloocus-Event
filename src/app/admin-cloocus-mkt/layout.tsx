@@ -24,6 +24,7 @@ const DEFAULT_NAV: NavItem[] = [
   { href: '/admin-cloocus-mkt/emails', label: '이메일 발송', icon: '✉️' },
   { href: '/admin-cloocus-mkt/faqs', label: 'FAQ 관리', icon: '❓' },
   { href: '/admin-cloocus-mkt/surveys', label: '설문조사 관리', icon: '📝' },
+  { href: '/admin-cloocus-mkt/survey-list', label: '설문 리스트', icon: '📑' },
   { href: '/admin-cloocus-mkt/survey-responses', label: '설문 응답', icon: '📈' },
   { href: '/admin-cloocus-mkt/certificates', label: '수료증 관리', icon: '🎓' },
 ];

@@ -722,8 +722,7 @@ export default function MyDashboard() {
                   </svg>
                 </div>
                 <p className="text-xl font-bold text-gray-900 mb-2">설문조사 제출이 완료되었습니다!</p>
-                <p className="text-sm text-gray-500 mb-1">오늘의 경험을 공유해 주셔서 감사합니다.</p>
-                <p className="text-sm text-gray-400 mb-4">{registration.event_name}</p>
+                <p className="text-sm text-gray-500 mb-4">오늘의 경험을 공유해 주셔서 감사합니다.</p>
 
                 {/* 수료증 다운로드 */}
                 <button
@@ -763,7 +762,7 @@ export default function MyDashboard() {
                               <div>
                                 <p style="font-size:10px;color:#4c2d96;margin:0 0 4px;font-weight:600;letter-spacing:1px;">Cloocus CEO</p>
                                 <p style="font-size:14px;font-weight:700;color:#222;margin:0 0 4px;">Steve Hong</p>
-                                <img src="/stamp.jpg" style="width:50px;height:auto;opacity:0.85;" crossorigin="anonymous" />
+                                <img src="/stamp.jpg" style="width:70px;height:auto;margin-top:4px;" crossorigin="anonymous" />
                               </div>
                               <!-- Issued on -->
                               <div>
