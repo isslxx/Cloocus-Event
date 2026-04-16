@@ -725,7 +725,7 @@ export default function MyDashboard() {
 
                             <!-- 좌측 중심: CERTIFICATE OF COMPLETION -->
                             <div>
-                              <p style="font-size:64px;font-weight:800;color:#1a1a1a;letter-spacing:5px;margin:0 0 14px;line-height:1;">CERTIFICATE</p>
+                              <p style="font-size:64px;font-weight:800;color:#1a1a1a;letter-spacing:5px;margin:0 0 28px;line-height:1;">CERTIFICATE</p>
                               <p style="font-size:22px;font-weight:500;color:#999;margin:0 0 0 3px;letter-spacing:4px;">OF COMPLETION</p>
                               <div style="width:80px;height:3px;background:#4c2d96;margin-top:20px;border-radius:2px;"></div>
                             </div>
@@ -784,11 +784,9 @@ export default function MyDashboard() {
                               <p style="font-size:15px;font-weight:600;color:#fff;margin:0 0 22px;line-height:1.5;word-break:keep-all;">${registration.event_name}</p>
 
                               <p style="font-size:10px;color:rgba(180,170,220,0.8);margin:0 0 6px;letter-spacing:2px;text-transform:uppercase;">Period</p>
-                              <p style="font-size:15px;font-weight:600;color:#fff;margin:0 0 24px;">${periodStr}</p>
-                            </div>
+                              <p style="font-size:15px;font-weight:600;color:#fff;margin:0 0 28px;">${periodStr}</p>
 
-                            <!-- 인증 문구 (PERIOD 아래, 흰색, 크게) -->
-                            <div style="margin-top:auto;padding-top:12px;">
+                              <!-- 인증 문구 (PERIOD 바로 아래) -->
                               <p style="font-size:16px;font-weight:600;color:#fff;margin:0;line-height:2;word-break:keep-all;">위 사람은 클루커스의 &ldquo;${registration.event_name}&rdquo;에</p>
                               <p style="font-size:16px;font-weight:600;color:#fff;margin:0;line-height:2;">참석하시어 성실히 이수하였기에</p>
                               <p style="font-size:16px;font-weight:600;color:#fff;margin:0;line-height:2;">이 증서를 수여합니다.</p>
@@ -835,6 +833,7 @@ export default function MyDashboard() {
                 >
                   수료증 발급하기 (PDF)
                 </button>
+                <p className="text-xs text-red-500 mt-2">수료증 발급은 이벤트 종료일 기준 7일 이후에는 발급이 불가합니다.</p>
 
                 {/* QR code below */}
                 <div className="mt-4 pt-4 border-t border-gray-100">
