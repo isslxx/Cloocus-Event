@@ -33,6 +33,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     'email', 'phone', 'industry', 'company_size', 'referral_source',
     'referrer_name', 'inquiry', 'privacy_consent', 'registration_status',
     'survey_enabled', 'survey_completed',
+    'certificate_issued', 'certificate_issued_at',
   ];
   const filtered: Record<string, unknown> = {};
   for (const key of allowedFields) {

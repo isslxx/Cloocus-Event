@@ -34,6 +34,8 @@ export type Registration = {
   registration_status: 'pending' | 'confirmed' | 'rejected';
   survey_enabled: boolean;
   survey_completed: boolean;
+  certificate_issued: boolean;
+  certificate_issued_at: string | null;
   created_at: string;
   updated_at: string;
 };

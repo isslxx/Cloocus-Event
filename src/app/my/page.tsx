@@ -688,6 +688,13 @@ export default function MyDashboard() {
                       const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
                       doc.addImage(imgData, 'PNG', 0, 0, 297, 210);
                       doc.save(`수료증_${registration.name}_${registration.event_name}.pdf`);
+
+                      // 발급 기록
+                      fetch('/api/certificate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ registration_id: registration.id, pin }),
+                      }).catch(() => {});
                     } catch (err) {
                       alert('PDF 생성 중 오류: ' + String(err));
                     }
