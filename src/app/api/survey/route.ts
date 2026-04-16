@@ -1,0 +1,70 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+
+function getServiceSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const { registration_id, pin, q1_azure_level, q2_difficulty, q3_purpose, q4_adoption, q5_consulting, q6_feedback } = await req.json();
+
+    if (!registration_id || !pin) {
+      return NextResponse.json({ error: '인증 정보가 필요합니다.' }, { status: 400 });
+    }
+
+    const supabase = getServiceSupabase();
+
+    // PIN 검증
+    const { data: reg } = await supabase
+      .from('event_registrations')
+      .select('id, pin, survey_enabled, survey_completed')
+      .eq('id', registration_id)
+      .single();
+
+    if (!reg || reg.pin !== pin) {
+      return NextResponse.json({ error: '인증에 실패했습니다.' }, { status: 403 });
+    }
+
+    if (!reg.survey_enabled) {
+      return NextResponse.json({ error: '설문조사가 활성화되지 않았습니다.' }, { status: 400 });
+    }
+
+    if (reg.survey_completed) {
+      return NextResponse.json({ error: '이미 설문조사를 완료했습니다.' }, { status: 400 });
+    }
+
+    // 필수 항목 검증
+    if (!q1_azure_level || !q2_difficulty || !q3_purpose?.length || !q4_adoption || !q5_consulting?.length) {
+      return NextResponse.json({ error: '필수 항목을 모두 입력해주세요.' }, { status: 400 });
+    }
+
+    // 설문 저장
+    const { error: insertError } = await supabase.from('surveys').insert({
+      registration_id,
+      q1_azure_level,
+      q2_difficulty,
+      q3_purpose,
+      q4_adoption,
+      q5_consulting,
+      q6_feedback: q6_feedback || '',
+    });
+
+    if (insertError) {
+      return NextResponse.json({ error: '설문 저장 중 오류가 발생했습니다.' }, { status: 500 });
+    }
+
+    // survey_completed 업데이트
+    await supabase
+      .from('event_registrations')
+      .update({ survey_completed: true })
+      .eq('id', registration_id);
+
+    return NextResponse.json({ success: true });
+  } catch {
+    return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 });
+  }
+}

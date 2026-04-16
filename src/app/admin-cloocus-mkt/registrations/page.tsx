@@ -341,6 +341,7 @@ export default function RegistrationsPage() {
                   { key: 'referral_source' as SortKey, label: '신청 경로' },
                   { key: 'created_at' as SortKey, label: '등록일' },
                   { key: 'registration_status' as SortKey, label: '등록 상태' },
+                  { key: 'survey_enabled' as SortKey, label: '설문조사' },
                 ].map((col) => (
                   <th key={col.key} className="px-4 py-3 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 whitespace-nowrap" onClick={() => handleSort(col.key)}>
                     {col.label}{sortIcon(col.key)}
@@ -392,6 +393,26 @@ export default function RegistrationsPage() {
                       </select>
                     ) : (
                       registrationStatusLabel(r.registration_status)
+                    )}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {r.registration_status === 'confirmed' ? (
+                      <button
+                        onClick={async () => {
+                          const newVal = !(r.survey_enabled);
+                          setRecords((prev) => prev.map((rec) => rec.id === r.id ? { ...rec, survey_enabled: newVal } as Registration : rec));
+                          fetch(`/api/admin/registrations/${r.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+                            body: JSON.stringify({ survey_enabled: newVal }),
+                          });
+                        }}
+                        className={`text-xs px-2 py-0.5 rounded-full font-medium ${r.survey_enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}
+                      >
+                        {r.survey_enabled ? (r.survey_completed ? '완료' : 'On') : 'Off'}
+                      </button>
+                    ) : (
+                      <span className="text-xs text-gray-300">-</span>
                     )}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">{emailStatusLabel(r.email_status)}</td>

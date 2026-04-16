@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 
     const { data, error } = await supabase
       .from('event_registrations')
-      .select('id, name, company_name, company_name_raw, department, job_title, email, phone, industry, company_size, referral_source, referrer_name, inquiry, event_id, registration_status, events!event_registrations_event_id_fkey(name, status, event_date, event_type, capacity, location, event_time, category)')
+      .select('id, name, company_name, company_name_raw, department, job_title, email, phone, industry, company_size, referral_source, referrer_name, inquiry, event_id, registration_status, survey_enabled, survey_completed, events!event_registrations_event_id_fkey(name, status, event_date, event_type, capacity, location, event_time, category)')
       .eq('email', email.toLowerCase().trim())
       .eq('pin', pin)
       .is('deleted_at', null)
@@ -63,6 +63,8 @@ export async function POST(req: NextRequest) {
         event_location: (evt as Record<string, unknown>)?.location || '',
         event_time: (evt as Record<string, unknown>)?.event_time || '',
         registration_status: r.registration_status || 'pending',
+        survey_enabled: r.survey_enabled || false,
+        survey_completed: r.survey_completed || false,
       },
       editable: eventStatus === 'open',
     });

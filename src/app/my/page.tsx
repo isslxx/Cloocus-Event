@@ -25,6 +25,8 @@ type RegistrationData = {
   event_category: string;
   event_location: string;
   event_time: string;
+  survey_enabled: boolean;
+  survey_completed: boolean;
 };
 
 type FAQItem = {
@@ -71,6 +73,20 @@ export default function MyDashboard() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelled, setCancelled] = useState(false);
+
+  const [showSurvey, setShowSurvey] = useState(false);
+  const [surveySubmitted, setSurveySubmitted] = useState(false);
+  const [surveyForm, setSurveyForm] = useState({
+    q1: '',
+    q2: '',
+    q3: [] as string[],
+    q4: '',
+    q5: [] as string[],
+    q3_etc: '',
+    q6: '',
+  });
+  const [surveyErrors, setSurveyErrors] = useState<Record<string, string>>({});
+  const [surveySubmitting, setSurveySubmitting] = useState(false);
 
   // 수정 모드
   const [editMode, setEditMode] = useState(false);
@@ -393,25 +409,334 @@ export default function MyDashboard() {
           </div>
         )}
 
-        {/* QR 코드 (등록 확정 + 오프라인 카테고리) */}
+        {/* 등록 확정 영역 */}
         {showQr && (
-          <div className="bg-white rounded-xl border-2 border-green-200 p-6 mb-4 text-center">
-            <div className="bg-green-50 rounded-lg p-3 mb-4">
-              <p className="text-green-700 font-bold text-lg">등록이 확정되었습니다</p>
-              <p className="text-green-600 text-sm mt-1">{registration.event_name}</p>
-            </div>
-            <p className="text-xs text-gray-500 mb-3">이벤트 현장에서 아래 QR코드를 제시해주세요.</p>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(verifyUrl)}`}
-              alt="QR Code"
-              className="mx-auto border border-gray-100 rounded-lg p-2"
-              width={200}
-              height={200}
-            />
-            <p className="text-xs text-gray-400 mt-3">{registration.name} | {registration.company_name}</p>
-            <p className="text-[10px] text-gray-300 mt-1">QR 스캔 시 참석자 검증 페이지로 연결됩니다</p>
-          </div>
+          <>
+            {/* 설문조사 미완료 + 설문 활성화 → 설문조사 버튼 */}
+            {registration.survey_enabled && !registration.survey_completed && !surveySubmitted && !showSurvey && (
+              <div className="bg-white rounded-xl border-2 border-green-200 p-6 mb-4 text-center">
+                <div className="bg-green-50 rounded-lg p-3 mb-4">
+                  <p className="text-green-700 font-bold text-lg">등록이 확정되었습니다</p>
+                  <p className="text-green-600 text-sm mt-1">{registration.event_name}</p>
+                </div>
+                <p className="text-sm text-gray-500 mb-4">이벤트 참여 후 설문조사를 작성해주세요.</p>
+                <button onClick={() => setShowSurvey(true)} className="btn-primary">
+                  설문조사 작성하기
+                </button>
+              </div>
+            )}
+
+            {/* 설문조사 폼 */}
+            {showSurvey && !surveySubmitted && (
+              <div className="bg-white rounded-xl border border-gray-200 p-6 mb-4">
+                <h2 className="text-lg font-bold mb-1">설문조사</h2>
+                <p className="text-sm text-gray-500 mb-6">오늘의 경험에 대해 알려주세요.</p>
+
+                <div className="space-y-6">
+                  {/* Q1 */}
+                  <div>
+                    <p className="text-sm font-medium text-gray-800 mb-2">1. 교육 전 Microsoft Azure에 대한 이해 수준은 어느 정도입니까? <span className="text-red-500">*</span></p>
+                    {['전혀 모름 (들어봤으나 사용 경험 없음)', '기본 개념 (Azure 역할 및 주요 서비스 이해)', '기초 수준 (리소스 생성 등 기본 실습/사용 경험)', '중급 수준 (가상머신, 스토리지 등 일부 서비스 적용 경험)', '고급 수준 (아키텍처 설계, 최적화 등 고급 기능 숙지)'].map((opt) => (
+                      <label key={opt} className="flex items-center gap-2 py-1.5 cursor-pointer">
+                        <input type="radio" name="q1" value={opt} checked={surveyForm.q1 === opt} onChange={(e) => { setSurveyForm({ ...surveyForm, q1: e.target.value }); setSurveyErrors({ ...surveyErrors, q1: '' }); }} className="w-4 h-4 accent-blue-600" />
+                        <span className="text-sm text-gray-700">{opt}</span>
+                      </label>
+                    ))}
+                    {surveyErrors.q1 && <p className="text-xs text-red-500 mt-1">{surveyErrors.q1}</p>}
+                  </div>
+
+                  {/* Q2 */}
+                  <div>
+                    <p className="text-sm font-medium text-gray-800 mb-2">2. 오늘 참여한 이벤트의 난이도는 어떠셨나요? <span className="text-red-500">*</span></p>
+                    {['매우 쉬움', '적절함', '다소 어려움', '매우 어려움'].map((opt) => (
+                      <label key={opt} className="flex items-center gap-2 py-1.5 cursor-pointer">
+                        <input type="radio" name="q2" value={opt} checked={surveyForm.q2 === opt} onChange={(e) => { setSurveyForm({ ...surveyForm, q2: e.target.value }); setSurveyErrors({ ...surveyErrors, q2: '' }); }} className="w-4 h-4 accent-blue-600" />
+                        <span className="text-sm text-gray-700">{opt}</span>
+                      </label>
+                    ))}
+                    {surveyErrors.q2 && <p className="text-xs text-red-500 mt-1">{surveyErrors.q2}</p>}
+                  </div>
+
+                  {/* Q3 - multiple choice */}
+                  <div>
+                    <p className="text-sm font-medium text-gray-800 mb-2">3. 본 이벤트에 참여하신 목적은 무엇입니까? (복수 선택 가능) <span className="text-red-500">*</span></p>
+                    {['기초 지식 및 기본 역량 확보', '클라우드 도입 전 비교/평가', '사내 PoC 프로젝트 준비', 'Azure 전환(마이그레이션) 검토', '사용 중인 Azure 기술 고도화', '기타'].map((opt) => (
+                      <label key={opt} className="flex items-center gap-2 py-1.5 cursor-pointer">
+                        <input type="checkbox" checked={surveyForm.q3.includes(opt)} onChange={(e) => {
+                          const next = e.target.checked ? [...surveyForm.q3, opt] : surveyForm.q3.filter((v) => v !== opt);
+                          setSurveyForm({ ...surveyForm, q3: next, q3_etc: e.target.checked ? surveyForm.q3_etc : (opt === '기타' ? '' : surveyForm.q3_etc) });
+                          setSurveyErrors({ ...surveyErrors, q3: '' });
+                        }} className="w-4 h-4 accent-blue-600" />
+                        <span className="text-sm text-gray-700">{opt}</span>
+                      </label>
+                    ))}
+                    {surveyForm.q3.includes('기타') && (
+                      <input type="text" value={surveyForm.q3_etc} onChange={(e) => setSurveyForm({ ...surveyForm, q3_etc: e.target.value })} placeholder="기타 내용을 입력해주세요" className="mt-1 w-full" style={{ padding: '8px 12px', border: `1px solid ${surveyErrors.q3_etc ? '#ef4444' : '#e0e0e0'}`, borderRadius: 8, fontSize: 14 }} />
+                    )}
+                    {surveyErrors.q3 && <p className="text-xs text-red-500 mt-1">{surveyErrors.q3}</p>}
+                    {surveyErrors.q3_etc && <p className="text-xs text-red-500 mt-1">{surveyErrors.q3_etc}</p>}
+                  </div>
+
+                  {/* Q4 */}
+                  <div>
+                    <p className="text-sm font-medium text-gray-800 mb-2">4. 현재 Microsoft Azure 도입 또는 마이그레이션을 고려 중입니까? <span className="text-red-500">*</span></p>
+                    {['이미 사용 중 (추가 도입/확장 계획 있음)', '이미 사용 중 (추가 도입/확장 계획 없음)', '6개월 이내 도입 계획 있음', '1년 이내 도입 계획 있음', '계획 없음 / 미정'].map((opt) => (
+                      <label key={opt} className="flex items-center gap-2 py-1.5 cursor-pointer">
+                        <input type="radio" name="q4" value={opt} checked={surveyForm.q4 === opt} onChange={(e) => { setSurveyForm({ ...surveyForm, q4: e.target.value }); setSurveyErrors({ ...surveyErrors, q4: '' }); }} className="w-4 h-4 accent-blue-600" />
+                        <span className="text-sm text-gray-700">{opt}</span>
+                      </label>
+                    ))}
+                    {surveyErrors.q4 && <p className="text-xs text-red-500 mt-1">{surveyErrors.q4}</p>}
+                  </div>
+
+                  {/* Q5 - multiple choice */}
+                  <div>
+                    <p className="text-sm font-medium text-gray-800 mb-2">5. Microsoft Azure 추가 활용에 대한 클루커스의 컨설팅이 필요하십니까? (복수 선택 가능) <span className="text-red-500">*</span></p>
+                    {['예 (클루커스의 추가 컨설팅 필요)', '예 (교육/세미나 이벤트 소식 필요)', '필요 없음'].map((opt) => (
+                      <label key={opt} className="flex items-center gap-2 py-1.5 cursor-pointer">
+                        <input type="checkbox" checked={surveyForm.q5.includes(opt)} onChange={(e) => {
+                          const next = e.target.checked ? [...surveyForm.q5, opt] : surveyForm.q5.filter((v) => v !== opt);
+                          setSurveyForm({ ...surveyForm, q5: next });
+                          setSurveyErrors({ ...surveyErrors, q5: '' });
+                        }} className="w-4 h-4 accent-blue-600" />
+                        <span className="text-sm text-gray-700">{opt}</span>
+                      </label>
+                    ))}
+                    {surveyErrors.q5 && <p className="text-xs text-red-500 mt-1">{surveyErrors.q5}</p>}
+                  </div>
+
+                  {/* Q6 */}
+                  <div>
+                    <p className="text-sm font-medium text-gray-800 mb-2">6. 참여 후기, 추가로 배우고 싶은 교육 주제 등 핸즈온 운영에 대한 피드백이 있으시면 편히 말씀 부탁드립니다.</p>
+                    <p className="text-xs text-gray-400 mb-2">작성해 주신 피드백은 향후 더 나은 경험 제공을 위해 개선 사항으로 참고하겠습니다.</p>
+                    <textarea rows={4} value={surveyForm.q6} onChange={(e) => setSurveyForm({ ...surveyForm, q6: e.target.value })} placeholder="자유롭게 작성해주세요" className="w-full" style={{ padding: '10px 12px', border: '1px solid #e0e0e0', borderRadius: 8, fontSize: 14 }} />
+                  </div>
+                </div>
+
+                <button
+                  onClick={async () => {
+                    const errs: Record<string, string> = {};
+                    if (!surveyForm.q1) errs.q1 = '필수 항목입니다.';
+                    if (!surveyForm.q2) errs.q2 = '필수 항목입니다.';
+                    if (surveyForm.q3.length === 0) errs.q3 = '하나 이상 선택해주세요.';
+                    if (surveyForm.q3.includes('기타') && !surveyForm.q3_etc.trim()) errs.q3_etc = '기타 내용을 입력해주세요.';
+                    if (!surveyForm.q4) errs.q4 = '필수 항목입니다.';
+                    if (surveyForm.q5.length === 0) errs.q5 = '하나 이상 선택해주세요.';
+                    setSurveyErrors(errs);
+                    if (Object.keys(errs).length > 0) return;
+
+                    setSurveySubmitting(true);
+                    try {
+                      const q3Final = surveyForm.q3.map((v) => v === '기타' ? `기타: ${surveyForm.q3_etc}` : v);
+                      const res = await fetch('/api/survey', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          registration_id: registration.id,
+                          pin,
+                          q1_azure_level: surveyForm.q1,
+                          q2_difficulty: surveyForm.q2,
+                          q3_purpose: q3Final,
+                          q4_adoption: surveyForm.q4,
+                          q5_consulting: surveyForm.q5,
+                          q6_feedback: surveyForm.q6,
+                        }),
+                      });
+                      const data = await res.json();
+                      if (!res.ok) { alert(data.error || '제출에 실패했습니다.'); return; }
+                      setSurveySubmitted(true);
+                      setShowSurvey(false);
+                      if (registration) {
+                        setRegistration({ ...registration, survey_completed: true });
+                      }
+                    } catch { alert('네트워크 오류가 발생했습니다.'); }
+                    finally { setSurveySubmitting(false); }
+                  }}
+                  disabled={surveySubmitting}
+                  className="btn-primary w-full mt-6"
+                >
+                  {surveySubmitting ? '제출 중...' : '제출하기'}
+                </button>
+              </div>
+            )}
+
+            {/* 설문 완료 화면 */}
+            {(surveySubmitted || (registration.survey_enabled && registration.survey_completed)) && (
+              <div className="bg-white rounded-xl border-2 border-green-200 p-6 mb-4 text-center">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <p className="text-lg font-bold text-gray-900 mb-1">오늘의 경험을 공유해 주셔서 감사합니다.</p>
+                <p className="text-sm text-gray-500 mb-4">{registration.event_name}</p>
+
+                {/* 수료증 다운로드 */}
+                <button
+                  onClick={async () => {
+                    try {
+                      const { jsPDF } = await import('jspdf');
+                      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+                      // A4 landscape: 297 x 210
+                      const W = 297, H = 210;
+                      const leftW = W * 0.6;
+
+                      // Right section - dark gradient bg
+                      doc.setFillColor(45, 27, 105);
+                      doc.rect(leftW, 0, W - leftW, H, 'F');
+                      // Gradient overlay
+                      doc.setFillColor(75, 50, 160);
+                      doc.rect(leftW, 0, W - leftW, H * 0.3, 'F');
+
+                      // Left section - white
+                      doc.setFillColor(255, 255, 255);
+                      doc.rect(0, 0, leftW, H, 'F');
+
+                      // Border line between sections
+                      doc.setDrawColor(220, 220, 230);
+                      doc.setLineWidth(0.3);
+                      doc.line(leftW, 15, leftW, H - 15);
+
+                      // Header - Logo text (since we can't embed image easily)
+                      doc.setFont('helvetica', 'bold');
+                      doc.setFontSize(14);
+                      doc.setTextColor(37, 99, 235);
+                      doc.text('Cloocus', 20, 25);
+
+                      // Left section content
+                      doc.setFont('helvetica', 'bold');
+                      doc.setFontSize(36);
+                      doc.setTextColor(30, 30, 30);
+                      doc.text('CERTIFICATE', 20, 70);
+
+                      doc.setFontSize(14);
+                      doc.setTextColor(120, 120, 120);
+                      doc.text('of Cloocus Seminar', 20, 82);
+
+                      // Decorative line
+                      doc.setDrawColor(37, 99, 235);
+                      doc.setLineWidth(1);
+                      doc.line(20, 90, 80, 90);
+
+                      // Issuance info
+                      doc.setFont('helvetica', 'normal');
+                      doc.setFontSize(10);
+                      doc.setTextColor(100, 100, 100);
+                      const issueDate = new Date();
+                      doc.text('Date of Issuance', 20, 160);
+                      doc.setFont('helvetica', 'bold');
+                      doc.text(`${issueDate.getFullYear()}. ${issueDate.getMonth()+1}. ${issueDate.getDate()}`, 20, 167);
+
+                      doc.setFont('helvetica', 'normal');
+                      doc.text('Issued by', 20, 180);
+                      doc.setFont('helvetica', 'bold');
+                      doc.text('Cloocus Inc.', 20, 187);
+
+                      // Right section content
+                      // Badge circle
+                      doc.setFillColor(100, 70, 200);
+                      doc.circle(W - (W - leftW) / 2, 40, 18, 'F');
+                      doc.setFillColor(255, 255, 255);
+                      doc.setFont('helvetica', 'bold');
+                      doc.setFontSize(10);
+                      doc.setTextColor(255, 255, 255);
+                      doc.text('CERTIFIED', W - (W - leftW) / 2, 38, { align: 'center' });
+                      doc.setFontSize(7);
+                      doc.text('COMPLETION', W - (W - leftW) / 2, 44, { align: 'center' });
+
+                      const rx = leftW + 15;
+                      const rw = W - leftW - 30;
+
+                      // NAME
+                      doc.setFontSize(9);
+                      doc.setTextColor(180, 180, 220);
+                      doc.text('NAME', rx, 80);
+                      doc.setFontSize(16);
+                      doc.setTextColor(255, 255, 255);
+                      doc.setFont('helvetica', 'bold');
+                      doc.text(registration.name, rx, 92);
+
+                      // COURSE NAME
+                      doc.setFontSize(9);
+                      doc.setTextColor(180, 180, 220);
+                      doc.setFont('helvetica', 'normal');
+                      doc.text('COURSE NAME', rx, 110);
+                      doc.setFontSize(12);
+                      doc.setTextColor(255, 255, 255);
+                      doc.setFont('helvetica', 'bold');
+                      // Word wrap for long course names
+                      const courseLines = doc.splitTextToSize(registration.event_name, rw);
+                      doc.text(courseLines, rx, 120);
+
+                      // PERIOD
+                      const periodY = 120 + courseLines.length * 7 + 10;
+                      doc.setFontSize(9);
+                      doc.setTextColor(180, 180, 220);
+                      doc.setFont('helvetica', 'normal');
+                      doc.text('PERIOD', rx, periodY);
+                      doc.setFontSize(12);
+                      doc.setTextColor(255, 255, 255);
+                      doc.setFont('helvetica', 'bold');
+                      const evtDate = new Date(registration.event_date);
+                      doc.text(`${evtDate.getFullYear()}. ${evtDate.getMonth()+1}. ${evtDate.getDate()}`, rx, periodY + 10);
+
+                      // Certification text (Korean - rendered as-is, jsPDF default font may not support Korean perfectly)
+                      // Use a simple approach
+                      doc.setFontSize(8);
+                      doc.setTextColor(200, 200, 230);
+                      doc.setFont('helvetica', 'normal');
+                      const certText = `This certifies that ${registration.name} has successfully completed the "${registration.event_name}" program by Cloocus.`;
+                      const certLines = doc.splitTextToSize(certText, rw);
+                      doc.text(certLines, rx, H - 30);
+
+                      doc.save(`수료증_${registration.name}_${registration.event_name}.pdf`);
+                    } catch (err) {
+                      alert('PDF 생성 중 오류: ' + String(err));
+                    }
+                  }}
+                  className="btn-primary mb-3"
+                >
+                  수료증 발급하기 (PDF)
+                </button>
+
+                {/* QR code below */}
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <p className="text-xs text-gray-500 mb-3">이벤트 현장에서 아래 QR코드를 제시해주세요.</p>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(verifyUrl)}`}
+                    alt="QR Code"
+                    className="mx-auto border border-gray-100 rounded-lg p-2"
+                    width={200}
+                    height={200}
+                  />
+                  <p className="text-xs text-gray-400 mt-3">{registration.name} | {registration.company_name}</p>
+                </div>
+              </div>
+            )}
+
+            {/* 설문 미활성화 상태 (기존 확정 화면) */}
+            {!registration.survey_enabled && !surveySubmitted && (
+              <div className="bg-white rounded-xl border-2 border-green-200 p-6 mb-4 text-center">
+                <div className="bg-green-50 rounded-lg p-3 mb-4">
+                  <p className="text-green-700 font-bold text-lg">등록이 확정되었습니다</p>
+                  <p className="text-green-600 text-sm mt-1">{registration.event_name}</p>
+                </div>
+                <p className="text-xs text-gray-500 mb-3">이벤트 현장에서 아래 QR코드를 제시해주세요.</p>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(verifyUrl)}`}
+                  alt="QR Code"
+                  className="mx-auto border border-gray-100 rounded-lg p-2"
+                  width={200}
+                  height={200}
+                />
+                <p className="text-xs text-gray-400 mt-3">{registration.name} | {registration.company_name}</p>
+                <p className="text-[10px] text-gray-300 mt-1">QR 스캔 시 참석자 검증 페이지로 연결됩니다</p>
+              </div>
+            )}
+          </>
         )}
 
         {/* 신청 내역 */}

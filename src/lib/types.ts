@@ -32,6 +32,8 @@ export type Registration = {
   email_status: 'confirmed' | 'rejected' | null;
   email_sent_at: string | null;
   registration_status: 'pending' | 'confirmed' | 'rejected';
+  survey_enabled: boolean;
+  survey_completed: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -75,5 +77,17 @@ export type AuditEntry = {
   target_table: string;
   target_id: string;
   changes: Record<string, { old: unknown; new: unknown }>;
+  created_at: string;
+};
+
+export type Survey = {
+  id: string;
+  registration_id: string;
+  q1_azure_level: string;
+  q2_difficulty: string;
+  q3_purpose: string[];
+  q4_adoption: string;
+  q5_consulting: string[];
+  q6_feedback: string;
   created_at: string;
 };
