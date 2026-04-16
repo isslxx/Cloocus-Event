@@ -141,7 +141,7 @@ export default function SurveyManagementPage() {
           </h2>
           <div className="flex gap-2">
             {questions.length === 0 && (
-              <button onClick={handleInitDefault} className="text-xs px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100">기본 질문으로 초기화</button>
+              <button onClick={handleInitDefault} className="text-xs px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100">기본 질문 불러오기</button>
             )}
             {questions.length > 0 && (
               <select onChange={(e) => { if (e.target.value) handleCopyToEvent(e.target.value); e.target.value = ''; }} className="text-xs px-2 py-1.5 border border-gray-200 rounded-lg" defaultValue="">
@@ -154,7 +154,7 @@ export default function SurveyManagementPage() {
         </div>
 
         {questions.length === 0 ? (
-          <p className="text-gray-400 text-sm py-8 text-center">등록된 질문이 없습니다. &quot;+ 질문 추가&quot; 또는 &quot;기본 질문으로 초기화&quot;를 사용하세요.</p>
+          <p className="text-gray-400 text-sm py-8 text-center">등록된 질문이 없습니다. &quot;+ 질문 추가&quot; 또는 &quot;기본 질문 불러오기&quot;를 사용하세요.</p>
         ) : (
           <div className="space-y-2">
             {questions.map((q, idx) => (
