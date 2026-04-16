@@ -81,6 +81,7 @@ export default function MyDashboard() {
   const [cancelled, setCancelled] = useState(false);
 
   const [showSurvey, setShowSurvey] = useState(false);
+  const [showSurveyChoice, setShowSurveyChoice] = useState(false);
   const [surveySubmitted, setSurveySubmitted] = useState(false);
   const [surveyForm, setSurveyForm] = useState({
     q1: '',
@@ -510,16 +511,41 @@ export default function MyDashboard() {
         {/* 등록 확정 영역 */}
         {registration.registration_status === 'confirmed' && (
           <>
-            {/* 설문조사 미완료 + 설문 활성화 → 설문조사 버튼 */}
-            {registration.survey_enabled && !registration.survey_completed && !surveySubmitted && !showSurvey && (
+            {/* 설문조사 미완료 + 설문 활성화 → 선택 화면 또는 설문 버튼 */}
+            {registration.survey_enabled && !registration.survey_completed && !surveySubmitted && !showSurvey && !showSurveyChoice && (
               <div className="bg-white rounded-xl border-2 border-green-200 p-6 mb-4 text-center">
                 <div className="bg-green-50 rounded-lg p-3 mb-4">
                   <p className="text-green-700 font-bold text-lg">등록이 확정되었습니다</p>
                   <p className="text-green-600 text-sm mt-1">{registration.event_name}</p>
                 </div>
                 <p className="text-sm text-gray-500 mb-4">이벤트 참여 후 설문조사를 작성해주세요.</p>
-                <button onClick={() => setShowSurvey(true)} className="btn-shimmer">
+                <button onClick={() => setShowSurveyChoice(true)} className="btn-shimmer">
                   설문조사 작성하기
+                </button>
+              </div>
+            )}
+
+            {/* 설문 진입 선택: 저장된 정보 불러오기 / 새로 작성하기 */}
+            {showSurveyChoice && !showSurvey && (
+              <div className="bg-white rounded-xl border border-gray-200 p-6 mb-4 text-center">
+                <h2 className="text-lg font-bold mb-2">설문조사 시작</h2>
+                <p className="text-sm text-gray-500 mb-6">기존에 등록한 개인정보를 어떻게 처리할까요?</p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => { setShowSurveyChoice(false); setShowSurvey(true); }}
+                    className="btn-primary flex-1" style={{ padding: '12px 0' }}
+                  >
+                    저장된 정보 불러오기
+                  </button>
+                  <button
+                    onClick={() => { setShowSurveyChoice(false); startEdit(); }}
+                    className="btn-secondary flex-1" style={{ padding: '12px 0' }}
+                  >
+                    개인정보 수정 후 작성
+                  </button>
+                </div>
+                <button onClick={() => setShowSurveyChoice(false)} className="text-sm text-gray-400 hover:text-gray-600 mt-3">
+                  취소
                 </button>
               </div>
             )}
@@ -688,7 +714,7 @@ export default function MyDashboard() {
             )}
 
             {/* 설문 완료 화면 */}
-            {(surveySubmitted || (registration.survey_enabled && registration.survey_completed)) && (
+            {(surveySubmitted || (registration.survey_enabled && registration.survey_completed)) && !showSurvey && !showSurveyChoice && (
               <div className="bg-white rounded-xl border-2 border-green-200 p-6 mb-4 text-center">
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -834,6 +860,18 @@ export default function MyDashboard() {
                   수료증 발급하기 (PDF)
                 </button>
                 <p className="text-xs text-red-500 mt-2">수료증 발급은 이벤트 종료일 기준 7일 이후에는 발급이 불가합니다.</p>
+
+                <button
+                  onClick={() => {
+                    setSurveySubmitted(false);
+                    setShowSurvey(true);
+                    setSurveyForm({ q1: '', q2: '', q3: [], q4: '', q5: [], q3_etc: '', q6: '' });
+                    setSurveyErrors({});
+                  }}
+                  className="text-sm text-blue-600 hover:underline mt-3 block"
+                >
+                  설문조사 수정하기
+                </button>
 
                 {/* QR code below */}
                 <div className="mt-4 pt-4 border-t border-gray-100">
@@ -1010,12 +1048,12 @@ export default function MyDashboard() {
             <a href="/" className="btn-primary flex-1 text-center" style={{ padding: '12px 0', fontSize: 15 }}>
               확인 완료
             </a>
-            {editable && (
+            {editable && registration.registration_status === 'pending' && (
               <button onClick={startEdit} className="btn-secondary flex-1" style={{ padding: '12px 0', fontSize: 15, fontWeight: 600 }}>
                 수정하기
               </button>
             )}
-            {editable && (
+            {editable && registration.registration_status === 'pending' && (
               <button onClick={() => setShowCancelConfirm(true)} className="btn-danger flex-1" style={{ padding: '12px 0', fontSize: 15, fontWeight: 600 }}>
                 등록 취소
               </button>

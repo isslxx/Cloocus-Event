@@ -33,35 +33,41 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '설문조사가 활성화되지 않았습니다.' }, { status: 400 });
     }
 
-    if (reg.survey_completed) {
-      return NextResponse.json({ error: '이미 설문조사를 완료했습니다.' }, { status: 400 });
-    }
-
     // 필수 항목 검증
     if (!q1_azure_level || !q2_difficulty || !q3_purpose?.length || !q4_adoption || !q5_consulting?.length) {
       return NextResponse.json({ error: '필수 항목을 모두 입력해주세요.' }, { status: 400 });
     }
 
-    // 설문 저장
-    const { error: insertError } = await supabase.from('surveys').insert({
-      registration_id,
-      q1_azure_level,
-      q2_difficulty,
-      q3_purpose,
-      q4_adoption,
-      q5_consulting,
-      q6_feedback: q6_feedback || '',
-    });
+    // 기존 설문이 있으면 업데이트, 없으면 신규 저장
+    if (reg.survey_completed) {
+      const { error: updateError } = await supabase
+        .from('surveys')
+        .update({ q1_azure_level, q2_difficulty, q3_purpose, q4_adoption, q5_consulting, q6_feedback: q6_feedback || '' })
+        .eq('registration_id', registration_id);
 
-    if (insertError) {
-      return NextResponse.json({ error: '설문 저장 중 오류가 발생했습니다.' }, { status: 500 });
+      if (updateError) {
+        return NextResponse.json({ error: '설문 수정 중 오류가 발생했습니다.' }, { status: 500 });
+      }
+    } else {
+      const { error: insertError } = await supabase.from('surveys').insert({
+        registration_id,
+        q1_azure_level,
+        q2_difficulty,
+        q3_purpose,
+        q4_adoption,
+        q5_consulting,
+        q6_feedback: q6_feedback || '',
+      });
+
+      if (insertError) {
+        return NextResponse.json({ error: '설문 저장 중 오류가 발생했습니다.' }, { status: 500 });
+      }
+
+      await supabase
+        .from('event_registrations')
+        .update({ survey_completed: true })
+        .eq('id', registration_id);
     }
-
-    // survey_completed 업데이트
-    await supabase
-      .from('event_registrations')
-      .update({ survey_completed: true })
-      .eq('id', registration_id);
 
     return NextResponse.json({ success: true });
   } catch {
