@@ -60,9 +60,11 @@ export default function MyDashboard() {
   const [authenticated, setAuthenticated] = useState(false);
   const [lookupEmail, setLookupEmail] = useState('');
   const [lookupPin, setLookupPin] = useState('');
+  const [lookupEventId, setLookupEventId] = useState('');
   const [lookupError, setLookupError] = useState('');
   const [lookupLoading, setLookupLoading] = useState(false);
   const [pin, setPin] = useState('');
+  const [allEvents, setAllEvents] = useState<{ id: string; name: string }[]>([]);
 
   // 여러 이벤트 선택
   const [multipleEvents, setMultipleEvents] = useState<{ id: string; event_name: string; event_date: string; registration_status: string }[]>([]);
@@ -104,10 +106,8 @@ export default function MyDashboard() {
   const [formOptions, setFormOptions] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
-    fetch('/api/form-options')
-      .then((r) => r.json())
-      .then((d) => setFormOptions(d))
-      .catch(() => {});
+    fetch('/api/form-options').then((r) => r.json()).then((d) => setFormOptions(d)).catch(() => {});
+    fetch('/api/events').then((r) => r.json()).then((d) => setAllEvents(Array.isArray(d) ? d.map((e: { id: string; name: string }) => ({ id: e.id, name: e.name })) : [])).catch(() => {});
   }, []);
 
   const startEdit = () => {
@@ -194,6 +194,7 @@ export default function MyDashboard() {
   const showQr = registration?.registration_status === 'confirmed' && offlineCategories.includes(registration.event_category);
 
   const handleLookup = async () => {
+    if (!lookupEventId) { setLookupError('이벤트를 선택해주세요.'); return; }
     if (!lookupEmail.trim()) { setLookupError('이메일을 입력해주세요.'); return; }
     if (!/^\d{4}$/.test(lookupPin)) { setLookupError('확인 암호 4자리 숫자를 입력해주세요.'); return; }
     setLookupLoading(true);
@@ -202,7 +203,7 @@ export default function MyDashboard() {
       const res = await fetch('/api/register/lookup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: lookupEmail, pin: lookupPin }),
+        body: JSON.stringify({ email: lookupEmail, pin: lookupPin, event_id: lookupEventId }),
       });
       const data = await res.json();
       if (!res.ok) { setLookupError(data.error || '조회에 실패했습니다.'); return; }
@@ -275,6 +276,18 @@ export default function MyDashboard() {
               <p className="text-gray-500 text-center text-sm mb-6">등록 시 입력한 정보로 조회해주세요.</p>
 
               <div className="space-y-4">
+                <div className="field">
+                  <label className="text-sm font-medium text-gray-700">등록한 이벤트</label>
+                  <select
+                    value={lookupEventId}
+                    onChange={(e) => { setLookupEventId(e.target.value); setLookupError(''); }}
+                  >
+                    <option value="">이벤트를 선택해주세요</option>
+                    {allEvents.map((evt) => (
+                      <option key={evt.id} value={evt.id}>{evt.name}</option>
+                    ))}
+                  </select>
+                </div>
                 <div className="field">
                   <label className="text-sm font-medium text-gray-700">이메일 주소</label>
                   <input

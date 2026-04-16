@@ -11,7 +11,7 @@ function getServiceSupabase() {
 // 이메일 + PIN으로 등록 정보 조회
 export async function POST(req: NextRequest) {
   try {
-    const { email, pin } = await req.json();
+    const { email, pin, event_id } = await req.json();
 
     if (!email?.trim()) {
       return NextResponse.json({ error: '이메일을 입력해주세요.' }, { status: 400 });
@@ -23,13 +23,18 @@ export async function POST(req: NextRequest) {
 
     const supabase = getServiceSupabase();
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('event_registrations')
       .select('id, name, company_name, company_name_raw, department, job_title, email, phone, industry, company_size, referral_source, referrer_name, inquiry, event_id, registration_status, survey_enabled, survey_completed, events!event_registrations_event_id_fkey(name, status, event_date, event_type, capacity, location, event_time, category)')
       .eq('email', email.toLowerCase().trim())
       .eq('pin', pin)
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false });
+      .is('deleted_at', null);
+
+    if (event_id) {
+      query = query.eq('event_id', event_id);
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false });
 
     if (error || !data || data.length === 0) {
       return NextResponse.json({ error: '일치하는 신청 내역이 없습니다. 이메일 주소와 확인 암호를 다시 확인해주세요.' }, { status: 404 });
