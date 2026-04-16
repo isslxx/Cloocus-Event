@@ -721,8 +721,9 @@ export default function MyDashboard() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <p className="text-lg font-bold text-gray-900 mb-1">오늘의 경험을 공유해 주셔서 감사합니다.</p>
-                <p className="text-sm text-gray-500 mb-4">{registration.event_name}</p>
+                <p className="text-xl font-bold text-gray-900 mb-2">설문조사 제출이 완료되었습니다!</p>
+                <p className="text-sm text-gray-500 mb-1">오늘의 경험을 공유해 주셔서 감사합니다.</p>
+                <p className="text-sm text-gray-400 mb-4">{registration.event_name}</p>
 
                 {/* 수료증 다운로드 */}
                 <button
@@ -860,30 +861,40 @@ export default function MyDashboard() {
                 </button>
                 <p className="text-xs text-red-500 mt-2">수료증 발급은 이벤트 종료일 기준 7일 이후에는 발급이 불가합니다.</p>
 
-                <button
-                  onClick={() => {
-                    setSurveySubmitted(false);
-                    setShowSurvey(true);
-                    setSurveyForm({ q1: '', q2: '', q3: [], q4: '', q5: [], q3_etc: '', q6: '' });
-                    setSurveyErrors({});
-                  }}
-                  className="text-sm text-blue-600 hover:underline mt-3 block"
-                >
-                  설문조사 수정하기
-                </button>
-
-                {/* QR code below */}
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                  <p className="text-xs text-gray-500 mb-3">이벤트 현장에서 아래 QR코드를 제시해주세요.</p>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(verifyUrl)}`}
-                    alt="QR Code"
-                    className="mx-auto border border-gray-100 rounded-lg p-2"
-                    width={200}
-                    height={200}
-                  />
-                  <p className="text-xs text-gray-400 mt-3">{registration.name} | {registration.company_name}</p>
+                <div className="text-right mt-3">
+                  <button
+                    onClick={async () => {
+                      // 기존 응답 불러오기
+                      try {
+                        const res = await fetch(`/api/survey?registration_id=${registration.id}&pin=${encodeURIComponent(pin)}`);
+                        const data = await res.json();
+                        if (data.exists && data.survey) {
+                          const s = data.survey;
+                          const q3 = (s.q3_purpose || []) as string[];
+                          let q3_etc = '';
+                          const q3Clean = q3.map((v: string) => {
+                            if (v.startsWith('기타: ')) { q3_etc = v.replace('기타: ', ''); return '기타'; }
+                            return v;
+                          });
+                          setSurveyForm({
+                            q1: s.q1_azure_level || '',
+                            q2: s.q2_difficulty || '',
+                            q3: q3Clean,
+                            q4: s.q4_adoption || '',
+                            q5: (s.q5_consulting || []) as string[],
+                            q3_etc,
+                            q6: s.q6_feedback || '',
+                          });
+                        }
+                      } catch { /* 불러오기 실패 시 빈 폼 */ }
+                      setSurveySubmitted(false);
+                      setShowSurvey(true);
+                      setSurveyErrors({});
+                    }}
+                    className="text-sm text-blue-600 hover:underline"
+                  >
+                    설문조사 수정하기
+                  </button>
                 </div>
               </div>
             )}

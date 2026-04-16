@@ -8,6 +8,26 @@ function getServiceSupabase() {
   );
 }
 
+// 기존 설문 응답 조회
+export async function GET(req: NextRequest) {
+  try {
+    const regId = req.nextUrl.searchParams.get('registration_id');
+    const pin = req.nextUrl.searchParams.get('pin');
+    if (!regId || !pin) return NextResponse.json({ error: '인증 정보가 필요합니다.' }, { status: 400 });
+
+    const supabase = getServiceSupabase();
+    const { data: reg } = await supabase.from('event_registrations').select('id, pin').eq('id', regId).single();
+    if (!reg || reg.pin !== pin) return NextResponse.json({ error: '인증에 실패했습니다.' }, { status: 403 });
+
+    const { data } = await supabase.from('surveys').select('*').eq('registration_id', regId).order('created_at', { ascending: false }).limit(1).maybeSingle();
+    if (!data) return NextResponse.json({ exists: false });
+
+    return NextResponse.json({ exists: true, survey: data });
+  } catch {
+    return NextResponse.json({ error: '서버 오류' }, { status: 500 });
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { registration_id, pin, q1_azure_level, q2_difficulty, q3_purpose, q4_adoption, q5_consulting, q6_feedback } = await req.json();
