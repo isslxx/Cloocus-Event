@@ -144,6 +144,34 @@ body {
   background: #fef2f2;
 }
 
+/* 반짝이 버튼 효과 */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.btn-shimmer {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(90deg, #2563eb 0%, #2563eb 40%, #60a5fa 50%, #2563eb 60%, #2563eb 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2.5s ease-in-out infinite;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 0 20px rgba(37, 99, 235, 0.3);
+  transition: box-shadow 0.3s, transform 0.15s;
+}
+
+.btn-shimmer:hover {
+  box-shadow: 0 0 30px rgba(37, 99, 235, 0.5);
+  transform: translateY(-1px);
+}
+
 /* 관리자 테이블 내 작업 버튼 정렬 */
 table button, table a {
   white-space: nowrap;

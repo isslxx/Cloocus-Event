@@ -87,6 +87,7 @@ export default function MyDashboard() {
   });
   const [surveyErrors, setSurveyErrors] = useState<Record<string, string>>({});
   const [surveySubmitting, setSurveySubmitting] = useState(false);
+  const [surveyValidationPopup, setSurveyValidationPopup] = useState<string[]>([]);
 
   // 수정 모드
   const [editMode, setEditMode] = useState(false);
@@ -420,7 +421,7 @@ export default function MyDashboard() {
                   <p className="text-green-600 text-sm mt-1">{registration.event_name}</p>
                 </div>
                 <p className="text-sm text-gray-500 mb-4">이벤트 참여 후 설문조사를 작성해주세요.</p>
-                <button onClick={() => setShowSurvey(true)} className="btn-primary">
+                <button onClick={() => setShowSurvey(true)} className="btn-shimmer">
                   설문조사 작성하기
                 </button>
               </div>
@@ -429,8 +430,13 @@ export default function MyDashboard() {
             {/* 설문조사 폼 */}
             {showSurvey && !surveySubmitted && (
               <div className="bg-white rounded-xl border border-gray-200 p-6 mb-4">
-                <h2 className="text-lg font-bold mb-1">설문조사</h2>
-                <p className="text-sm text-gray-500 mb-6">오늘의 경험에 대해 알려주세요.</p>
+                <div className="flex items-center justify-between mb-1">
+                  <h2 className="text-lg font-bold">설문조사</h2>
+                </div>
+                <div className="flex items-center justify-between mb-6">
+                  <p className="text-sm text-gray-500">오늘의 경험에 대해 알려주세요.</p>
+                  <span className="text-xs text-red-500 shrink-0">* 필수</span>
+                </div>
 
                 <div className="space-y-6">
                   {/* Q1 */}
@@ -516,14 +522,17 @@ export default function MyDashboard() {
                 <button
                   onClick={async () => {
                     const errs: Record<string, string> = {};
-                    if (!surveyForm.q1) errs.q1 = '필수 항목입니다.';
-                    if (!surveyForm.q2) errs.q2 = '필수 항목입니다.';
-                    if (surveyForm.q3.length === 0) errs.q3 = '하나 이상 선택해주세요.';
-                    if (surveyForm.q3.includes('기타') && !surveyForm.q3_etc.trim()) errs.q3_etc = '기타 내용을 입력해주세요.';
-                    if (!surveyForm.q4) errs.q4 = '필수 항목입니다.';
-                    if (surveyForm.q5.length === 0) errs.q5 = '하나 이상 선택해주세요.';
+                    if (!surveyForm.q1) errs.q1 = '1번 (Azure 이해 수준)을 선택해주세요.';
+                    if (!surveyForm.q2) errs.q2 = '2번 (이벤트 난이도)을 선택해주세요.';
+                    if (surveyForm.q3.length === 0) errs.q3 = '3번 (참여 목적)을 하나 이상 선택해주세요.';
+                    if (surveyForm.q3.includes('기타') && !surveyForm.q3_etc.trim()) errs.q3_etc = '3번 기타 내용을 입력해주세요.';
+                    if (!surveyForm.q4) errs.q4 = '4번 (Azure 도입 계획)을 선택해주세요.';
+                    if (surveyForm.q5.length === 0) errs.q5 = '5번 (컨설팅 필요 여부)을 하나 이상 선택해주세요.';
                     setSurveyErrors(errs);
-                    if (Object.keys(errs).length > 0) return;
+                    if (Object.keys(errs).length > 0) {
+                      setSurveyValidationPopup(Object.values(errs));
+                      return;
+                    }
 
                     setSurveySubmitting(true);
                     try {
@@ -557,6 +566,27 @@ export default function MyDashboard() {
                 >
                   {surveySubmitting ? '제출 중...' : '제출하기'}
                 </button>
+              </div>
+            )}
+
+            {/* 설문 검증 오류 팝업 */}
+            {surveyValidationPopup.length > 0 && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
+                <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="text-red-500 text-xl">⚠</span>
+                    <h3 className="text-lg font-bold text-gray-900">입력 정보를 확인해주세요</h3>
+                  </div>
+                  <ul className="space-y-2 mb-6 max-h-60 overflow-y-auto">
+                    {surveyValidationPopup.map((msg, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                        <span className="text-red-400 mt-0.5 shrink-0">•</span>
+                        {msg}
+                      </li>
+                    ))}
+                  </ul>
+                  <button onClick={() => setSurveyValidationPopup([])} className="btn-primary w-full">확인</button>
+                </div>
               </div>
             )}
 

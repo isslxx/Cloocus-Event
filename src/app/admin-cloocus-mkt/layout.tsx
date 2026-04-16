@@ -23,6 +23,8 @@ const DEFAULT_NAV: NavItem[] = [
   { href: '/admin-cloocus-mkt/events', label: '이벤트 관리', icon: '📅' },
   { href: '/admin-cloocus-mkt/emails', label: '이메일 발송', icon: '✉️' },
   { href: '/admin-cloocus-mkt/faqs', label: 'FAQ 관리', icon: '❓' },
+  { href: '/admin-cloocus-mkt/surveys', label: '설문조사 관리', icon: '📝' },
+  { href: '/admin-cloocus-mkt/survey-responses', label: '설문 응답', icon: '📈' },
 ];
 
 function loadNavOrder(): NavItem[] {

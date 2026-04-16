@@ -348,8 +348,8 @@ export default function RegistrationsPage() {
                   { key: 'company_name' as SortKey, label: '회사명' },
                   { key: 'email' as SortKey, label: '이메일' },
                   { key: 'phone' as SortKey, label: '연락처' },
-                  { key: 'industry' as SortKey, label: '산업군' },
                   { key: 'referral_source' as SortKey, label: '신청 경로' },
+                  { key: 'referrer_name' as SortKey, label: '추천인' },
                   { key: 'created_at' as SortKey, label: '등록일' },
                   { key: 'registration_status' as SortKey, label: '등록 상태' },
                   { key: 'survey_enabled' as SortKey, label: '설문조사' },
@@ -379,8 +379,8 @@ export default function RegistrationsPage() {
                   <td className="px-4 py-3 whitespace-nowrap">{r.company_name}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.email}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.phone}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">{r.industry}</td>
                   <td className="px-4 py-3 whitespace-nowrap">{r.referral_source}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.referrer_name || '-'}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-gray-500">{new Date(r.created_at).toLocaleDateString('ko-KR')}</td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     {canEditRecord ? (
