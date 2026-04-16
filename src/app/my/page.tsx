@@ -622,33 +622,41 @@ export default function MyDashboard() {
                       certEl.innerHTML = `
                         <div style="display:flex;width:100%;height:100%;background:#fff;">
                           <!-- 좌측 60% -->
-                          <div style="width:60%;height:100%;padding:50px 50px 40px;display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box;">
+                          <div style="width:60%;height:100%;padding:48px 50px 38px;display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box;">
                             <!-- 좌측 상단: 로고 -->
-                            <img src="/cloocus-logo.png" style="width:110px;height:auto;" crossorigin="anonymous" />
+                            <img src="/cloocus-logo.png" style="width:120px;height:auto;" crossorigin="anonymous" />
 
-                            <!-- 좌측 중심: CERTIFICATE OF COMPLETION -->
-                            <div>
-                              <p style="font-size:40px;font-weight:800;color:#1a1a1a;letter-spacing:4px;margin:0;">CERTIFICATE</p>
-                              <p style="font-size:15px;font-weight:500;color:#999;margin:6px 0 0 2px;letter-spacing:2px;">OF COMPLETION</p>
-                              <div style="width:60px;height:3px;background:#4c2d96;margin-top:18px;border-radius:2px;"></div>
+                            <!-- 좌측 중심: CERTIFICATE OF COMPLETION (2배 확대) -->
+                            <div style="margin-top:-10px;">
+                              <p style="font-size:64px;font-weight:800;color:#1a1a1a;letter-spacing:5px;margin:0;line-height:1.1;">CERTIFICATE</p>
+                              <p style="font-size:22px;font-weight:500;color:#999;margin:8px 0 0 3px;letter-spacing:4px;">OF COMPLETION</p>
+                              <div style="width:80px;height:3px;background:#4c2d96;margin-top:16px;border-radius:2px;"></div>
                             </div>
 
-                            <!-- 좌측 하단: 발급 정보 (1열 나란히) -->
-                            <div style="display:flex;gap:40px;align-items:flex-end;">
-                              <div>
-                                <p style="font-size:9px;color:#bbb;margin:0 0 4px;text-transform:uppercase;letter-spacing:1.5px;">Issued on</p>
-                                <p style="font-size:13px;font-weight:600;color:#333;margin:0;">${issueDateStr}</p>
+                            <!-- 좌측 하단: CEO + Issued on + Issued by + QR (1열) -->
+                            <div style="display:flex;gap:28px;align-items:flex-end;">
+                              <!-- CEO + 날인 -->
+                              <div style="text-align:left;">
+                                <p style="font-size:10px;color:#4c2d96;margin:0 0 3px;font-weight:600;letter-spacing:1px;">Cloocus CEO</p>
+                                <p style="font-size:14px;font-weight:700;color:#222;margin:0;">Steve Hong</p>
+                                <img src="/stamp.png" style="width:50px;height:auto;margin-top:2px;opacity:0.85;" crossorigin="anonymous" />
                               </div>
+                              <!-- Issued on -->
                               <div>
-                                <p style="font-size:9px;color:#bbb;margin:0 0 4px;text-transform:uppercase;letter-spacing:1.5px;">Issued by</p>
-                                <p style="font-size:13px;font-weight:600;color:#333;margin:0;">Cloocus co.,Ltd.</p>
+                                <p style="font-size:10px;color:#4c2d96;margin:0 0 3px;font-weight:600;letter-spacing:1px;">Issued on</p>
+                                <p style="font-size:14px;font-weight:700;color:#222;margin:0;">${issueDateStr}</p>
+                              </div>
+                              <!-- Issued by -->
+                              <div>
+                                <p style="font-size:10px;color:#4c2d96;margin:0 0 3px;font-weight:600;letter-spacing:1px;">Issued by</p>
+                                <p style="font-size:14px;font-weight:700;color:#222;margin:0;">Cloocus co.,Ltd.</p>
                               </div>
                               <!-- 위조방지 QR + 인증번호 -->
                               <div style="display:flex;align-items:center;gap:8px;margin-left:auto;">
-                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=${encodeURIComponent(verifyQr)}" style="width:36px;height:36px;" crossorigin="anonymous" />
+                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(verifyQr)}" style="width:48px;height:48px;" crossorigin="anonymous" />
                                 <div>
                                   <p style="font-size:7px;color:#ccc;margin:0;">Certificate ID</p>
-                                  <p style="font-size:7.5px;color:#aaa;margin:1px 0 0;font-family:monospace;">${certId}</p>
+                                  <p style="font-size:8px;color:#aaa;margin:2px 0 0;font-family:monospace;letter-spacing:0.3px;">${certId}</p>
                                 </div>
                               </div>
                             </div>
@@ -658,31 +666,31 @@ export default function MyDashboard() {
                           <div style="width:1px;background:linear-gradient(180deg,transparent 5%,#e0dce8 20%,#e0dce8 80%,transparent 95%);"></div>
 
                           <!-- 우측 40% -->
-                          <div style="width:40%;height:100%;background:linear-gradient(160deg,#5b35a8 0%,#3a1d80 40%,#1a1045 100%);padding:40px 35px;display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box;position:relative;">
-                            <!-- 인증 마크 (우측 상단, 더 큰 크기) -->
-                            <div style="width:100px;height:100px;border-radius:50%;border:3px solid rgba(255,255,255,0.25);display:flex;flex-direction:column;align-items:center;justify-content:center;position:absolute;top:30px;right:30px;background:radial-gradient(circle,rgba(100,70,200,0.4) 0%,transparent 70%);">
-                              <div style="width:80px;height:80px;border-radius:50%;border:2px solid rgba(255,255,255,0.4);display:flex;flex-direction:column;align-items:center;justify-content:center;">
-                                <p style="font-size:12px;font-weight:800;color:#fff;margin:0;letter-spacing:1.5px;">VERIFIED</p>
-                                <div style="width:35px;height:1.5px;background:rgba(255,255,255,0.5);margin:4px 0;"></div>
-                                <p style="font-size:8px;font-weight:600;color:rgba(255,255,255,0.75);margin:0;letter-spacing:2px;">OFFICIAL</p>
+                          <div style="width:40%;height:100%;background:linear-gradient(160deg,#5b35a8 0%,#3a1d80 40%,#1a1045 100%);padding:35px 32px;display:flex;flex-direction:column;box-sizing:border-box;position:relative;">
+                            <!-- 인증 마크 (우측 상단, 2배 크기) -->
+                            <div style="width:150px;height:150px;border-radius:50%;border:3px solid rgba(255,255,255,0.2);display:flex;flex-direction:column;align-items:center;justify-content:center;position:absolute;top:20px;right:20px;background:radial-gradient(circle,rgba(100,70,200,0.35) 0%,transparent 70%);">
+                              <div style="width:125px;height:125px;border-radius:50%;border:2px solid rgba(255,255,255,0.35);display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                                <div style="width:100px;height:100px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.25);display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                                  <p style="font-size:16px;font-weight:800;color:#fff;margin:0;letter-spacing:2px;">VERIFIED</p>
+                                  <div style="width:45px;height:1.5px;background:rgba(255,255,255,0.5);margin:5px 0;"></div>
+                                  <p style="font-size:9px;font-weight:600;color:rgba(255,255,255,0.75);margin:0;letter-spacing:2.5px;">OFFICIAL</p>
+                                </div>
                               </div>
                             </div>
 
                             <!-- 수료자 정보 -->
-                            <div style="margin-top:120px;">
+                            <div style="margin-top:160px;flex:1;">
                               <p style="font-size:10px;color:rgba(180,170,220,0.8);margin:0 0 6px;letter-spacing:2px;text-transform:uppercase;">Name</p>
-                              <p style="font-size:24px;font-weight:700;color:#fff;margin:0 0 28px;border-bottom:1px solid rgba(255,255,255,0.15);padding-bottom:14px;">${registration.name}</p>
+                              <p style="font-size:24px;font-weight:700;color:#fff;margin:0 0 24px;border-bottom:1px solid rgba(255,255,255,0.15);padding-bottom:12px;">${registration.name}</p>
 
                               <p style="font-size:10px;color:rgba(180,170,220,0.8);margin:0 0 6px;letter-spacing:2px;text-transform:uppercase;">Course Name</p>
-                              <p style="font-size:15px;font-weight:600;color:#fff;margin:0 0 28px;line-height:1.5;word-break:keep-all;">${registration.event_name}</p>
+                              <p style="font-size:15px;font-weight:600;color:#fff;margin:0 0 24px;line-height:1.5;word-break:keep-all;">${registration.event_name}</p>
 
                               <p style="font-size:10px;color:rgba(180,170,220,0.8);margin:0 0 6px;letter-spacing:2px;text-transform:uppercase;">Period</p>
-                              <p style="font-size:15px;font-weight:600;color:#fff;margin:0;">${periodStr}</p>
-                            </div>
+                              <p style="font-size:15px;font-weight:600;color:#fff;margin:0 0 20px;">${periodStr}</p>
 
-                            <!-- 인증 문구 -->
-                            <div style="border-top:1px solid rgba(255,255,255,0.12);padding-top:16px;">
-                              <p style="font-size:11px;color:rgba(210,200,240,0.9);margin:0;line-height:1.9;word-break:keep-all;">
+                              <!-- 인증 문구 (PERIOD 바로 아래, 흰색) -->
+                              <p style="font-size:11.5px;color:#fff;margin:0;line-height:2;word-break:keep-all;">
                                 위 사람은 클루커스의 &ldquo;${registration.event_name}&rdquo;에 참석하시어 성실히 이수하였기에 이 증서를 수여합니다.
                               </p>
                             </div>
