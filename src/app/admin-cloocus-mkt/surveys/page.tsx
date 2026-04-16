@@ -145,7 +145,7 @@ export default function SurveyManagementPage() {
             )}
             {questions.length > 0 && (
               <select onChange={(e) => { if (e.target.value) handleCopyToEvent(e.target.value); e.target.value = ''; }} className="text-xs px-2 py-1.5 border border-gray-200 rounded-lg" defaultValue="">
-                <option value="" disabled>다른 이벤트로 복사</option>
+                <option value="" disabled>다른 이벤트 설문 가져오기</option>
                 <option value="">기본 설문조사</option>
                 {events.filter((e) => e.id !== selectedEventId).map((evt) => <option key={evt.id} value={evt.id}>{evt.name}</option>)}
               </select>
