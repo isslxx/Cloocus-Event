@@ -762,7 +762,7 @@ export default function MyDashboard() {
                               <div>
                                 <p style="font-size:10px;color:#4c2d96;margin:0 0 4px;font-weight:600;letter-spacing:1px;">Cloocus CEO</p>
                                 <p style="font-size:14px;font-weight:700;color:#222;margin:0 0 4px;">Steve Hong</p>
-                                <img src="/stamp.png" style="width:50px;height:auto;opacity:0.85;" crossorigin="anonymous" />
+                                <img src="/stamp.jpg" style="width:50px;height:auto;opacity:0.85;" crossorigin="anonymous" />
                               </div>
                               <!-- Issued on -->
                               <div>
@@ -814,8 +814,7 @@ export default function MyDashboard() {
 
                               <!-- 인증 문구 (PERIOD 바로 아래) -->
                               <p style="font-size:16px;font-weight:600;color:#fff;margin:0;line-height:2;word-break:keep-all;">위 사람은 클루커스의 &ldquo;${registration.event_name}&rdquo;에</p>
-                              <p style="font-size:16px;font-weight:600;color:#fff;margin:0;line-height:2;">참석하시어 성실히 이수하였기에</p>
-                              <p style="font-size:16px;font-weight:600;color:#fff;margin:0;line-height:2;">이 증서를 수여합니다.</p>
+                              <p style="font-size:16px;font-weight:600;color:#fff;margin:0;line-height:2;">참석하시어 성실히 이수하였기에 이 증서를 수여합니다.</p>
                             </div>
                           </div>
                         </div>
