@@ -500,7 +500,7 @@ export default function RegistrationsPage() {
             <h2 className="text-lg font-bold mb-2">선택 삭제</h2>
             <p className="text-gray-500 text-sm mb-6">
               선택한 {selected.size}건의 등록 정보를 삭제하시겠습니까?<br />
-              <span className="text-xs text-gray-400 mt-1 block">삭제된 항목은 휴지통에서 복구할 수 있습니다.</span>
+              <span className="text-xs text-gray-400 mt-1 block">삭제된 항목은 휴지통에서 복구할 수 있지만 일정 기간 후에는 자동 폐기됩니다.</span>
             </p>
             <div className="flex gap-2">
               <button onClick={handleBulkDelete} className="btn-danger flex-1">삭제</button>
