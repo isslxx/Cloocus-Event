@@ -170,16 +170,22 @@ export default function SurveyListPage() {
                     <th className="px-3 py-3 w-10">
                       <input type="checkbox" checked={participants.length > 0 && selected.size === participants.length} onChange={toggleSelectAll} className="w-4 h-4 rounded accent-blue-600" />
                     </th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap cursor-pointer hover:bg-gray-100" onClick={() => handleSort('name')}>성함{sortIcon('name')}</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap cursor-pointer hover:bg-gray-100" onClick={() => handleSort('company_name')}>회사명{sortIcon('company_name')}</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap cursor-pointer hover:bg-gray-100" onClick={() => handleSort('department')}>부서{sortIcon('department')}</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap cursor-pointer hover:bg-gray-100" onClick={() => handleSort('job_title')}>직급{sortIcon('job_title')}</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap cursor-pointer hover:bg-gray-100" onClick={() => handleSort('email')}>이메일{sortIcon('email')}</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap cursor-pointer hover:bg-gray-100" onClick={() => handleSort('phone')}>연락처{sortIcon('phone')}</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap cursor-pointer hover:bg-gray-100" onClick={() => handleSort('industry')}>산업군{sortIcon('industry')}</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap cursor-pointer hover:bg-gray-100" onClick={() => handleSort('registration_status')}>등록 상태{sortIcon('registration_status')}</th>
-                    <th className="px-4 py-3 text-center font-medium text-gray-600 whitespace-nowrap cursor-pointer hover:bg-gray-100" onClick={() => handleSort('survey_completed')}>설문{sortIcon('survey_completed')}</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap cursor-pointer hover:bg-gray-100" onClick={() => handleSort('created_at')}>등록일{sortIcon('created_at')}</th>
+                    {[
+                      { key: 'name', label: '성함', align: 'left' },
+                      { key: 'company_name', label: '회사명', align: 'left' },
+                      { key: 'department', label: '부서', align: 'left' },
+                      { key: 'job_title', label: '직급', align: 'left' },
+                      { key: 'email', label: '이메일', align: 'left' },
+                      { key: 'phone', label: '연락처', align: 'left' },
+                      { key: 'industry', label: '산업군', align: 'left' },
+                      { key: 'registration_status', label: '등록 상태', align: 'left' },
+                      { key: 'survey_completed', label: '설문', align: 'center' },
+                      { key: 'created_at', label: '등록일', align: 'left' },
+                    ].map((col) => (
+                      <th key={col.key} className={`px-4 py-3 text-${col.align} font-medium whitespace-nowrap cursor-pointer hover:bg-gray-100 ${sortKey === col.key ? 'text-blue-700 bg-blue-50/50' : 'text-gray-600'}`} onClick={() => handleSort(col.key)}>
+                        {col.label}{sortIcon(col.key)}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>

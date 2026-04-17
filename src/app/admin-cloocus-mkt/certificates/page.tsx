@@ -186,13 +186,13 @@ export default function CertificatesPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="px-4 py-3 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('name')}>성함{sortIcon('name')}</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('company_name')}>회사명{sortIcon('company_name')}</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('email')}>이메일{sortIcon('email')}</th>
-                {!selectedEvent && <th className="px-4 py-3 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('event_id')}>이벤트{sortIcon('event_id')}</th>}
-                <th className="px-4 py-3 text-center font-medium text-gray-600 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('survey_completed')}>설문{sortIcon('survey_completed')}</th>
-                <th className="px-4 py-3 text-center font-medium text-gray-600 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('certificate_issued')}>수료증{sortIcon('certificate_issued')}</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('certificate_issued_at')}>발급일{sortIcon('certificate_issued_at')}</th>
+                <th className={`px-4 py-3 text-left font-medium cursor-pointer hover:bg-gray-100 ${sortKey === 'name' ? 'text-blue-700 bg-blue-50/50' : 'text-gray-600'}`} onClick={() => handleSort('name')}>성함{sortIcon('name')}</th>
+                <th className={`px-4 py-3 text-left font-medium cursor-pointer hover:bg-gray-100 ${sortKey === 'company_name' ? 'text-blue-700 bg-blue-50/50' : 'text-gray-600'}`} onClick={() => handleSort('company_name')}>회사명{sortIcon('company_name')}</th>
+                <th className={`px-4 py-3 text-left font-medium cursor-pointer hover:bg-gray-100 ${sortKey === 'email' ? 'text-blue-700 bg-blue-50/50' : 'text-gray-600'}`} onClick={() => handleSort('email')}>이메일{sortIcon('email')}</th>
+                {!selectedEvent && <th className={`px-4 py-3 text-left font-medium cursor-pointer hover:bg-gray-100 ${sortKey === 'event_id' ? 'text-blue-700 bg-blue-50/50' : 'text-gray-600'}`} onClick={() => handleSort('event_id')}>이벤트{sortIcon('event_id')}</th>}
+                <th className={`px-4 py-3 text-center font-medium cursor-pointer hover:bg-gray-100 ${sortKey === 'survey_completed' ? 'text-blue-700 bg-blue-50/50' : 'text-gray-600'}`} onClick={() => handleSort('survey_completed')}>설문{sortIcon('survey_completed')}</th>
+                <th className={`px-4 py-3 text-center font-medium cursor-pointer hover:bg-gray-100 ${sortKey === 'certificate_issued' ? 'text-blue-700 bg-blue-50/50' : 'text-gray-600'}`} onClick={() => handleSort('certificate_issued')}>수료증{sortIcon('certificate_issued')}</th>
+                <th className={`px-4 py-3 text-left font-medium cursor-pointer hover:bg-gray-100 ${sortKey === 'certificate_issued_at' ? 'text-blue-700 bg-blue-50/50' : 'text-gray-600'}`} onClick={() => handleSort('certificate_issued_at')}>발급일{sortIcon('certificate_issued_at')}</th>
               </tr>
             </thead>
             <tbody>

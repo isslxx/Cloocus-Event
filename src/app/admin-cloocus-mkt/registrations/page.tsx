@@ -354,7 +354,7 @@ export default function RegistrationsPage() {
                   { key: 'registration_status' as SortKey, label: '등록 상태' },
                   { key: 'survey_enabled' as SortKey, label: '설문조사' },
                 ].map((col) => (
-                  <th key={col.key} className="px-4 py-3 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100 whitespace-nowrap" onClick={() => handleSort(col.key)}>
+                  <th key={col.key} className={`px-4 py-3 text-left font-medium cursor-pointer hover:bg-gray-100 whitespace-nowrap ${sortKey === col.key ? 'text-blue-700 bg-blue-50/50' : 'text-gray-600'}`} onClick={() => handleSort(col.key)}>
                     {col.label}{sortIcon(col.key)}
                   </th>
                 ))}
