@@ -646,7 +646,7 @@ export default function Home() {
 
               <div className="flex flex-col gap-3 mt-10" style={{ position: 'relative', zIndex: 60 }}>
                 <a href="/my" className="btn-primary text-center">
-                  내 응답 확인 / 수정
+                  등록 정보 조회 바로가기
                 </a>
                 <button
                   onClick={() => {
@@ -689,7 +689,7 @@ export default function Home() {
             <img src="/cloocus-logo.png" alt="Cloocus" className="h-5" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900">
-            {editMode ? '내 응답 확인 / 수정' : '클루커스 이벤트 등록하기'}
+            {editMode ? '등록 정보 조회' : '클루커스 이벤트 등록하기'}
           </h1>
         </div>
       </header>

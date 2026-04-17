@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
 
   const supabase = getServiceSupabase();
   const { data, error } = await supabase
-    .from('faqs')
+    .from('faq_categories')
     .select('*')
     .order('sort_order', { ascending: true });
 
@@ -20,20 +20,18 @@ export async function POST(req: NextRequest) {
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (admin.role === 'viewer') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const { question, answer, sort_order, active, category_id } = await req.json();
-  if (!question?.trim() || !answer?.trim()) {
-    return NextResponse.json({ error: '질문과 답변을 입력해주세요.' }, { status: 400 });
+  const { name, icon, sort_order } = await req.json();
+  if (!name?.trim()) {
+    return NextResponse.json({ error: '카테고리 이름을 입력해주세요.' }, { status: 400 });
   }
 
   const supabase = getServiceSupabase();
-  const { error } = await supabase.from('faqs').insert({
-    question: question.trim(),
-    answer: answer.trim(),
+  const { data, error } = await supabase.from('faq_categories').insert({
+    name: name.trim(),
+    icon: icon || '',
     sort_order: sort_order || 0,
-    active: active !== false,
-    category_id: category_id || null,
-  });
+  }).select().single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ success: true });
+  return NextResponse.json(data);
 }

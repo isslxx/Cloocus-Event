@@ -10,12 +10,23 @@ function getServiceSupabase() {
 
 export async function GET() {
   const supabase = getServiceSupabase();
-  const { data, error } = await supabase
+
+  // 카테고리 조회
+  const { data: categories } = await supabase
+    .from('faq_categories')
+    .select('*')
+    .order('sort_order', { ascending: true });
+
+  // FAQ 조회 (카테고리 정보 포함)
+  const { data: faqs, error } = await supabase
     .from('faqs')
-    .select('id, question, answer')
+    .select('id, question, answer, category_id, sort_order')
     .eq('active', true)
     .order('sort_order', { ascending: true });
 
-  if (error) return NextResponse.json([]);
-  return NextResponse.json(data || []);
+  if (error) return NextResponse.json({ categories: [], faqs: [] });
+  return NextResponse.json({
+    categories: categories || [],
+    faqs: faqs || [],
+  });
 }

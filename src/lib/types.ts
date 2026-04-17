@@ -63,12 +63,21 @@ export type EmailLog = {
   created_at: string;
 };
 
+export type FAQCategory = {
+  id: string;
+  name: string;
+  icon: string;
+  sort_order: number;
+  created_at: string;
+};
+
 export type FAQ = {
   id: string;
   question: string;
   answer: string;
   sort_order: number;
   active: boolean;
+  category_id: string | null;
   created_at: string;
 };
 

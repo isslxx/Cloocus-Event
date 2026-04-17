@@ -10,13 +10,13 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const updates = await req.json();
   const supabase = getServiceSupabase();
 
-  const allowed = ['question', 'answer', 'sort_order', 'active', 'category_id'];
+  const allowed = ['name', 'icon', 'sort_order'];
   const filtered: Record<string, unknown> = {};
   for (const key of allowed) {
     if (key in updates) filtered[key] = updates[key];
   }
 
-  const { error } = await supabase.from('faqs').update(filtered).eq('id', id);
+  const { error } = await supabase.from('faq_categories').update(filtered).eq('id', id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }
@@ -28,7 +28,9 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
   const { id } = await params;
   const supabase = getServiceSupabase();
-  const { error } = await supabase.from('faqs').delete().eq('id', id);
+
+  // 카테고리 삭제 시 소속 FAQ의 category_id를 null로 설정 (ON DELETE SET NULL)
+  const { error } = await supabase.from('faq_categories').delete().eq('id', id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }

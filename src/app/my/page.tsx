@@ -31,10 +31,18 @@ type RegistrationData = {
   event_ended_at: string | null;
 };
 
+type FAQCategory = {
+  id: string;
+  name: string;
+  icon: string;
+  sort_order: number;
+};
+
 type FAQItem = {
   id: string;
   question: string;
   answer: string;
+  category_id: string | null;
 };
 
 function BrandFooter() {
@@ -75,8 +83,10 @@ export default function MyDashboard() {
   const [registration, setRegistration] = useState<RegistrationData | null>(null);
   const [editable, setEditable] = useState(false);
   const [faqs, setFaqs] = useState<FAQItem[]>([]);
+  const [faqCategories, setFaqCategories] = useState<FAQCategory[]>([]);
   const [openFaqId, setOpenFaqId] = useState<string | null>(null);
-  const [showFaq, setShowFaq] = useState(false);
+  const [faqSearch, setFaqSearch] = useState('');
+  const [openCategoryId, setOpenCategoryId] = useState<string | null>(null);
 
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -246,7 +256,8 @@ export default function MyDashboard() {
       try {
         const faqRes = await fetch('/api/faqs');
         const faqData = await faqRes.json();
-        setFaqs(Array.isArray(faqData) ? faqData : []);
+        setFaqs(Array.isArray(faqData?.faqs) ? faqData.faqs : []);
+        setFaqCategories(Array.isArray(faqData?.categories) ? faqData.categories : []);
       } catch { /* ignore */ }
     } catch {
       setLookupError('네트워크 오류가 발생했습니다.');
@@ -472,7 +483,7 @@ export default function MyDashboard() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <header className="bg-white border-b border-gray-200">
-        <div className="max-w-2xl mx-auto px-4 py-5">
+        <div className="max-w-4xl mx-auto px-4 py-5">
           <div className="flex items-center justify-between">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/cloocus-logo.png" alt="Cloocus" className="h-5" />
@@ -487,7 +498,7 @@ export default function MyDashboard() {
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-6 flex-1 w-full">
+      <main className="max-w-4xl mx-auto px-4 py-6 flex-1 w-full">
         {isEventEnded && daysRemaining !== null && daysRemaining > 0 && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-center">
             <p className="text-sm text-amber-700 font-medium">이벤트가 종료되었습니다. 조회 가능 기간이 <strong>{daysRemaining}일</strong> 남았습니다.</p>
@@ -974,29 +985,154 @@ export default function MyDashboard() {
           </>
         )}
 
-        {/* 신청 내역 */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5 mb-4">
-          <h2 className="text-sm font-medium text-gray-500 mb-3">신청 내역</h2>
-          <div className="space-y-3">
-            {[
-              ['성함', registration.name],
-              ['회사명', registration.company_name],
-              ['부서명', registration.department],
-              ['직급', registration.job_title],
-              ['이메일', registration.email],
-              ['연락처', registration.phone],
-              ['산업군', registration.industry],
-              ['기업 규모', registration.company_size],
-              ['신청 경로', registration.referral_source],
-              ...(registration.referrer_name ? [['추천인', registration.referrer_name]] : []),
-              ...(registration.inquiry ? [['문의사항', registration.inquiry]] : []),
-            ].map(([label, value]) => (
-              <div key={label} className="flex items-start gap-3">
-                <span className="text-sm text-gray-400 w-20 shrink-0">{label}</span>
-                <span className="text-sm text-gray-900">{value}</span>
-              </div>
-            ))}
+        {/* 신청 내역 + FAQ 2컬럼 */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+          {/* 좌측: 신청 내역 */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <h2 className="text-sm font-medium text-gray-500 mb-3">신청 내역</h2>
+            <div className="space-y-3">
+              {[
+                ['성함', registration.name],
+                ['회사명', registration.company_name],
+                ['부서명', registration.department],
+                ['직급', registration.job_title],
+                ['이메일', registration.email],
+                ['연락처', registration.phone],
+                ['산업군', registration.industry],
+                ['기업 규모', registration.company_size],
+                ['신청 경로', registration.referral_source],
+                ...(registration.referrer_name ? [['추천인', registration.referrer_name]] : []),
+                ...(registration.inquiry ? [['문의사항', registration.inquiry]] : []),
+              ].map(([label, value]) => (
+                <div key={label} className="flex items-start gap-3">
+                  <span className="text-sm text-gray-400 w-20 shrink-0">{label}</span>
+                  <span className="text-sm text-gray-900">{value}</span>
+                </div>
+              ))}
+            </div>
           </div>
+
+          {/* 우측: FAQ */}
+          {faqs.length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <h2 className="text-sm font-medium text-gray-500 mb-3">자주 묻는 질문 (FAQ)</h2>
+
+              {/* 검색 */}
+              <div className="relative mb-4">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
+                <input
+                  type="text"
+                  value={faqSearch}
+                  onChange={(e) => setFaqSearch(e.target.value)}
+                  placeholder="질문을 검색해보세요..."
+                  className="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-300"
+                />
+                {faqSearch && (
+                  <button onClick={() => setFaqSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs">
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              {/* 카테고리별 FAQ */}
+              <div className="space-y-3 max-h-[500px] overflow-y-auto">
+                {(() => {
+                  const search = faqSearch.trim().toLowerCase();
+                  const filtered = search
+                    ? faqs.filter((f) => f.question.toLowerCase().includes(search) || f.answer.toLowerCase().includes(search))
+                    : faqs;
+
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="text-center py-8">
+                        <p className="text-sm text-gray-400 mb-2">검색 결과가 없습니다.</p>
+                        <p className="text-xs text-gray-400">
+                          📧 <a href="mailto:marketing@cloocus.com" className="text-blue-500 hover:underline">marketing@cloocus.com</a>으로 문의해주세요.
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  // 카테고리별 그룹핑
+                  const grouped: { category: FAQCategory | null; items: FAQItem[] }[] = [];
+
+                  if (faqCategories.length > 0) {
+                    for (const cat of faqCategories) {
+                      const items = filtered.filter((f) => f.category_id === cat.id);
+                      if (items.length > 0) grouped.push({ category: cat, items });
+                    }
+                    // 카테고리 없는 FAQ
+                    const uncategorized = filtered.filter((f) => !f.category_id);
+                    if (uncategorized.length > 0) grouped.push({ category: null, items: uncategorized });
+                  } else {
+                    // 카테고리 없으면 플랫 리스트
+                    grouped.push({ category: null, items: filtered });
+                  }
+
+                  const highlightText = (text: string) => {
+                    if (!search) return text;
+                    const idx = text.toLowerCase().indexOf(search);
+                    if (idx === -1) return text;
+                    return (
+                      <>
+                        {text.slice(0, idx)}
+                        <mark className="bg-yellow-100 rounded px-0.5">{text.slice(idx, idx + search.length)}</mark>
+                        {text.slice(idx + search.length)}
+                      </>
+                    );
+                  };
+
+                  return grouped.map((group, gi) => (
+                    <div key={gi}>
+                      {group.category && (
+                        <button
+                          onClick={() => setOpenCategoryId(openCategoryId === group.category!.id ? null : group.category!.id)}
+                          className="w-full flex items-center justify-between py-2 px-1 text-left"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm">{group.category.icon || '📌'}</span>
+                            <span className="text-sm font-semibold text-gray-700">{group.category.name}</span>
+                            <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">{group.items.length}</span>
+                          </div>
+                          <span className="text-gray-400 text-xs">{(search || openCategoryId === group.category.id) ? '▲' : '▼'}</span>
+                        </button>
+                      )}
+
+                      {(search || !group.category || openCategoryId === group.category.id) && (
+                        <div className="bg-gray-50 rounded-lg overflow-hidden">
+                          {group.items.map((faq, i) => (
+                            <div key={faq.id} className={i > 0 ? 'border-t border-gray-200' : ''}>
+                              <button
+                                onClick={() => setOpenFaqId(openFaqId === faq.id ? null : faq.id)}
+                                className="w-full text-left px-4 py-3 flex items-start justify-between hover:bg-gray-100 transition-colors"
+                              >
+                                <span className="text-sm font-medium text-gray-800 pr-3">Q. {highlightText(faq.question)}</span>
+                                <span className="text-gray-400 shrink-0 text-xs mt-0.5">{openFaqId === faq.id ? '−' : '+'}</span>
+                              </button>
+                              {openFaqId === faq.id && (
+                                <div className="px-4 pb-3">
+                                  <div className="bg-white rounded-lg p-3 text-sm text-gray-600 leading-relaxed whitespace-pre-wrap border border-gray-100">
+                                    {highlightText(faq.answer)}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ));
+                })()}
+              </div>
+
+              {/* 하단 문의 링크 */}
+              <div className="mt-4 pt-3 border-t border-gray-100 text-center">
+                <p className="text-xs text-gray-400">
+                  원하시는 답변을 찾지 못하셨나요? 📧 <a href="mailto:marketing@cloocus.com" className="text-blue-500 hover:underline">marketing@cloocus.com</a>
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 문의 이메일 (등록 불가 시) */}
@@ -1251,40 +1387,6 @@ export default function MyDashboard() {
           </div>
         )}
 
-        {/* FAQ */}
-        {faqs.length > 0 && (
-          <div className="mb-6">
-            <button
-              onClick={() => setShowFaq(!showFaq)}
-              className="w-full bg-white rounded-xl border border-gray-200 p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-            >
-              <span className="font-medium text-gray-700">자주 묻는 질문 (FAQ)</span>
-              <span className="text-gray-400">{showFaq ? '▲' : '▼'}</span>
-            </button>
-            {showFaq && (
-              <div className="mt-2 bg-white rounded-xl border border-gray-200 overflow-hidden">
-                {faqs.map((faq, i) => (
-                  <div key={faq.id} className={i > 0 ? 'border-t border-gray-100' : ''}>
-                    <button
-                      onClick={() => setOpenFaqId(openFaqId === faq.id ? null : faq.id)}
-                      className="w-full text-left px-5 py-4 flex items-start justify-between hover:bg-gray-50"
-                    >
-                      <span className="text-sm font-medium text-gray-800 pr-4">Q. {faq.question}</span>
-                      <span className="text-gray-400 shrink-0">{openFaqId === faq.id ? '−' : '+'}</span>
-                    </button>
-                    {openFaqId === faq.id && (
-                      <div className="px-5 pb-4">
-                        <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap bg-gray-50 rounded-lg p-4">
-                          {faq.answer}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
       </main>
 
       <BrandFooter />
