@@ -399,7 +399,7 @@ export default function Home() {
               href="/my"
               className="w-full mt-3 text-sm text-gray-400 hover:text-gray-600 hover:underline block text-center"
             >
-              신청 내역 확인 / 수정하기
+              등록 정보 조회
             </a>
           </div>
 
@@ -639,6 +639,9 @@ export default function Home() {
               </h2>
               <p className="text-sm sm:text-base text-gray-500 leading-relaxed">
                 등록하신 이메일로 등록 확정 여부와<br />관련 정보를 D-7 이내 전달해 드리겠습니다.
+              </p>
+              <p className="mt-4 text-sm font-medium px-4 py-2 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 inline-block">
+                *신청 내역 확인에서 등록 여부를 직접 확인하실 수 있습니다.
               </p>
 
               <div className="flex flex-col gap-3 mt-10" style={{ position: 'relative', zIndex: 60 }}>

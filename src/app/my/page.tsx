@@ -293,7 +293,7 @@ export default function MyDashboard() {
             <div className="bg-white rounded-xl border border-gray-200 p-8">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/cloocus-logo.png" alt="Cloocus" className="h-7 mx-auto mb-5" />
-              <h1 className="text-xl font-bold text-center mb-1">신청자 대시보드</h1>
+              <h1 className="text-xl font-bold text-center mb-1">신청자 포털</h1>
               <p className="text-gray-500 text-center text-sm mb-6">등록 시 입력한 정보로 조회해주세요.</p>
 
               <div className="space-y-4">
@@ -483,7 +483,7 @@ export default function MyDashboard() {
               로그아웃
             </button>
           </div>
-          <h1 className="text-xl font-bold text-gray-900 mt-2">신청자 대시보드</h1>
+          <h1 className="text-xl font-bold text-gray-900 mt-2">신청자 포털</h1>
         </div>
       </header>
 
