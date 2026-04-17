@@ -28,6 +28,9 @@ export default function SurveyListPage() {
   const [participants, setParticipants] = useState<SurveyParticipant[]>([]);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [sortKey, setSortKey] = useState<string>('created_at');
+  const [sortAsc, setSortAsc] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     if (!accessToken) return;
@@ -82,7 +85,25 @@ export default function SurveyListPage() {
     XLSX.writeFile(wb, `설문리스트_${evtName}_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
-  const completedCount = participants.filter((r) => r.survey_completed).length;
+  const handleSort = (key: string) => {
+    if (sortKey === key) setSortAsc(!sortAsc);
+    else { setSortKey(key); setSortAsc(true); }
+  };
+  const sortIcon = (key: string) => sortKey !== key ? '' : sortAsc ? ' ↑' : ' ↓';
+
+  const filteredParticipants = participants.filter((r) => {
+    if (!searchTerm) return true;
+    const q = searchTerm.toLowerCase();
+    return r.name.toLowerCase().includes(q) || r.company_name.toLowerCase().includes(q) || r.email.toLowerCase().includes(q);
+  });
+  const sortedParticipants = [...filteredParticipants].sort((a, b) => {
+    const va = (a as Record<string, unknown>)[sortKey];
+    const vb = (b as Record<string, unknown>)[sortKey];
+    const cmp = String(va || '').localeCompare(String(vb || ''));
+    return sortAsc ? cmp : -cmp;
+  });
+
+  const completedCount = filteredParticipants.filter((r) => r.survey_completed).length;
 
   return (
     <div>
@@ -117,7 +138,7 @@ export default function SurveyListPage() {
           <div className="grid grid-cols-3 gap-4 mb-4">
             <div className="bg-blue-50 text-blue-700 rounded-xl p-4">
               <p className="text-xs font-medium opacity-70">설문 대상</p>
-              <p className="text-2xl font-bold mt-1">{participants.length}명</p>
+              <p className="text-2xl font-bold mt-1">{filteredParticipants.length}명</p>
             </div>
             <div className="bg-green-50 text-green-700 rounded-xl p-4">
               <p className="text-xs font-medium opacity-70">설문 완료</p>
@@ -125,8 +146,19 @@ export default function SurveyListPage() {
             </div>
             <div className="bg-amber-50 text-amber-700 rounded-xl p-4">
               <p className="text-xs font-medium opacity-70">미완료</p>
-              <p className="text-2xl font-bold mt-1">{participants.length - completedCount}명</p>
+              <p className="text-2xl font-bold mt-1">{filteredParticipants.length - completedCount}명</p>
             </div>
+          </div>
+
+          {/* 검색 */}
+          <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
+            <input
+              type="text"
+              placeholder="이름, 회사, 이메일 검색..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+            />
           </div>
 
           {/* 테이블 */}
@@ -138,20 +170,20 @@ export default function SurveyListPage() {
                     <th className="px-3 py-3 w-10">
                       <input type="checkbox" checked={participants.length > 0 && selected.size === participants.length} onChange={toggleSelectAll} className="w-4 h-4 rounded accent-blue-600" />
                     </th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">성함</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">회사명</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">부서</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">직급</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">이메일</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">연락처</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">산업군</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">등록 상태</th>
-                    <th className="px-4 py-3 text-center font-medium text-gray-600 whitespace-nowrap">설문</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">등록일</th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap cursor-pointer hover:bg-gray-100" onClick={() => handleSort('name')}>성함{sortIcon('name')}</th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap cursor-pointer hover:bg-gray-100" onClick={() => handleSort('company_name')}>회사명{sortIcon('company_name')}</th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap cursor-pointer hover:bg-gray-100" onClick={() => handleSort('department')}>부서{sortIcon('department')}</th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap cursor-pointer hover:bg-gray-100" onClick={() => handleSort('job_title')}>직급{sortIcon('job_title')}</th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap cursor-pointer hover:bg-gray-100" onClick={() => handleSort('email')}>이메일{sortIcon('email')}</th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap cursor-pointer hover:bg-gray-100" onClick={() => handleSort('phone')}>연락처{sortIcon('phone')}</th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap cursor-pointer hover:bg-gray-100" onClick={() => handleSort('industry')}>산업군{sortIcon('industry')}</th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap cursor-pointer hover:bg-gray-100" onClick={() => handleSort('registration_status')}>등록 상태{sortIcon('registration_status')}</th>
+                    <th className="px-4 py-3 text-center font-medium text-gray-600 whitespace-nowrap cursor-pointer hover:bg-gray-100" onClick={() => handleSort('survey_completed')}>설문{sortIcon('survey_completed')}</th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap cursor-pointer hover:bg-gray-100" onClick={() => handleSort('created_at')}>등록일{sortIcon('created_at')}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {participants.map((r) => (
+                  {sortedParticipants.map((r) => (
                     <tr key={r.id} className={`border-b border-gray-100 hover:bg-gray-50 ${selected.has(r.id) ? 'bg-blue-50/50' : ''}`}>
                       <td className="px-3 py-3"><input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleSelect(r.id)} className="w-4 h-4 rounded accent-blue-600" /></td>
                       <td className="px-4 py-3 font-medium whitespace-nowrap">{r.name}</td>

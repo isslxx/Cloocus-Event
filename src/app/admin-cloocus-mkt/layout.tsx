@@ -62,6 +62,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [navItems, setNavItems] = useState<NavItem[]>(DEFAULT_NAV);
   const [editingLabel, setEditingLabel] = useState<string | null>(null);
   const [editLabelValue, setEditLabelValue] = useState('');
+  const [editIconValue, setEditIconValue] = useState('');
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
 
@@ -94,7 +95,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const handleLabelSave = (href: string) => {
     if (!editLabelValue.trim()) { setEditingLabel(null); return; }
-    const items = navItems.map((n) => n.href === href ? { ...n, label: editLabelValue.trim() } : n);
+    const items = navItems.map((n) => n.href === href ? { ...n, label: editLabelValue.trim(), icon: editIconValue || n.icon } : n);
     saveNavOrder(items);
     setEditingLabel(null);
   };
@@ -225,7 +226,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               if (editMode && editingLabel === item.href) {
                 return (
                   <div key={item.href} className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg">
-                    <span>{item.icon}</span>
+                    <input
+                      type="text"
+                      value={editIconValue}
+                      onChange={(e) => setEditIconValue(e.target.value)}
+                      className="w-8 text-center border border-blue-300 rounded px-1 py-0.5 text-sm"
+                      style={{ fontSize: 16 }}
+                    />
                     <input
                       type="text"
                       value={editLabelValue}
@@ -259,6 +266,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         e.preventDefault();
                         setEditingLabel(item.href);
                         setEditLabelValue(item.label);
+                        setEditIconValue(item.icon);
                       } else {
                         setSidebarOpen(false);
                       }

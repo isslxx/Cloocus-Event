@@ -22,6 +22,9 @@ export default function CertificatesPage() {
   const [selectedEvent, setSelectedEvent] = useState('');
   const [records, setRecords] = useState<CertRecord[]>([]);
   const [loading, setLoading] = useState(false);
+  const [sortKey, setSortKey] = useState<string>('name');
+  const [sortAsc, setSortAsc] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     if (!accessToken) return;
@@ -48,12 +51,35 @@ export default function CertificatesPage() {
     if (accessToken) fetchRecords(selectedEvent);
   }, [accessToken, selectedEvent, fetchRecords]);
 
+  const handleSort = (key: string) => {
+    if (sortKey === key) setSortAsc(!sortAsc);
+    else { setSortKey(key); setSortAsc(true); }
+  };
+  const sortIcon = (key: string) => sortKey !== key ? '' : sortAsc ? ' ↑' : ' ↓';
+
+  const filteredRecords = useMemo(() => {
+    if (!searchTerm) return records;
+    const q = searchTerm.toLowerCase();
+    return records.filter((r) =>
+      r.name.toLowerCase().includes(q) || r.company_name.toLowerCase().includes(q) || r.email.toLowerCase().includes(q)
+    );
+  }, [records, searchTerm]);
+
+  const sortedRecords = useMemo(() => {
+    return [...filteredRecords].sort((a, b) => {
+      const va = (a as Record<string, unknown>)[sortKey];
+      const vb = (b as Record<string, unknown>)[sortKey];
+      const cmp = String(va || '').localeCompare(String(vb || ''));
+      return sortAsc ? cmp : -cmp;
+    });
+  }, [filteredRecords, sortKey, sortAsc]);
+
   const stats = useMemo(() => {
-    const total = records.length;
-    const issued = records.filter((r) => r.certificate_issued).length;
-    const surveyDone = records.filter((r) => r.survey_completed).length;
+    const total = filteredRecords.length;
+    const issued = filteredRecords.filter((r) => r.certificate_issued).length;
+    const surveyDone = filteredRecords.filter((r) => r.survey_completed).length;
     return { total, issued, surveyDone };
-  }, [records]);
+  }, [filteredRecords]);
 
   // 이벤트별 통계
   const eventStats = useMemo(() => {
@@ -143,19 +169,30 @@ export default function CertificatesPage() {
         </div>
       )}
 
+      {/* 검색 */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
+        <input
+          type="text"
+          placeholder="이름, 회사, 이메일 검색..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+        />
+      </div>
+
       {/* 상세 리스트 */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="px-4 py-3 text-left font-medium text-gray-600">성함</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">회사명</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">이메일</th>
-                {!selectedEvent && <th className="px-4 py-3 text-left font-medium text-gray-600">이벤트</th>}
-                <th className="px-4 py-3 text-center font-medium text-gray-600">설문</th>
-                <th className="px-4 py-3 text-center font-medium text-gray-600">수료증</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">발급일</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('name')}>성함{sortIcon('name')}</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('company_name')}>회사명{sortIcon('company_name')}</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('email')}>이메일{sortIcon('email')}</th>
+                {!selectedEvent && <th className="px-4 py-3 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('event_id')}>이벤트{sortIcon('event_id')}</th>}
+                <th className="px-4 py-3 text-center font-medium text-gray-600 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('survey_completed')}>설문{sortIcon('survey_completed')}</th>
+                <th className="px-4 py-3 text-center font-medium text-gray-600 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('certificate_issued')}>수료증{sortIcon('certificate_issued')}</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('certificate_issued_at')}>발급일{sortIcon('certificate_issued_at')}</th>
               </tr>
             </thead>
             <tbody>
@@ -163,7 +200,7 @@ export default function CertificatesPage() {
                 <tr><td colSpan={7} className="px-4 py-12 text-center text-gray-400">로딩 중...</td></tr>
               ) : records.length === 0 ? (
                 <tr><td colSpan={7} className="px-4 py-12 text-center text-gray-400">등록 확정자가 없습니다.</td></tr>
-              ) : records.map((r) => (
+              ) : sortedRecords.map((r) => (
                 <tr key={r.id} className="border-b border-gray-100 hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium whitespace-nowrap">{r.name}</td>
                   <td className="px-4 py-3 whitespace-nowrap">{r.company_name}</td>
@@ -189,7 +226,7 @@ export default function CertificatesPage() {
         </div>
         {records.length > 0 && (
           <div className="px-4 py-3 border-t border-gray-200 text-sm text-gray-500">
-            총 {records.length}명
+            총 {filteredRecords.length}명
           </div>
         )}
       </div>
