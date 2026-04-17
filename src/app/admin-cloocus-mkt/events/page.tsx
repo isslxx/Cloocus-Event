@@ -16,7 +16,7 @@ export default function EventsPage() {
   const [formName, setFormName] = useState('');
   const [formDate, setFormDate] = useState('');
   const [formType, setFormType] = useState<'online' | 'offline' | 'none'>('offline');
-  const [formStatus, setFormStatus] = useState<'open' | 'closed'>('open');
+  const [formStatus, setFormStatus] = useState<'open' | 'closed' | 'ended'>('open');
   const [formLocation, setFormLocation] = useState('');
   const [formTime, setFormTime] = useState('');
   const [formVisible, setFormVisible] = useState(true);
@@ -83,7 +83,7 @@ export default function EventsPage() {
     if (!formName.trim() || !formDate) return;
     setSaving(true);
     try {
-      const body = { name: formName.trim(), event_date: formDate, event_type: formType, status: formStatus, location: formLocation.trim(), event_time: formTime.trim(), visible: formVisible, capacity: formCapacity ? parseInt(formCapacity) : null, privacy_category: formPrivacy, category: formCategory };
+      const body = { name: formName.trim(), event_date: formDate, event_type: formType, status: formStatus, location: formLocation.trim(), event_time: formTime.trim(), visible: formVisible, capacity: formCapacity ? parseInt(formCapacity) : null, privacy_category: formPrivacy, category: formCategory, ended_at: formStatus === 'ended' ? new Date().toISOString() : null };
       if (isNew) {
         await fetch('/api/admin/events', {
           method: 'POST',
@@ -289,13 +289,11 @@ export default function EventsPage() {
                   <button
                     onClick={() => isAdmin && toggleStatus(event)}
                     className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      event.status === 'open'
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'bg-gray-100 text-gray-500'
+                      event.status === 'open' ? 'bg-blue-100 text-blue-700' : event.status === 'closed' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'
                     } ${isAdmin ? 'cursor-pointer hover:opacity-80' : ''}`}
                     disabled={!isAdmin}
                   >
-                    {event.status === 'open' ? (event.category === '프로모션' ? '진행중' : '모집중') : (event.category === '프로모션' ? '종료' : '마감')}
+                    {event.status === 'open' ? (event.category === '프로모션' ? '진행중' : '모집중') : event.status === 'closed' ? '마감' : '종료'}
                   </button>
                 </td>
                 <td className="px-4 py-3">
@@ -397,9 +395,10 @@ export default function EventsPage() {
                 </div>
                 <div className="field">
                   <label>상태</label>
-                  <select value={formStatus} onChange={(e) => setFormStatus(e.target.value as 'open' | 'closed')}>
+                  <select value={formStatus} onChange={(e) => setFormStatus(e.target.value as 'open' | 'closed' | 'ended')}>
                     <option value="open">{formCategory === '프로모션' ? '진행중' : '모집중'}</option>
-                    <option value="closed">{formCategory === '프로모션' ? '종료' : '마감'}</option>
+                    <option value="closed">{formCategory === '프로모션' ? '마감' : '마감'}</option>
+                    <option value="ended">{formCategory === '프로모션' ? '종료' : '종료'}</option>
                   </select>
                 </div>
                 <div className="field">

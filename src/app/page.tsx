@@ -81,6 +81,10 @@ export default function Home() {
   // 검증 오류 팝업
   const [validationPopup, setValidationPopup] = useState<string[]>([]);
 
+  // 마감 이벤트 팝업
+  const [closedEventPopup, setClosedEventPopup] = useState<Event | null>(null);
+  const [closedAcknowledged, setClosedAcknowledged] = useState(false);
+
   // 회사명 자동완성
   const [companySuggestions, setCompanySuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -261,14 +265,22 @@ export default function Home() {
               <>
                 <div className="space-y-3">
                   {events.map((event) => {
+                    const isEnded = event.status === 'ended';
                     const isClosed = event.status === 'closed';
                     return (
                       <button
                         key={event.id}
-                        onClick={() => !isClosed && setSelectedEvent(event)}
-                        disabled={isClosed}
+                        onClick={() => {
+                          if (isEnded) return;
+                          if (isClosed) {
+                            setClosedEventPopup(event);
+                            return;
+                          }
+                          setSelectedEvent(event);
+                        }}
+                        disabled={isEnded}
                         className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
-                          isClosed
+                          isEnded
                             ? 'border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed'
                             : selectedEvent?.id === event.id
                               ? 'border-blue-500 bg-blue-50'
@@ -282,12 +294,13 @@ export default function Home() {
                                 {event.category}
                               </span>
                             )}
-                            <p className={`font-semibold text-base ${isClosed ? 'text-gray-400' : ''}`}>{event.name}</p>
+                            <p className={`font-semibold text-base ${isEnded ? 'text-gray-400' : ''}`}>{event.name}</p>
                           </div>
+                          {isEnded && (
+                            <span className="text-xs px-2.5 py-1 rounded-full font-bold bg-red-100 text-red-600 shrink-0">종료</span>
+                          )}
                           {isClosed && (
-                            <span className="text-xs px-2.5 py-1 rounded-full font-bold bg-red-100 text-red-600 shrink-0">
-                              마감
-                            </span>
+                            <span className="text-xs px-2.5 py-1 rounded-full font-bold bg-amber-100 text-amber-700 shrink-0">마감</span>
                           )}
                         </div>
                         <div className="flex items-center gap-3 mt-1.5 flex-wrap">
@@ -320,15 +333,55 @@ export default function Home() {
                   })}
                 </div>
 
-                {events.every((e) => e.status === 'closed') && (
+                {events.every((e) => e.status === 'closed' || e.status === 'ended') && (
                   <p className="text-center text-gray-400 text-sm mt-4">현재 모든 이벤트의 신청이 마감되었습니다.</p>
                 )}
               </>
             )}
 
+            {closedEventPopup && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
+                <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-amber-500 text-xl">⚠</span>
+                    <h3 className="text-lg font-bold text-gray-900">마감 안내</h3>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-4">현재 정원이 마감되어 등록이 어려울 수 있습니다.</p>
+                  <label className="flex items-start gap-2 cursor-pointer mb-4">
+                    <input
+                      type="checkbox"
+                      checked={closedAcknowledged}
+                      onChange={(e) => setClosedAcknowledged(e.target.checked)}
+                      className="mt-0.5 w-4 h-4 rounded accent-blue-600"
+                    />
+                    <span className="text-sm text-gray-700">위 내용을 확인했습니다.</span>
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      disabled={!closedAcknowledged}
+                      onClick={() => {
+                        setSelectedEvent(closedEventPopup);
+                        setClosedEventPopup(null);
+                        setClosedAcknowledged(false);
+                      }}
+                      className="btn-primary flex-1 disabled:opacity-40"
+                    >
+                      등록 진행하기
+                    </button>
+                    <button
+                      onClick={() => { setClosedEventPopup(null); setClosedAcknowledged(false); }}
+                      className="btn-secondary flex-1"
+                    >
+                      취소
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <button
               onClick={async () => {
-                if (!selectedEvent || selectedEvent.status !== 'open') return;
+                if (!selectedEvent || selectedEvent.status === 'ended') return;
                 try {
                   const res = await fetch(`/api/privacy-policy?category=${encodeURIComponent(selectedEvent.privacy_category || '기타')}`);
                   const data = await res.json();
@@ -337,7 +390,7 @@ export default function Home() {
                 } catch { /* ignore */ }
                 setStep(2);
               }}
-              disabled={!selectedEvent || selectedEvent.status === 'closed'}
+              disabled={!selectedEvent || selectedEvent.status === 'ended'}
               className="btn-primary w-full mt-6"
             >
               등록하기

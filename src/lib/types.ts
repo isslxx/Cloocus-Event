@@ -3,7 +3,8 @@ export type Event = {
   name: string;
   event_date: string;
   event_type: 'online' | 'offline' | 'none';
-  status: 'open' | 'closed';
+  status: 'open' | 'closed' | 'ended';
+  ended_at: string | null;
   visible: boolean;
   capacity: number | null;
   privacy_category: string;

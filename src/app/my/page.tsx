@@ -27,6 +27,8 @@ type RegistrationData = {
   event_time: string;
   survey_enabled: boolean;
   survey_completed: boolean;
+  event_status: string;
+  event_ended_at: string | null;
 };
 
 type FAQItem = {
@@ -193,6 +195,19 @@ export default function MyDashboard() {
   const offlineCategories = ['세미나', '워크샵', '전시회', '스프린트'];
   const showStatus = registration && !['프로모션', '이벤트'].includes(registration.event_category);
   const showQr = registration?.registration_status === 'confirmed' && offlineCategories.includes(registration.event_category);
+
+  // 종료 후 7일 접근 제한
+  const isEventEnded = registration?.event_status === 'ended';
+  const endedAt = registration?.event_ended_at ? new Date(registration.event_ended_at) : null;
+  const endedDaysAgo = endedAt ? Math.floor((Date.now() - endedAt.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+  const isAccessExpired = isEventEnded && endedAt && endedDaysAgo > 7;
+  const daysRemaining = isEventEnded && endedAt ? Math.max(0, 7 - endedDaysAgo) : null;
+
+  // 마감/종료 시 개인정보 수정 불가 (editable 재정의)
+  const canEditInfo = editable && registration?.event_status === 'open' && registration?.registration_status === 'pending';
+  // 설문 수정 가능: 확정자 + 이벤트 날짜 이전
+  const eventDatePassed = registration?.event_date ? new Date(registration.event_date) < new Date() : false;
+  const canEditSurvey = registration?.registration_status === 'confirmed' && !isAccessExpired && (registration?.event_status !== 'ended');
 
   const handleLookup = async () => {
     if (!lookupEventId) { setLookupError('이벤트를 선택해주세요.'); return; }
@@ -422,6 +437,26 @@ export default function MyDashboard() {
     );
   }
 
+  if (isAccessExpired) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl border border-gray-200 p-8 max-w-sm w-full text-center">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-2xl">🔒</span>
+            </div>
+            <h2 className="text-xl font-bold mb-2">조회 기간이 만료되었습니다</h2>
+            <p className="text-gray-500 text-sm mb-2">이벤트 종료 후 7일이 경과하여</p>
+            <p className="text-gray-500 text-sm mb-6">신청 내역을 조회할 수 없습니다.</p>
+            <p className="text-xs text-gray-400 mb-4">문의: marketing@cloocus.com</p>
+            <a href="/" className="btn-primary inline-block">돌아가기</a>
+          </div>
+        </div>
+        <BrandFooter />
+      </div>
+    );
+  }
+
   if (!registration) return null;
 
   const status = statusLabel(registration.registration_status || 'pending');
@@ -448,6 +483,13 @@ export default function MyDashboard() {
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-6 flex-1 w-full">
+        {isEventEnded && daysRemaining !== null && daysRemaining > 0 && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-center">
+            <p className="text-sm text-amber-700 font-medium">이벤트가 종료되었습니다. 조회 가능 기간이 <strong>{daysRemaining}일</strong> 남았습니다.</p>
+            <p className="text-xs text-amber-500 mt-1">종료일 기준 7일 이후에는 신청 내역을 조회할 수 없습니다.</p>
+          </div>
+        )}
+
         {/* 이벤트 정보 */}
         <div className="bg-white rounded-xl border border-gray-200 p-5 mb-4" style={{ backgroundColor: '#e0f2fe' }}>
           <div className="flex items-center gap-2 mb-1">
@@ -537,12 +579,14 @@ export default function MyDashboard() {
                   >
                     저장된 정보 불러오기
                   </button>
+                  {registration.event_status === 'open' && (
                   <button
                     onClick={() => { setShowSurveyChoice(false); startEdit(); }}
                     className="btn-secondary flex-1" style={{ padding: '12px 0' }}
                   >
                     개인정보 수정 후 작성
                   </button>
+                  )}
                 </div>
                 <button onClick={() => setShowSurveyChoice(false)} className="text-sm text-gray-400 hover:text-gray-600 mt-3">
                   취소
@@ -860,6 +904,7 @@ export default function MyDashboard() {
                 </button>
                 <p className="text-xs text-red-500 mt-2">수료증 발급은 이벤트 종료일 기준 7일 이후에는 발급이 불가합니다.</p>
 
+                {canEditSurvey && (
                 <div className="text-right mt-3">
                   <button
                     onClick={async () => {
@@ -895,6 +940,7 @@ export default function MyDashboard() {
                     설문조사 수정하기
                   </button>
                 </div>
+                )}
               </div>
             )}
 
@@ -1057,12 +1103,12 @@ export default function MyDashboard() {
             <a href="/" className="btn-primary flex-1 text-center" style={{ padding: '12px 0', fontSize: 15 }}>
               확인 완료
             </a>
-            {editable && registration.registration_status === 'pending' && (
+            {canEditInfo && (
               <button onClick={startEdit} className="btn-secondary flex-1" style={{ padding: '12px 0', fontSize: 15, fontWeight: 600 }}>
                 수정하기
               </button>
             )}
-            {editable && registration.registration_status === 'pending' && (
+            {canEditInfo && (
               <button onClick={() => setShowCancelConfirm(true)} className="btn-danger flex-1" style={{ padding: '12px 0', fontSize: 15, fontWeight: 600 }}>
                 등록 취소
               </button>

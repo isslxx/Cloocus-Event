@@ -27,7 +27,7 @@ export async function GET(
 
     const { data, error } = await supabase
       .from('event_registrations')
-      .select('*, events!event_registrations_event_id_fkey(name, status, event_date, event_type, capacity, location, event_time, category)')
+      .select('*, events!event_registrations_event_id_fkey(name, status, event_date, event_type, capacity, location, event_time, category, ended_at)')
       .eq('id', id)
       .eq('pin', pin)
       .is('deleted_at', null)
@@ -61,6 +61,8 @@ export async function GET(
         event_category: evt?.category || '이벤트',
         event_location: evt?.location || '',
         event_time: evt?.event_time || '',
+        event_status: evt?.status || 'open',
+        event_ended_at: evt?.ended_at || null,
         registration_status: data.registration_status || 'pending',
         survey_enabled: data.survey_enabled || false,
         survey_completed: data.survey_completed || false,
