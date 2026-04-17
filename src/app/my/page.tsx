@@ -561,7 +561,7 @@ export default function MyDashboard() {
             {/* 설문조사 미완료 + 설문 활성화 → 선택 화면 또는 설문 버튼 */}
             {registration.survey_enabled && !registration.survey_completed && !surveySubmitted && !showSurvey && !showSurveyChoice && !surveyWithEdit && (
               <div className="bg-white rounded-xl border-2 border-green-200 p-6 mb-4 text-center">
-                <p className="text-green-700 font-semibold text-base mb-1">오늘의 경험을 설문조사에 남겨 주세요.</p>
+                <p className="text-gray-900 font-semibold text-base mb-1">오늘의 경험을 설문조사에 남겨 주세요.</p>
                 <p className="text-green-600 text-sm mb-5">설문조사 완료 후 수료증 발급이 가능합니다.</p>
                 <button onClick={() => setShowSurveyChoice(true)} className="btn-shimmer">
                   설문조사 작성하기
