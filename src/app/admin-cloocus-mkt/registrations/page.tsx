@@ -336,16 +336,20 @@ export default function RegistrationsPage() {
       {/* 테이블 */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-auto" style={{ maxHeight: 'calc(100vh - 300px)', minHeight: '400px' }}>
         <table className="w-full text-sm">
-          <thead className="sticky top-0 z-10">
+          <thead className="sticky top-0 z-20">
             <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="px-3 py-3 w-10 bg-gray-50">
+              <th className="px-3 py-3 w-10 bg-gray-50 sticky left-0 z-30">
                 <input type="checkbox" checked={records.length > 0 && selected.size === records.length} onChange={toggleSelectAll} className="w-4 h-4 rounded accent-blue-600" />
+              </th>
+              <th className={`px-4 py-3 text-left font-medium cursor-pointer hover:bg-gray-100 whitespace-nowrap bg-gray-50 sticky left-[40px] z-30 ${sortKey === 'name' ? 'text-blue-700' : 'text-gray-600'}`} onClick={() => handleSort('name' as SortKey)}>
+                성함{sortIcon('name' as SortKey)}
+              </th>
+              <th className={`px-4 py-3 text-left font-medium cursor-pointer hover:bg-gray-100 whitespace-nowrap bg-gray-50 sticky left-[120px] z-30 border-r border-gray-200 ${sortKey === 'company_name' ? 'text-blue-700' : 'text-gray-600'}`} onClick={() => handleSort('company_name' as SortKey)}>
+                회사명{sortIcon('company_name' as SortKey)}
               </th>
               {[
                 { key: 'created_at' as SortKey, label: '등록일' },
                 { key: 'event_id' as SortKey, label: '이벤트' },
-                { key: 'name' as SortKey, label: '성함' },
-                { key: 'company_name' as SortKey, label: '회사명' },
                 { key: 'department' as SortKey, label: '부서명' },
                 { key: 'job_title' as SortKey, label: '직급' },
                 { key: 'email' as SortKey, label: '이메일' },
@@ -375,13 +379,13 @@ export default function RegistrationsPage() {
               <tr><td colSpan={18} className="px-4 py-12 text-center text-gray-400">등록 데이터가 없습니다.</td></tr>
             ) : records.map((r) => (
               <tr key={r.id} className={`border-b border-gray-100 hover:bg-gray-50 ${selected.has(r.id) ? 'bg-blue-50/50' : ''}`}>
-                <td className="px-3 py-3 w-10">
+                <td className={`px-3 py-3 w-10 sticky left-0 z-10 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`}>
                   <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleSelect(r.id)} className="w-4 h-4 rounded accent-blue-600" />
                 </td>
+                <td className={`px-4 py-3 whitespace-nowrap font-medium sticky left-[40px] z-10 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`}>{r.name}</td>
+                <td className={`px-4 py-3 whitespace-nowrap sticky left-[120px] z-10 border-r border-gray-100 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`}>{r.company_name}</td>
                 <td className="px-4 py-3 whitespace-nowrap text-gray-500">{new Date(r.created_at).toLocaleDateString('ko-KR')}</td>
                 <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-500 max-w-[150px] truncate">{r.event_id ? (events.find((e) => e.id === r.event_id)?.name || '-') : '-'}</td>
-                <td className="px-4 py-3 whitespace-nowrap font-medium">{r.name}</td>
-                <td className="px-4 py-3 whitespace-nowrap">{r.company_name}</td>
                 <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.department || '-'}</td>
                 <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.job_title || '-'}</td>
                 <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.email}</td>

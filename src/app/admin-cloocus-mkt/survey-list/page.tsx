@@ -182,17 +182,20 @@ export default function SurveyListPage() {
           </div>
 
           {/* 테이블 */}
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="overflow-x-auto">
+          <div className="bg-white rounded-xl border border-gray-200 overflow-auto" style={{ maxHeight: 'calc(100vh - 300px)', minHeight: '400px' }}>
               <table className="w-full text-sm">
-                <thead>
+                <thead className="sticky top-0 z-20">
                   <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="px-3 py-3 w-10">
+                    <th className="px-3 py-3 w-10 bg-gray-50 sticky left-0 z-30">
                       <input type="checkbox" checked={participants.length > 0 && selected.size === participants.length} onChange={toggleSelectAll} className="w-4 h-4 rounded accent-blue-600" />
                     </th>
+                    <th className={`px-4 py-3 text-left font-medium whitespace-nowrap cursor-pointer hover:bg-gray-100 bg-gray-50 sticky left-[40px] z-30 ${sortKey === 'name' ? 'text-blue-700 bg-blue-50/50' : 'text-gray-600'}`} onClick={() => handleSort('name')}>
+                      성함{sortIcon('name')}
+                    </th>
+                    <th className={`px-4 py-3 text-left font-medium whitespace-nowrap cursor-pointer hover:bg-gray-100 bg-gray-50 sticky left-[120px] z-30 border-r border-gray-200 ${sortKey === 'company_name' ? 'text-blue-700 bg-blue-50/50' : 'text-gray-600'}`} onClick={() => handleSort('company_name')}>
+                      회사명{sortIcon('company_name')}
+                    </th>
                     {[
-                      { key: 'name', label: '성함', align: 'left' },
-                      { key: 'company_name', label: '회사명', align: 'left' },
                       { key: 'department', label: '부서', align: 'left' },
                       { key: 'job_title', label: '직급', align: 'left' },
                       { key: 'email', label: '이메일', align: 'left' },
@@ -202,7 +205,7 @@ export default function SurveyListPage() {
                       { key: 'survey_completed', label: '설문', align: 'center' },
                       { key: 'created_at', label: '등록일', align: 'left' },
                     ].map((col) => (
-                      <th key={col.key} className={`px-4 py-3 text-${col.align} font-medium whitespace-nowrap cursor-pointer hover:bg-gray-100 ${sortKey === col.key ? 'text-blue-700 bg-blue-50/50' : 'text-gray-600'}`} onClick={() => handleSort(col.key)}>
+                      <th key={col.key} className={`px-4 py-3 text-${col.align} font-medium whitespace-nowrap cursor-pointer hover:bg-gray-100 bg-gray-50 ${sortKey === col.key ? 'text-blue-700 bg-blue-50/50' : 'text-gray-600'}`} onClick={() => handleSort(col.key)}>
                         {col.label}{sortIcon(col.key)}
                       </th>
                     ))}
@@ -211,9 +214,9 @@ export default function SurveyListPage() {
                 <tbody>
                   {sortedParticipants.map((r) => (
                     <tr key={r.id} className={`border-b border-gray-100 hover:bg-gray-50 ${selected.has(r.id) ? 'bg-blue-50/50' : ''}`}>
-                      <td className="px-3 py-3"><input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleSelect(r.id)} className="w-4 h-4 rounded accent-blue-600" /></td>
-                      <td className="px-4 py-3 font-medium whitespace-nowrap">{r.name}</td>
-                      <td className="px-4 py-3 whitespace-nowrap">{r.company_name}</td>
+                      <td className={`px-3 py-3 sticky left-0 z-10 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`}><input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleSelect(r.id)} className="w-4 h-4 rounded accent-blue-600" /></td>
+                      <td className={`px-4 py-3 font-medium whitespace-nowrap sticky left-[40px] z-10 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`}>{r.name}</td>
+                      <td className={`px-4 py-3 whitespace-nowrap sticky left-[120px] z-10 border-r border-gray-100 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`}>{r.company_name}</td>
                       <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.department}</td>
                       <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.job_title}</td>
                       <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.email}</td>
@@ -234,7 +237,6 @@ export default function SurveyListPage() {
                   ))}
                 </tbody>
               </table>
-            </div>
           </div>
 
           {/* 하단 고정 카운트 바 */}
