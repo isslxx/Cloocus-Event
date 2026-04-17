@@ -38,6 +38,9 @@ export default function FaqsPage() {
   const [deletingCategory, setDeletingCategory] = useState<string | null>(null);
   const [bulkDeleting, setBulkDeleting] = useState(false);
 
+  // 카테고리 이동 드롭다운
+  const [showMoveDropdown, setShowMoveDropdown] = useState(false);
+
   // 드래그 앤 드롭 (FAQ)
   const dragFaqItem = useRef<{ id: string; catId: string | null } | null>(null);
   const dragOverFaqItem = useRef<{ id: string; catId: string | null } | null>(null);
@@ -94,6 +97,21 @@ export default function FaqsPage() {
         body: JSON.stringify({ ids: [...selectedIds], updates: { active } }),
       });
       setSelectedIds(new Set());
+      fetchData();
+    } catch { /* ignore */ }
+  };
+
+  // 카테고리 이동
+  const bulkMove = async (categoryId: string | null) => {
+    if (selectedIds.size === 0) return;
+    try {
+      await fetch('/api/admin/faqs/bulk', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ ids: [...selectedIds], updates: { category_id: categoryId } }),
+      });
+      setSelectedIds(new Set());
+      setShowMoveDropdown(false);
       fetchData();
     } catch { /* ignore */ }
   };
@@ -335,7 +353,38 @@ export default function FaqsPage() {
           <span className="text-sm font-medium text-blue-700">
             {selectedIds.size}개 선택됨
           </span>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            {/* 카테고리 이동 */}
+            <div className="relative">
+              <button
+                onClick={() => setShowMoveDropdown(!showMoveDropdown)}
+                className="text-xs px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 font-medium"
+              >
+                카테고리 이동 ▾
+              </button>
+              {showMoveDropdown && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowMoveDropdown(false)} />
+                  <div className="absolute right-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[160px]">
+                    <button
+                      onClick={() => bulkMove(null)}
+                      className="w-full text-left px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                    >
+                      📂 미분류
+                    </button>
+                    {categories.map((cat) => (
+                      <button
+                        key={cat.id}
+                        onClick={() => bulkMove(cat.id)}
+                        className="w-full text-left px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                      >
+                        {cat.icon || '📌'} {cat.name}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
             <button onClick={() => bulkToggle(true)} className="text-xs px-3 py-1.5 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 font-medium">
               활성화
             </button>
