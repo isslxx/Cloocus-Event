@@ -10,41 +10,28 @@ export async function GET(req: NextRequest) {
 
   const supabase = getServiceSupabase();
 
-  // surveys 테이블에서 직접 조회 (registration join)
-  const { data: surveys, error } = await supabase
+  // 삭제되지 않은 설문 대상자만 조회
+  const { data: regs } = await supabase
+    .from('event_registrations')
+    .select('id, name, company_name, email, phone')
+    .eq('event_id', eventId)
+    .eq('survey_completed', true)
+    .eq('survey_enabled', true)
+    .is('deleted_at', null);
+
+  if (!regs || regs.length === 0) return NextResponse.json([]);
+
+  const regIds = regs.map((r) => r.id);
+  const regMap = new Map(regs.map((r) => [r.id, r]));
+
+  const { data: surveys } = await supabase
     .from('surveys')
-    .select('*, event_registrations!inner(name, company_name, email, phone, event_id)')
-    .eq('event_registrations.event_id', eventId)
+    .select('*')
+    .in('registration_id', regIds)
     .order('created_at', { ascending: false });
 
-  if (error) {
-    // inner join 미지원 시 fallback
-    const { data: regs } = await supabase
-      .from('event_registrations')
-      .select('id, name, company_name, email, phone')
-      .eq('event_id', eventId)
-      .eq('survey_completed', true)
-      .is('deleted_at', null);
-
-    if (!regs || regs.length === 0) return NextResponse.json([]);
-
-    const regIds = regs.map((r) => r.id);
-    const regMap = new Map(regs.map((r) => [r.id, r]));
-
-    const { data: fallbackSurveys } = await supabase
-      .from('surveys')
-      .select('*')
-      .in('registration_id', regIds)
-      .order('created_at', { ascending: false });
-
-    return NextResponse.json((fallbackSurveys || []).map((s) => {
-      const reg = regMap.get(s.registration_id);
-      return { ...s, name: reg?.name || '', company_name: reg?.company_name || '', email: reg?.email || '', phone: reg?.phone || '' };
-    }));
-  }
-
   return NextResponse.json((surveys || []).map((s) => {
-    const reg = s.event_registrations as unknown as { name: string; company_name: string; email: string; phone: string } | null;
+    const reg = regMap.get(s.registration_id);
     return {
       id: s.id,
       registration_id: s.registration_id,
