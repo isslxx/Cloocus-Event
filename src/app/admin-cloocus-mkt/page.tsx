@@ -384,26 +384,34 @@ export default function AdminDashboard() {
             <h3 className="font-semibold mb-4">산업군 분포</h3>
             {metrics.byIndustry.length > 0 ? (
               <>
-                <ResponsiveContainer width="100%" height={280}>
+                <ResponsiveContainer width="100%" height={320}>
                   <PieChart>
                     <Pie
                       data={metrics.byIndustry}
                       dataKey="value"
                       nameKey="name"
                       cx="50%"
-                      cy="50%"
-                      outerRadius={90}
-                      innerRadius={45}
-                      label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
-                      labelLine={false}
-                      fontSize={11}
+                      cy="45%"
+                      outerRadius={80}
+                      innerRadius={40}
+                      label={false}
                     >
                       {metrics.byIndustry.map((_, i) => (
                         <Cell key={i} fill={COLORS[i % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip />
-                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Tooltip formatter={(value) => [`${value}건`]} />
+                    <Legend
+                      layout="horizontal"
+                      verticalAlign="bottom"
+                      align="center"
+                      wrapperStyle={{ fontSize: 11, paddingTop: 12 }}
+                      formatter={(value: string) => {
+                        const item = metrics.byIndustry.find((d) => d.name === value);
+                        const pct = item && metrics.total > 0 ? ((item.value / metrics.total) * 100).toFixed(0) : '0';
+                        return `${value} ${pct}%`;
+                      }}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
                 <table className="w-full text-xs mt-4 border-collapse">

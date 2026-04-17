@@ -235,7 +235,11 @@ export default function SurveyListPage() {
                 </tbody>
               </table>
             </div>
-            <div className="px-4 py-3 border-t border-gray-200 text-sm text-gray-500">
+          </div>
+
+          {/* 하단 고정 카운트 바 */}
+          <div className="sticky bottom-0 z-20 bg-white border-t border-gray-200 rounded-b-xl shadow-[0_-2px_8px_rgba(0,0,0,0.06)]">
+            <div className="px-4 py-3 text-sm text-gray-500">
               총 {participants.length}명{selected.size > 0 && ` (${selected.size}명 선택)`}
             </div>
           </div>

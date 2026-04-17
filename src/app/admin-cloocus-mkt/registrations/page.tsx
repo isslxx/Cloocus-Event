@@ -441,16 +441,20 @@ export default function RegistrationsPage() {
           </table>
         </div>
 
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
+      </div>
+
+      {/* 하단 고정 네비게이션 바 */}
+      {totalPages > 1 && (
+        <div className="sticky bottom-0 z-20 bg-white border-t border-gray-200 rounded-b-xl shadow-[0_-2px_8px_rgba(0,0,0,0.06)]">
+          <div className="flex items-center justify-between px-4 py-3">
             <p className="text-sm text-gray-500">{(page - 1) * limit + 1}~{Math.min(page * limit, total)} / {total}건</p>
             <div className="flex gap-1">
               <button onClick={() => setPage(page - 1)} disabled={page === 1} className="btn-secondary text-xs disabled:opacity-40">이전</button>
               <button onClick={() => setPage(page + 1)} disabled={page === totalPages} className="btn-secondary text-xs disabled:opacity-40">다음</button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* 수정 모달 */}
       {editing && (
