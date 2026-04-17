@@ -22,7 +22,8 @@ export async function GET() {
     .from('faqs')
     .select('id, question, answer, category_id, sort_order')
     .eq('active', true)
-    .order('sort_order', { ascending: true });
+    .order('sort_order', { ascending: true })
+    .range(0, 9999);
 
   if (error) return NextResponse.json({ categories: [], faqs: [] });
   return NextResponse.json({

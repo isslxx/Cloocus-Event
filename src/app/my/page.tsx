@@ -1045,10 +1045,7 @@ export default function MyDashboard() {
                   if (filtered.length === 0) {
                     return (
                       <div className="text-center py-8">
-                        <p className="text-sm text-gray-400 mb-2">검색 결과가 없습니다.</p>
-                        <p className="text-xs text-gray-400">
-                          📧 <a href="mailto:marketing@cloocus.com" className="text-blue-500 hover:underline">marketing@cloocus.com</a>으로 문의해주세요.
-                        </p>
+                        <p className="text-sm text-gray-400">검색 결과가 없습니다.</p>
                       </div>
                     );
                   }
