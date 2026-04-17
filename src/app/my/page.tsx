@@ -185,6 +185,10 @@ export default function MyDashboard() {
         setEditable(lookupData.editable);
       }
       setEditMode(false);
+      // 설문 활성화 상태면 수정 후 바로 설문 폼 열기
+      if (registration?.survey_enabled && !registration?.survey_completed) {
+        setShowSurvey(true);
+      }
     } catch {
       setEditServerError('네트워크 오류가 발생했습니다.');
     } finally {
@@ -560,7 +564,8 @@ export default function MyDashboard() {
                   <p className="text-green-700 font-bold text-lg">등록이 확정되었습니다</p>
                   <p className="text-green-600 text-sm mt-1">{registration.event_name}</p>
                 </div>
-                <p className="text-sm text-gray-500 mb-4">이벤트 참여 후 설문조사를 작성해주세요.</p>
+                <p className="text-sm text-gray-500 mb-1">오늘의 경험을 설문조사에 남겨 주세요.</p>
+                <p className="text-sm text-gray-400 mb-4">설문조사 완료 후 수료증 발급이 가능합니다.</p>
                 <button onClick={() => setShowSurveyChoice(true)} className="btn-shimmer">
                   설문조사 작성하기
                 </button>
@@ -571,22 +576,20 @@ export default function MyDashboard() {
             {showSurveyChoice && !showSurvey && (
               <div className="bg-white rounded-xl border border-gray-200 p-6 mb-4 text-center">
                 <h2 className="text-lg font-bold mb-2">설문조사 시작</h2>
-                <p className="text-sm text-gray-500 mb-6">기존에 등록한 개인정보를 어떻게 처리할까요?</p>
+                <p className="text-sm text-gray-500 mb-6">기존에 등록하신 정보로 진행하시겠습니까?</p>
                 <div className="flex gap-3">
                   <button
                     onClick={() => { setShowSurveyChoice(false); setShowSurvey(true); }}
-                    className="btn-primary flex-1" style={{ padding: '12px 0' }}
+                    className="btn-primary flex-1" style={{ padding: '12px 0', fontSize: 14 }}
                   >
-                    저장된 정보 불러오기
+                    저장된 등록 정보로 시작하기
                   </button>
-                  {registration.event_status === 'open' && (
                   <button
                     onClick={() => { setShowSurveyChoice(false); startEdit(); }}
-                    className="btn-secondary flex-1" style={{ padding: '12px 0' }}
+                    className="btn-secondary flex-1" style={{ padding: '12px 0', fontSize: 14 }}
                   >
-                    개인정보 수정 후 작성
+                    개인정보 수정 후 시작하기
                   </button>
-                  )}
                 </div>
                 <button onClick={() => setShowSurveyChoice(false)} className="text-sm text-gray-400 hover:text-gray-600 mt-3">
                   취소
@@ -1098,7 +1101,7 @@ export default function MyDashboard() {
         )}
 
         {/* 버튼 그룹 */}
-        {!editMode && (
+        {!editMode && !showSurvey && !showSurveyChoice && (
           <div className="flex gap-3 mb-4">
             <a href="/" className="btn-primary flex-1 text-center" style={{ padding: '12px 0', fontSize: 15 }}>
               확인 완료
