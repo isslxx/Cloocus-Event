@@ -293,7 +293,7 @@ export default function EventsPage() {
                   <button
                     onClick={() => isAdmin && toggleStatus(event)}
                     className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      event.status === 'open' ? 'bg-blue-100 text-blue-700' : event.status === 'closed' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'
+                      event.status === 'open' ? 'bg-blue-100 text-blue-700' : event.status === 'closed' ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500'
                     } ${isAdmin ? 'cursor-pointer hover:opacity-80' : ''}`}
                     disabled={!isAdmin}
                   >
