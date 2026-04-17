@@ -311,7 +311,14 @@ export default function FaqsPage() {
   };
 
   // 카테고리별 FAQ 그룹핑
+  const categoryIds = new Set(categories.map((c) => c.id));
   const getFaqsByCategory = (catId: string | null) => {
+    if (catId === null) {
+      // 미분류: category_id가 null/undefined이거나 존재하지 않는 카테고리
+      return faqs
+        .filter((f) => !f.category_id || !categoryIds.has(f.category_id))
+        .sort((a, b) => a.sort_order - b.sort_order);
+    }
     return faqs
       .filter((f) => f.category_id === catId)
       .sort((a, b) => a.sort_order - b.sort_order);

@@ -1058,8 +1058,9 @@ export default function MyDashboard() {
                       const items = filtered.filter((f) => f.category_id === cat.id);
                       if (items.length > 0) grouped.push({ category: cat, items });
                     }
-                    // 카테고리 없는 FAQ
-                    const uncategorized = filtered.filter((f) => !f.category_id);
+                    // 카테고리 없는 FAQ (null/undefined 또는 존재하지 않는 카테고리)
+                    const catIds = new Set(faqCategories.map((c) => c.id));
+                    const uncategorized = filtered.filter((f) => !f.category_id || !catIds.has(f.category_id));
                     if (uncategorized.length > 0) grouped.push({ category: null, items: uncategorized });
                   } else {
                     // 카테고리 없으면 플랫 리스트
