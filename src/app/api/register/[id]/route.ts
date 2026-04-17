@@ -144,6 +144,7 @@ export async function PUT(
       name, company_name, department, job_title,
       email, phone, industry, industry_etc, company_size,
       referral_source, referral_source_etc, referrer_name, inquiry, pin,
+      force_survey_edit,
     } = body;
 
     // PIN 검증
@@ -205,8 +206,11 @@ export async function PUT(
         .eq('id', reg.event_id)
         .single();
 
-      if (evt?.status !== 'open') {
+      if (evt?.status !== 'open' && !force_survey_edit) {
         return NextResponse.json({ error: '이벤트가 마감되어 수정할 수 없습니다.' }, { status: 403 });
+      }
+      if (evt?.status === 'ended' && force_survey_edit) {
+        return NextResponse.json({ error: '이벤트가 종료되어 수정할 수 없습니다.' }, { status: 403 });
       }
     }
 
