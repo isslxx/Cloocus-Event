@@ -300,7 +300,7 @@ export default function Home() {
                             <span className="text-xs px-2.5 py-1 rounded-full font-bold bg-red-100 text-red-600 shrink-0">종료</span>
                           )}
                           {isClosed && (
-                            <span className="text-xs px-2.5 py-1 rounded-full font-bold bg-amber-100 text-amber-700 shrink-0">마감</span>
+                            <span className="text-xs px-2.5 py-1 rounded-full font-bold bg-red-100 text-red-600 shrink-0">마감</span>
                           )}
                         </div>
                         <div className="flex items-center gap-3 mt-1.5 flex-wrap">
