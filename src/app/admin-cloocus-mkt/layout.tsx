@@ -95,7 +95,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const handleLabelSave = (href: string) => {
     if (!editLabelValue.trim()) { setEditingLabel(null); return; }
-    const items = navItems.map((n) => n.href === href ? { ...n, label: editLabelValue.trim(), icon: editIconValue || n.icon } : n);
+    const items = navItems.map((n) => n.href === href ? { ...n, label: editLabelValue.trim(), icon: editIconValue } : n);
     saveNavOrder(items);
     setEditingLabel(null);
   };
@@ -230,18 +230,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                       type="text"
                       value={editIconValue}
                       onChange={(e) => setEditIconValue(e.target.value)}
-                      className="w-8 text-center border border-blue-300 rounded px-1 py-0.5 text-sm"
-                      style={{ fontSize: 16 }}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleLabelSave(item.href); if (e.key === 'Escape') setEditingLabel(null); }}
+                      placeholder="🔹"
+                      className="w-10 text-center border border-blue-300 rounded px-1 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      style={{ fontSize: 18 }}
                     />
                     <input
                       type="text"
                       value={editLabelValue}
                       onChange={(e) => setEditLabelValue(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') handleLabelSave(item.href); if (e.key === 'Escape') setEditingLabel(null); }}
-                      onBlur={() => handleLabelSave(item.href)}
-                      className="flex-1 text-sm border border-blue-300 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="flex-1 text-sm border border-blue-300 rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       autoFocus
                     />
+                    <button onClick={() => handleLabelSave(item.href)} className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 shrink-0">저장</button>
                   </div>
                 );
               }
