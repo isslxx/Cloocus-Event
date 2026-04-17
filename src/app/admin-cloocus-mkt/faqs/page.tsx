@@ -163,12 +163,14 @@ export default function FaqsPage() {
   };
 
   const handleSaveFaq = async () => {
-    if (!formQuestion.trim() || !formAnswer.trim()) return;
+    // 에디터에서 최신 내용 읽기
+    const latestAnswer = answerEditorRef.current?.innerHTML || formAnswer;
+    if (!formQuestion.trim() || !latestAnswer.trim()) return;
     setSaving(true);
     try {
       const body = {
         question: formQuestion.trim(),
-        answer: formAnswer.trim(),
+        answer: latestAnswer.trim(),
         sort_order: formSortOrder,
         active: formActive,
         category_id: formCategoryId || null,
@@ -650,10 +652,9 @@ export default function FaqsPage() {
                     ref={answerEditorRef}
                     contentEditable
                     suppressContentEditableWarning
-                    onInput={() => {
+                    onBlur={() => {
                       if (answerEditorRef.current) setFormAnswer(answerEditorRef.current.innerHTML);
                     }}
-                    dangerouslySetInnerHTML={{ __html: formAnswer }}
                     className="min-h-[120px] px-3 py-2 text-sm leading-relaxed focus:outline-none"
                     style={{ whiteSpace: 'pre-wrap' }}
                   />
