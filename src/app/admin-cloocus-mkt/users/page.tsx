@@ -9,6 +9,21 @@ export default function UsersPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // 이름 편집
+  const [editingNameId, setEditingNameId] = useState<string | null>(null);
+  const [editNameValue, setEditNameValue] = useState('');
+
+  const handleNameSave = async (userId: string) => {
+    if (!editNameValue.trim()) { setEditingNameId(null); return; }
+    await fetch(`/api/admin/users/${userId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ display_name: editNameValue.trim() }),
+    });
+    setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, display_name: editNameValue.trim() } : u));
+    setEditingNameId(null);
+  };
+
   // 초대 모달
   const [showInvite, setShowInvite] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -158,7 +173,30 @@ export default function UsersPage() {
               <tr><td colSpan={4} className="px-4 py-12 text-center text-gray-400">등록된 사용자가 없습니다.</td></tr>
             ) : users.map((u) => (
               <tr key={u.id} className="border-b border-gray-100 hover:bg-gray-50">
-                <td className="px-4 py-3 font-medium">{u.display_name}</td>
+                <td className="px-4 py-3 font-medium">
+                  {editingNameId === u.id ? (
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="text"
+                        value={editNameValue}
+                        onChange={(e) => setEditNameValue(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleNameSave(u.id); if (e.key === 'Escape') setEditingNameId(null); }}
+                        className="text-sm border border-blue-300 rounded px-2 py-1 w-28 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        autoFocus
+                      />
+                      <button onClick={() => handleNameSave(u.id)} className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">저장</button>
+                      <button onClick={() => setEditingNameId(null)} className="text-xs px-1.5 py-1 text-gray-400 hover:text-gray-600">취소</button>
+                    </div>
+                  ) : (
+                    <span
+                      className="cursor-pointer hover:text-blue-600 hover:underline"
+                      onClick={() => { setEditingNameId(u.id); setEditNameValue(u.display_name); }}
+                      title="클릭하여 이름 수정"
+                    >
+                      {u.display_name}
+                    </span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-gray-500">{u.email}</td>
                 <td className="px-4 py-3">
                   <select

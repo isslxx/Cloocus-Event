@@ -7,9 +7,15 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (admin.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const { id } = await params;
-  const { role, password } = await req.json();
+  const { role, password, display_name } = await req.json();
 
   const supabase = getServiceSupabase();
+
+  // 이름 변경
+  if (typeof display_name === 'string' && display_name.trim()) {
+    const { error } = await supabase.from('admin_users').update({ display_name: display_name.trim() }).eq('id', id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 
   // 역할 변경
   if (role) {
@@ -25,10 +31,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (password.length < 6) {
       return NextResponse.json({ error: '접속 코드는 6자 이상이어야 합니다.' }, { status: 400 });
     }
-    // 접속 코드 변경 + 기존 세션 무효화
     const { error } = await supabase.auth.admin.updateUserById(id, { password });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    // 해당 사용자의 세션을 만료시켜 강제 로그아웃
     await supabase.auth.admin.signOut(id, 'global');
   }
 
