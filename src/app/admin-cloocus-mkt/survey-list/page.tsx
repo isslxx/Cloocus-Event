@@ -89,7 +89,7 @@ export default function SurveyListPage() {
     if (sortKey === key) setSortAsc(!sortAsc);
     else { setSortKey(key); setSortAsc(true); }
   };
-  const sortIcon = (key: string) => sortKey !== key ? '' : sortAsc ? ' ↑' : ' ↓';
+  const sortIcon = (key: string) => sortKey === key ? (sortAsc ? ' ↑' : ' ↓') : ' ↕';
 
   const filteredParticipants = participants.filter((r) => {
     if (!searchTerm) return true;

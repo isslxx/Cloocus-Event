@@ -55,7 +55,7 @@ export default function CertificatesPage() {
     if (sortKey === key) setSortAsc(!sortAsc);
     else { setSortKey(key); setSortAsc(true); }
   };
-  const sortIcon = (key: string) => sortKey !== key ? '' : sortAsc ? ' ↑' : ' ↓';
+  const sortIcon = (key: string) => sortKey === key ? (sortAsc ? ' ↑' : ' ↓') : ' ↕';
 
   const filteredRecords = useMemo(() => {
     if (!searchTerm) return records;

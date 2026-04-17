@@ -232,7 +232,7 @@ export default function RegistrationsPage() {
   const totalPages = Math.ceil(total / limit);
   const canEditRecord = admin?.role === 'admin' || admin?.role === 'editor';
   const canDeleteRecord = admin?.role === 'admin';
-  const sortIcon = (key: SortKey) => sortKey !== key ? '' : sortAsc ? ' ↑' : ' ↓';
+  const sortIcon = (key: SortKey) => sortKey === key ? (sortAsc ? ' ↑' : ' ↓') : ' ↕';
 
   // 등록년도 옵션 생성
   const currentYear = new Date().getFullYear();
