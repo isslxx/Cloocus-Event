@@ -41,6 +41,14 @@ export default function FaqsPage() {
   // 카테고리 이동 드롭다운
   const [showMoveDropdown, setShowMoveDropdown] = useState(false);
 
+  // 리치 텍스트 에디터
+  const answerEditorRef = useRef<HTMLDivElement>(null);
+
+  const execCmd = (cmd: string, value?: string) => {
+    document.execCommand(cmd, false, value);
+    answerEditorRef.current?.focus();
+  };
+
   // 드래그 앤 드롭 (FAQ)
   const dragFaqItem = useRef<{ id: string; catId: string | null } | null>(null);
   const dragOverFaqItem = useRef<{ id: string; catId: string | null } | null>(null);
@@ -140,6 +148,7 @@ export default function FaqsPage() {
     setFormSortOrder(faqs.length + 1);
     setFormActive(true);
     setFormCategoryId(categoryId || '');
+    setTimeout(() => { if (answerEditorRef.current) answerEditorRef.current.innerHTML = ''; }, 0);
   };
 
   const openEditFaq = (faq: FAQ) => {
@@ -150,6 +159,7 @@ export default function FaqsPage() {
     setFormSortOrder(faq.sort_order);
     setFormActive(faq.active);
     setFormCategoryId(faq.category_id || '');
+    setTimeout(() => { if (answerEditorRef.current) answerEditorRef.current.innerHTML = faq.answer; }, 0);
   };
 
   const handleSaveFaq = async () => {
@@ -611,12 +621,43 @@ export default function FaqsPage() {
               </div>
               <div className="field">
                 <label>답변</label>
-                <textarea
-                  rows={5}
-                  value={formAnswer}
-                  onChange={(e) => setFormAnswer(e.target.value)}
-                  placeholder="답변을 입력하세요"
-                />
+                <div className="border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-200 focus-within:border-blue-300">
+                  {/* 툴바 */}
+                  <div className="flex items-center gap-0.5 px-2 py-1.5 bg-gray-50 border-b border-gray-200 flex-wrap">
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }} className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-200 text-sm font-bold" title="굵게">B</button>
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); execCmd('italic'); }} className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-200 text-sm italic" title="기울임">I</button>
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); execCmd('underline'); }} className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-200 text-sm underline" title="밑줄">U</button>
+                    <div className="w-px h-5 bg-gray-300 mx-1" />
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); execCmd('foreColor', '#2563eb'); }} className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-200 text-xs" title="파란색">
+                      <span className="text-blue-600 font-bold">A</span>
+                    </button>
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); execCmd('foreColor', '#dc2626'); }} className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-200 text-xs" title="빨간색">
+                      <span className="text-red-600 font-bold">A</span>
+                    </button>
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); execCmd('foreColor', '#16a34a'); }} className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-200 text-xs" title="초록색">
+                      <span className="text-green-600 font-bold">A</span>
+                    </button>
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); execCmd('foreColor', '#000000'); }} className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-200 text-xs" title="검정색">
+                      <span className="text-black font-bold">A</span>
+                    </button>
+                    <div className="w-px h-5 bg-gray-300 mx-1" />
+                    <button type="button" onMouseDown={(e) => { e.preventDefault(); execCmd('removeFormat'); }} className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-200 text-xs text-gray-500" title="서식 제거">
+                      T̶
+                    </button>
+                  </div>
+                  {/* 에디터 */}
+                  <div
+                    ref={answerEditorRef}
+                    contentEditable
+                    suppressContentEditableWarning
+                    onInput={() => {
+                      if (answerEditorRef.current) setFormAnswer(answerEditorRef.current.innerHTML);
+                    }}
+                    dangerouslySetInnerHTML={{ __html: formAnswer }}
+                    className="min-h-[120px] px-3 py-2 text-sm leading-relaxed focus:outline-none"
+                    style={{ whiteSpace: 'pre-wrap' }}
+                  />
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="field">

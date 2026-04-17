@@ -1019,7 +1019,7 @@ export default function MyDashboard() {
 
               {/* 검색 */}
               <div className="relative mb-4">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                 <input
                   type="text"
                   value={faqSearch}
@@ -1104,14 +1104,12 @@ export default function MyDashboard() {
                                 onClick={() => setOpenFaqId(openFaqId === faq.id ? null : faq.id)}
                                 className="w-full text-left px-4 py-3 flex items-start justify-between hover:bg-gray-100 transition-colors"
                               >
-                                <span className="text-sm font-medium text-gray-800 pr-3">Q. {highlightText(faq.question)}</span>
+                                <span className="text-sm font-medium text-gray-800 pr-3"><span className="text-blue-600 font-bold">Q.</span> {highlightText(faq.question)}</span>
                                 <span className="text-gray-400 shrink-0 text-xs mt-0.5">{openFaqId === faq.id ? '−' : '+'}</span>
                               </button>
                               {openFaqId === faq.id && (
                                 <div className="px-4 pb-3">
-                                  <div className="bg-white rounded-lg p-3 text-sm text-gray-600 leading-relaxed whitespace-pre-wrap border border-gray-100">
-                                    {highlightText(faq.answer)}
-                                  </div>
+                                  <div className="bg-white rounded-lg p-3 text-sm text-gray-600 leading-relaxed border border-gray-100 faq-answer" dangerouslySetInnerHTML={{ __html: search ? faq.answer.replace(new RegExp(`(${search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'), '<mark class="bg-yellow-100 rounded px-0.5">$1</mark>') : faq.answer }} />
                                 </div>
                               )}
                             </div>

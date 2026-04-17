@@ -144,6 +144,12 @@ body {
   background: #fef2f2;
 }
 
+/* FAQ 답변 리치 텍스트 */
+.faq-answer b, .faq-answer strong { font-weight: 700; }
+.faq-answer i, .faq-answer em { font-style: italic; }
+.faq-answer u { text-decoration: underline; }
+.faq-answer br { display: block; content: ""; margin-top: 0.25em; }
+
 /* 반짝이 버튼 효과 */
 @keyframes shimmer {
   0% { background-position: -200% 0; }
