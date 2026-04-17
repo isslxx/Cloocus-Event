@@ -131,11 +131,15 @@ export default function EventsPage() {
   };
 
   const toggleStatus = async (event: Event) => {
-    const newStatus = event.status === 'open' ? 'closed' : 'open';
+    const nextMap: Record<string, string> = { open: 'closed', closed: 'ended', ended: 'open' };
+    const newStatus = nextMap[event.status] || 'open';
+    const body: Record<string, unknown> = { status: newStatus };
+    if (newStatus === 'ended') body.ended_at = new Date().toISOString();
+    if (newStatus === 'open') body.ended_at = null;
     await fetch(`/api/admin/events/${event.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-      body: JSON.stringify({ status: newStatus }),
+      body: JSON.stringify(body),
     });
     fetchEvents();
   };
