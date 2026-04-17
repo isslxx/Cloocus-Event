@@ -334,127 +334,132 @@ export default function RegistrationsPage() {
       </div>
 
       {/* 테이블 */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="px-3 py-3 w-10">
-                  <input type="checkbox" checked={records.length > 0 && selected.size === records.length} onChange={toggleSelectAll} className="w-4 h-4 rounded accent-blue-600" />
-                </th>
-                {[
-                  { key: 'event_id' as SortKey, label: '이벤트' },
-                  { key: 'name' as SortKey, label: '성함' },
-                  { key: 'company_name' as SortKey, label: '회사명' },
-                  { key: 'email' as SortKey, label: '이메일' },
-                  { key: 'phone' as SortKey, label: '연락처' },
-                  { key: 'referral_source' as SortKey, label: '신청 경로' },
-                  { key: 'referrer_name' as SortKey, label: '추천인' },
-                  { key: 'created_at' as SortKey, label: '등록일' },
-                  { key: 'registration_status' as SortKey, label: '등록 상태' },
-                  { key: 'survey_enabled' as SortKey, label: '설문조사' },
-                ].map((col) => (
-                  <th key={col.key} className={`px-4 py-3 text-left font-medium cursor-pointer hover:bg-gray-100 whitespace-nowrap ${sortKey === col.key ? 'text-blue-700 bg-blue-50/50' : 'text-gray-600'}`} onClick={() => handleSort(col.key)}>
-                    {col.label}{sortIcon(col.key)}
+      <div className="bg-white rounded-xl border border-gray-200 flex flex-col" style={{ height: 'calc(100vh - 300px)', minHeight: '400px' }}>
+        <div className="overflow-x-auto flex-1 flex flex-col">
+          {/* 고정 헤더 */}
+          <div className="overflow-x-auto shrink-0">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="px-3 py-3 w-10">
+                    <input type="checkbox" checked={records.length > 0 && selected.size === records.length} onChange={toggleSelectAll} className="w-4 h-4 rounded accent-blue-600" />
                   </th>
-                ))}
-                <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">이메일 상태</th>
-                {(canEditRecord || canDeleteRecord) && (
-                  <th className="px-4 py-3 text-left font-medium text-gray-600 w-24">작업</th>
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={13} className="px-4 py-12 text-center text-gray-400">로딩 중...</td></tr>
-              ) : records.length === 0 ? (
-                <tr><td colSpan={13} className="px-4 py-12 text-center text-gray-400">등록 데이터가 없습니다.</td></tr>
-              ) : records.map((r) => (
-                <tr key={r.id} className={`border-b border-gray-100 hover:bg-gray-50 ${selected.has(r.id) ? 'bg-blue-50/50' : ''}`}>
-                  <td className="px-3 py-3">
-                    <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleSelect(r.id)} className="w-4 h-4 rounded accent-blue-600" />
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-500 max-w-[150px] truncate">{r.event_id ? (events.find((e) => e.id === r.event_id)?.name || '-') : '-'}</td>
-                  <td className="px-4 py-3 whitespace-nowrap font-medium">{r.name}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">{r.company_name}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.email}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.phone}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">{r.referral_source}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.referrer_name || '-'}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-gray-500">{new Date(r.created_at).toLocaleDateString('ko-KR')}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    {canEditRecord ? (
-                      <select
-                        value={r.registration_status || 'pending'}
-                        onChange={async (e) => {
-                          const newStatus = e.target.value;
-                          // 옵티미스틱 업데이트
-                          setRecords((prev) => prev.map((rec) => rec.id === r.id ? { ...rec, registration_status: newStatus as Registration['registration_status'] } : rec));
-                          fetch(`/api/admin/registrations/${r.id}`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-                            body: JSON.stringify({ registration_status: newStatus }),
-                          });
-                        }}
-                        className="text-xs border border-gray-200 rounded px-1.5 py-1"
-                      >
-                        <option value="pending">등록 대기</option>
-                        <option value="confirmed">등록 확정</option>
-                        <option value="rejected">등록 불가</option>
-                      </select>
-                    ) : (
-                      registrationStatusLabel(r.registration_status)
-                    )}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    {r.registration_status === 'confirmed' ? (
-                      <button
-                        onClick={async () => {
-                          const newVal = !(r.survey_enabled);
-                          setRecords((prev) => prev.map((rec) => rec.id === r.id ? { ...rec, survey_enabled: newVal } as Registration : rec));
-                          fetch(`/api/admin/registrations/${r.id}`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-                            body: JSON.stringify({ survey_enabled: newVal }),
-                          });
-                        }}
-                        className={`text-xs px-2 py-0.5 rounded-full font-medium ${r.survey_enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}
-                      >
-                        {r.survey_enabled ? (r.survey_completed ? '완료' : 'On') : 'Off'}
-                      </button>
-                    ) : (
-                      <span className="text-xs text-gray-300">-</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">{emailStatusLabel(r.email_status)}</td>
+                  {[
+                    { key: 'event_id' as SortKey, label: '이벤트' },
+                    { key: 'name' as SortKey, label: '성함' },
+                    { key: 'company_name' as SortKey, label: '회사명' },
+                    { key: 'email' as SortKey, label: '이메일' },
+                    { key: 'phone' as SortKey, label: '연락처' },
+                    { key: 'referral_source' as SortKey, label: '신청 경로' },
+                    { key: 'referrer_name' as SortKey, label: '추천인' },
+                    { key: 'created_at' as SortKey, label: '등록일' },
+                    { key: 'registration_status' as SortKey, label: '등록 상태' },
+                    { key: 'survey_enabled' as SortKey, label: '설문조사' },
+                  ].map((col) => (
+                    <th key={col.key} className={`px-4 py-3 text-left font-medium cursor-pointer hover:bg-gray-100 whitespace-nowrap ${sortKey === col.key ? 'text-blue-700 bg-blue-50/50' : 'text-gray-600'}`} onClick={() => handleSort(col.key)}>
+                      {col.label}{sortIcon(col.key)}
+                    </th>
+                  ))}
+                  <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">이메일 상태</th>
                   {(canEditRecord || canDeleteRecord) && (
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="flex gap-1">
-                        {canEditRecord && <button onClick={() => handleEdit(r)} className="text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100">수정</button>}
-                        {canDeleteRecord && <button onClick={() => setDeleting(r.id)} className="text-xs px-2 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100">삭제</button>}
-                      </div>
-                    </td>
+                    <th className="px-4 py-3 text-left font-medium text-gray-600 w-24">작업</th>
                   )}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+            </table>
+          </div>
+
+          {/* 스크롤되는 본문 */}
+          <div className="overflow-auto flex-1">
+            <table className="w-full text-sm">
+              <tbody>
+                {loading ? (
+                  <tr><td colSpan={13} className="px-4 py-12 text-center text-gray-400">로딩 중...</td></tr>
+                ) : records.length === 0 ? (
+                  <tr><td colSpan={13} className="px-4 py-12 text-center text-gray-400">등록 데이터가 없습니다.</td></tr>
+                ) : records.map((r) => (
+                  <tr key={r.id} className={`border-b border-gray-100 hover:bg-gray-50 ${selected.has(r.id) ? 'bg-blue-50/50' : ''}`}>
+                    <td className="px-3 py-3 w-10">
+                      <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleSelect(r.id)} className="w-4 h-4 rounded accent-blue-600" />
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-500 max-w-[150px] truncate">{r.event_id ? (events.find((e) => e.id === r.event_id)?.name || '-') : '-'}</td>
+                    <td className="px-4 py-3 whitespace-nowrap font-medium">{r.name}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">{r.company_name}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.email}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.phone}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">{r.referral_source}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.referrer_name || '-'}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-gray-500">{new Date(r.created_at).toLocaleDateString('ko-KR')}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {canEditRecord ? (
+                        <select
+                          value={r.registration_status || 'pending'}
+                          onChange={async (e) => {
+                            const newStatus = e.target.value;
+                            setRecords((prev) => prev.map((rec) => rec.id === r.id ? { ...rec, registration_status: newStatus as Registration['registration_status'] } : rec));
+                            fetch(`/api/admin/registrations/${r.id}`, {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+                              body: JSON.stringify({ registration_status: newStatus }),
+                            });
+                          }}
+                          className="text-xs border border-gray-200 rounded px-1.5 py-1"
+                        >
+                          <option value="pending">등록 대기</option>
+                          <option value="confirmed">등록 확정</option>
+                          <option value="rejected">등록 불가</option>
+                        </select>
+                      ) : (
+                        registrationStatusLabel(r.registration_status)
+                      )}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {r.registration_status === 'confirmed' ? (
+                        <button
+                          onClick={async () => {
+                            const newVal = !(r.survey_enabled);
+                            setRecords((prev) => prev.map((rec) => rec.id === r.id ? { ...rec, survey_enabled: newVal } as Registration : rec));
+                            fetch(`/api/admin/registrations/${r.id}`, {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+                              body: JSON.stringify({ survey_enabled: newVal }),
+                            });
+                          }}
+                          className={`text-xs px-2 py-0.5 rounded-full font-medium ${r.survey_enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}
+                        >
+                          {r.survey_enabled ? (r.survey_completed ? '완료' : 'On') : 'Off'}
+                        </button>
+                      ) : (
+                        <span className="text-xs text-gray-300">-</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">{emailStatusLabel(r.email_status)}</td>
+                    {(canEditRecord || canDeleteRecord) && (
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div className="flex gap-1">
+                          {canEditRecord && <button onClick={() => handleEdit(r)} className="text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100">수정</button>}
+                          {canDeleteRecord && <button onClick={() => setDeleting(r.id)} className="text-xs px-2 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100">삭제</button>}
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-      </div>
-
-      {/* 하단 고정 네비게이션 바 */}
-      {totalPages > 1 && (
-        <div className="sticky bottom-0 z-20 bg-white border-t border-gray-200 rounded-b-xl shadow-[0_-2px_8px_rgba(0,0,0,0.06)]">
-          <div className="flex items-center justify-between px-4 py-3">
+        {/* 페이지네이션 바 — 테이블 컨테이너 하단 고정 */}
+        {totalPages > 1 && (
+          <div className="shrink-0 flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-white rounded-b-xl">
             <p className="text-sm text-gray-500">{(page - 1) * limit + 1}~{Math.min(page * limit, total)} / {total}건</p>
             <div className="flex gap-1">
               <button onClick={() => setPage(page - 1)} disabled={page === 1} className="btn-secondary text-xs disabled:opacity-40">이전</button>
               <button onClick={() => setPage(page + 1)} disabled={page === totalPages} className="btn-secondary text-xs disabled:opacity-40">다음</button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* 수정 모달 */}
       {editing && (
