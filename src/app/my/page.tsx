@@ -597,6 +597,9 @@ export default function MyDashboard() {
             {/* 설문조사 폼 */}
             {showSurvey && !surveySubmitted && (
               <div className="bg-white rounded-xl border border-gray-200 p-6 mb-4">
+                <button onClick={() => { setShowSurvey(false); }} className="text-sm text-gray-400 hover:text-gray-600 mb-3 flex items-center gap-1">
+                  <span>←</span> 뒤로가기
+                </button>
                 <div className="flex items-center justify-between mb-1">
                   <h2 className="text-lg font-bold">설문조사</h2>
                 </div>

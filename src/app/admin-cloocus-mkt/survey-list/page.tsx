@@ -114,6 +114,26 @@ export default function SurveyListPage() {
             <option value="">이벤트 선택</option>
             {events.map((evt) => <option key={evt.id} value={evt.id}>{evt.name}</option>)}
           </select>
+          {selected.size > 0 && (
+            <button
+              onClick={async () => {
+                if (!confirm(`선택한 ${selected.size}건을 삭제하시겠습니까?\n삭제된 항목은 휴지통에서 3일간 보관됩니다.`)) return;
+                const ids = Array.from(selected);
+                await Promise.all(ids.map((id) =>
+                  fetch('/api/admin/registrations', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+                    body: JSON.stringify({ id }),
+                  }).catch(() => {})
+                ));
+                setSelected(new Set());
+                fetchParticipants(selectedEvent);
+              }}
+              className="btn-danger text-sm"
+            >
+              삭제 ({selected.size})
+            </button>
+          )}
           {participants.length > 0 && (
             <button onClick={handleExport} className="btn-secondary text-sm">
               XLSX 추출{selected.size > 0 ? ` (${selected.size})` : ''}

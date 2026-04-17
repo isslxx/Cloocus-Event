@@ -46,6 +46,7 @@ export default function SurveyResponsesPage() {
   const [responses, setResponses] = useState<SurveyResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [surveyTargetCount, setSurveyTargetCount] = useState(0);
 
   useEffect(() => {
     if (!accessToken) return;
@@ -56,14 +57,17 @@ export default function SurveyResponsesPage() {
   }, [accessToken]);
 
   const fetchResponses = useCallback(async (eventId: string) => {
-    if (!eventId) { setResponses([]); return; }
+    if (!eventId) { setResponses([]); setSurveyTargetCount(0); return; }
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/survey-responses?event_id=${eventId}`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      const data = await res.json();
+      const [respRes, listRes] = await Promise.all([
+        fetch(`/api/admin/survey-responses?event_id=${eventId}`, { headers: { Authorization: `Bearer ${accessToken}` } }),
+        fetch(`/api/admin/survey-list?event_id=${eventId}`, { headers: { Authorization: `Bearer ${accessToken}` } }),
+      ]);
+      const data = await respRes.json();
+      const listData = await listRes.json();
       setResponses(Array.isArray(data) ? data : []);
+      setSurveyTargetCount(Array.isArray(listData) ? listData.length : 0);
     } catch { /* ignore */ }
     finally { setLoading(false); }
   }, [accessToken]);
@@ -150,10 +154,15 @@ export default function SurveyResponsesPage() {
           {stats && (
             <div className="mb-6">
               {/* 요약 카드 */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+                <div className="bg-gray-50 text-gray-700 rounded-xl p-4">
+                  <p className="text-xs font-medium opacity-70">설문 대상</p>
+                  <p className="text-2xl font-bold mt-1">{surveyTargetCount}명</p>
+                </div>
                 <div className="bg-blue-50 text-blue-700 rounded-xl p-4">
-                  <p className="text-xs font-medium opacity-70">총 응답</p>
+                  <p className="text-xs font-medium opacity-70">응답 완료</p>
                   <p className="text-2xl font-bold mt-1">{stats.total}건</p>
+                  {surveyTargetCount > 0 && <p className="text-xs mt-1 opacity-70">{Math.round((stats.total / surveyTargetCount) * 100)}%</p>}
                 </div>
                 <div className="bg-green-50 text-green-700 rounded-xl p-4">
                   <p className="text-xs font-medium opacity-70">피드백 작성</p>
