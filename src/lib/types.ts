@@ -29,6 +29,7 @@ export type Registration = {
   referral_source: string;
   referrer_name: string;
   inquiry: string;
+  inquiry_status: 'pending' | 'answered' | 'dismissed';
   privacy_consent: boolean;
   email_status: 'confirmed' | 'rejected' | null;
   email_sent_at: string | null;
@@ -89,6 +90,15 @@ export type AuditEntry = {
   target_table: string;
   target_id: string;
   changes: Record<string, { old: unknown; new: unknown }>;
+  created_at: string;
+};
+
+export type InquiryComment = {
+  id: string;
+  registration_id: string;
+  author_type: 'admin' | 'applicant';
+  author_name: string;
+  content: string;
   created_at: string;
 };
 

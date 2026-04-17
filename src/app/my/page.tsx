@@ -29,6 +29,8 @@ type RegistrationData = {
   survey_completed: boolean;
   event_status: string;
   event_ended_at: string | null;
+  created_at: string;
+  inquiry_status: string;
 };
 
 type FAQCategory = {
@@ -87,6 +89,12 @@ export default function MyDashboard() {
   const [openFaqId, setOpenFaqId] = useState<string | null>(null);
   const [faqSearch, setFaqSearch] = useState('');
   const [openCategoryId, setOpenCategoryId] = useState<string | null>(null);
+
+  // 문의 대응 시스템
+  const [inquiryComments, setInquiryComments] = useState<{ id: string; author_type: string; author_name: string; content: string; created_at: string }[]>([]);
+  const [inquiryStatus, setInquiryStatus] = useState<string>('pending');
+  const [newInquiry, setNewInquiry] = useState('');
+  const [inquirySubmitting, setInquirySubmitting] = useState(false);
 
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -259,11 +267,50 @@ export default function MyDashboard() {
         setFaqs(Array.isArray(faqData?.faqs) ? faqData.faqs : []);
         setFaqCategories(Array.isArray(faqData?.categories) ? faqData.categories : []);
       } catch { /* ignore */ }
+
+      // 문의 히스토리 로드
+      if (data.registration?.inquiry) {
+        try {
+          const iqRes = await fetch(`/api/inquiry-comments?registration_id=${data.registration.id}&pin=${encodeURIComponent(lookupPin || pin)}`);
+          const iqData = await iqRes.json();
+          setInquiryComments(iqData.comments || []);
+          setInquiryStatus(iqData.inquiry_status || 'pending');
+        } catch { /* ignore */ }
+      }
     } catch {
       setLookupError('네트워크 오류가 발생했습니다.');
     } finally {
       setLookupLoading(false);
     }
+  };
+
+  const submitInquiry = async () => {
+    if (!newInquiry.trim() || !registration || inquirySubmitting) return;
+    setInquirySubmitting(true);
+    try {
+      const res = await fetch('/api/inquiry-comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          registration_id: registration.id,
+          pin,
+          content: newInquiry.trim(),
+          author_name: registration.name,
+        }),
+      });
+      if (res.ok) {
+        setInquiryComments((prev) => [...prev, {
+          id: Date.now().toString(),
+          author_type: 'applicant',
+          author_name: registration.name,
+          content: newInquiry.trim(),
+          created_at: new Date().toISOString(),
+        }]);
+        setInquiryStatus('pending');
+        setNewInquiry('');
+      }
+    } catch { /* ignore */ }
+    finally { setInquirySubmitting(false); }
   };
 
   const handleCancel = async () => {
@@ -986,6 +1033,99 @@ export default function MyDashboard() {
               </div>
             )}
           </>
+        )}
+
+        {/* 문의사항 대화형 UI */}
+        {registration.inquiry && (
+          <div className="bg-white rounded-xl border border-gray-200 p-5 mb-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-medium text-gray-500 flex items-center gap-2">
+                💬 문의사항
+                {inquiryStatus === 'answered' && inquiryComments.some((c) => c.author_type === 'admin') && (
+                  <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" title="새 답변" />
+                )}
+              </h2>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                inquiryStatus === 'answered' ? 'bg-green-100 text-green-700' :
+                inquiryStatus === 'dismissed' ? 'bg-gray-100 text-gray-500' :
+                'bg-yellow-100 text-yellow-700'
+              }`}>
+                {inquiryStatus === 'answered' ? '답변 완료' : inquiryStatus === 'dismissed' ? '불필요' : '답변 대기'}
+              </span>
+            </div>
+
+            {/* 대화 히스토리 */}
+            <div className="space-y-3 mb-4">
+              {/* 최초 문의 (등록 시 작성) */}
+              <div className="flex justify-end">
+                <div className="max-w-[80%]">
+                  <div className="bg-blue-50 rounded-xl rounded-tr-sm px-4 py-3">
+                    <p className="text-sm text-gray-800 whitespace-pre-wrap">{registration.inquiry}</p>
+                  </div>
+                  <p className="text-xs text-gray-400 text-right mt-1">
+                    {registration.name} · {new Date(registration.created_at || '').toLocaleDateString('ko-KR')}
+                  </p>
+                </div>
+              </div>
+
+              {/* 코멘트 히스토리 */}
+              {inquiryComments.map((comment) => (
+                <div key={comment.id} className={`flex ${comment.author_type === 'applicant' ? 'justify-end' : 'justify-start'}`}>
+                  <div className="max-w-[80%]">
+                    {comment.author_type === 'admin' ? (
+                      <div className="bg-white border border-gray-200 rounded-xl rounded-tl-sm px-4 py-3">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <span className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center text-white text-[10px] font-bold">C</span>
+                          <span className="text-xs font-medium text-blue-700">{comment.author_name}</span>
+                        </div>
+                        <p className="text-sm text-gray-800 whitespace-pre-wrap">{comment.content}</p>
+                      </div>
+                    ) : (
+                      <div className="bg-blue-50 rounded-xl rounded-tr-sm px-4 py-3">
+                        <p className="text-sm text-gray-800 whitespace-pre-wrap">{comment.content}</p>
+                      </div>
+                    )}
+                    <p className={`text-xs text-gray-400 mt-1 ${comment.author_type === 'applicant' ? 'text-right' : 'text-left'}`}>
+                      {new Date(comment.created_at).toLocaleDateString('ko-KR')} {new Date(comment.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                </div>
+              ))}
+
+              {/* 답변 대기 안내 */}
+              {inquiryStatus === 'pending' && !inquiryComments.some((c) => c.author_type === 'admin') && (
+                <div className="text-center py-2">
+                  <p className="text-xs text-gray-400">관리자가 문의를 확인 중입니다.</p>
+                </div>
+              )}
+            </div>
+
+            {/* 추가 문의 입력 */}
+            {inquiryStatus !== 'dismissed' && (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newInquiry}
+                  onChange={(e) => setNewInquiry(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey && newInquiry.trim() && !inquirySubmitting) {
+                      e.preventDefault();
+                      submitInquiry();
+                    }
+                  }}
+                  placeholder="추가 문의를 입력해주세요..."
+                  className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                />
+                <button
+                  onClick={submitInquiry}
+                  disabled={!newInquiry.trim() || inquirySubmitting}
+                  className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-40 shrink-0"
+                >
+                  {inquirySubmitting ? '...' : '전송'}
+                </button>
+              </div>
+            )}
+          </div>
         )}
 
         {/* 신청 내역 + FAQ 2컬럼 */}
