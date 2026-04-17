@@ -1045,12 +1045,12 @@ export default function MyDashboard() {
                   <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" title="새 답변" />
                 )}
               </h2>
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+              <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium whitespace-nowrap ${
                 inquiryStatus === 'answered' ? 'bg-green-100 text-green-700' :
                 inquiryStatus === 'dismissed' ? 'bg-gray-100 text-gray-500' :
                 'bg-yellow-100 text-yellow-700'
               }`}>
-                {inquiryStatus === 'answered' ? '답변 완료' : inquiryStatus === 'dismissed' ? '불필요' : '답변 대기'}
+                {inquiryStatus === 'answered' ? '답변 완료' : inquiryStatus === 'dismissed' ? '관리자 응답 불필요' : '답변 대기'}
               </span>
             </div>
 
@@ -1100,31 +1100,10 @@ export default function MyDashboard() {
               )}
             </div>
 
-            {/* 추가 문의 입력 */}
-            {inquiryStatus !== 'dismissed' && (
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={newInquiry}
-                  onChange={(e) => setNewInquiry(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey && newInquiry.trim() && !inquirySubmitting) {
-                      e.preventDefault();
-                      submitInquiry();
-                    }
-                  }}
-                  placeholder="추가 문의를 입력해주세요..."
-                  className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
-                />
-                <button
-                  onClick={submitInquiry}
-                  disabled={!newInquiry.trim() || inquirySubmitting}
-                  className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-40 shrink-0"
-                >
-                  {inquirySubmitting ? '...' : '전송'}
-                </button>
-              </div>
-            )}
+            {/* 추가 문의 안내 */}
+            <div className="text-center pt-2 border-t border-gray-100">
+              <p className="text-xs text-gray-400">추가 문의는 자주 묻는 질문(FAQ)을 먼저 확인해주세요.</p>
+            </div>
           </div>
         )}
 

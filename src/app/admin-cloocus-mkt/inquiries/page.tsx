@@ -27,7 +27,7 @@ type Comment = {
 const STATUS_LABELS: Record<string, { text: string; cls: string }> = {
   pending: { text: '답변 대기', cls: 'bg-yellow-100 text-yellow-700' },
   answered: { text: '답변 완료', cls: 'bg-green-100 text-green-700' },
-  dismissed: { text: '불필요', cls: 'bg-gray-100 text-gray-500' },
+  dismissed: { text: '관리자 응답 불필요', cls: 'bg-gray-100 text-gray-500' },
 };
 
 export default function InquiriesPage() {
@@ -142,7 +142,7 @@ export default function InquiriesPage() {
           <option value="all">전체 상태</option>
           <option value="pending">답변 대기</option>
           <option value="answered">답변 완료</option>
-          <option value="dismissed">불필요</option>
+          <option value="dismissed">관리자 응답 불필요</option>
         </select>
         <select value={eventFilter} onChange={(e) => setEventFilter(e.target.value)} className="text-sm border border-gray-200 rounded-lg px-3 py-2">
           <option value="">전체 이벤트</option>
@@ -177,7 +177,7 @@ export default function InquiriesPage() {
                     >
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2">
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${st.cls}`}>{st.text}</span>
+                          <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium whitespace-nowrap ${st.cls}`}>{st.text}</span>
                           <span className="text-sm font-medium text-gray-900">{item.name}</span>
                           <span className="text-xs text-gray-400">{item.company_name}</span>
                         </div>
@@ -216,7 +216,7 @@ export default function InquiriesPage() {
                   >
                     <option value="pending">답변 대기</option>
                     <option value="answered">답변 완료</option>
-                    <option value="dismissed">불필요</option>
+                    <option value="dismissed">관리자 응답 불필요</option>
                   </select>
                 )}
                 <button onClick={() => setSelectedId(null)} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
