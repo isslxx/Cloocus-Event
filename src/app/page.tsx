@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { INDUSTRIES, COMPANY_SIZES, REFERRAL_SOURCES, PRIVACY_POLICY_TEXT } from '@/lib/constants';
+import { trackFormSubmit, trackEventView, trackFormStart } from '@/lib/analytics';
 import type { } from '@/lib/constants'; // keep import for PRIVACY_POLICY_TEXT
 import { formatPhone, isBlockedEmailDomain, validateRegistrationForm } from '@/lib/validation';
 import type { FormErrors } from '@/lib/validation';
@@ -235,6 +236,12 @@ export default function Home() {
 
       if (!editMode && data.id) {
         setRegistrationId(data.id);
+        // GA: 등록 완료 이벤트
+        trackFormSubmit(
+          selectedEvent?.name || '',
+          selectedEvent?.category || '',
+          form.referral_source || undefined
+        );
       }
       setEditMode(false);
       setStep(3);
@@ -277,6 +284,7 @@ export default function Home() {
                             return;
                           }
                           setSelectedEvent(event);
+                          trackEventView(event.name, event.category);
                         }}
                         disabled={isEnded}
                         className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
@@ -388,6 +396,9 @@ export default function Home() {
                   if (data.content) setPrivacyContent(data.content);
                   if (data.title) setPrivacyTitle(data.title);
                 } catch { /* ignore */ }
+                if (selectedEvent) {
+                  trackFormStart(selectedEvent.name, selectedEvent.category);
+                }
                 setStep(2);
               }}
               disabled={!selectedEvent || selectedEvent.status === 'ended'}

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { INDUSTRIES, COMPANY_SIZES, REFERRAL_SOURCES } from '@/lib/constants';
 import { formatPhone } from '@/lib/validation';
+import { trackCertificateDownload, trackSurveyComplete, trackPortalLogin, trackInquirySubmit } from '@/lib/analytics';
 
 type RegistrationData = {
   id: string;
@@ -259,6 +260,7 @@ export default function MyDashboard() {
       setRegistration(data.registration);
       setEditable(data.editable);
       setAuthenticated(true);
+      trackPortalLogin();
 
       // Load FAQs
       try {
@@ -785,6 +787,7 @@ export default function MyDashboard() {
                       setShowSurvey(false);
                       if (registration) {
                         setRegistration({ ...registration, survey_completed: true });
+                        trackSurveyComplete(registration.event_name, registration.event_category || '');
                       }
                     } catch { alert('네트워크 오류가 발생했습니다.'); }
                     finally { setSurveySubmitting(false); }
@@ -951,6 +954,9 @@ export default function MyDashboard() {
                       });
 
                       doc.save(`수료증_${registration.name}_${registration.event_name}.pdf`);
+
+                      // GA: 수료증 다운로드
+                      trackCertificateDownload(registration.event_name, registration.event_category || '');
 
                       // 발급 기록
                       fetch('/api/certificate', {
@@ -1473,7 +1479,10 @@ export default function MyDashboard() {
                   setSurveySubmitted(true);
                   setEditMode(false);
                   setSurveyWithEdit(false);
-                  if (registration) setRegistration({ ...registration, survey_completed: true });
+                  if (registration) {
+                    setRegistration({ ...registration, survey_completed: true });
+                    trackSurveyComplete(registration.event_name, registration.event_category || '');
+                  }
                 } catch { alert('네트워크 오류가 발생했습니다.'); }
                 finally { setSurveySubmitting(false); }
               }}
