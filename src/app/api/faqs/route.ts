@@ -11,23 +11,35 @@ function getServiceSupabase() {
 export async function GET() {
   const supabase = getServiceSupabase();
 
-  // 카테고리 조회
-  const { data: categories } = await supabase
-    .from('faq_categories')
-    .select('*')
-    .order('sort_order', { ascending: true });
+  // 카테고리 + FAQ 병렬 조회
+  const [categoriesRes, faqsRes] = await Promise.all([
+    supabase
+      .from('faq_categories')
+      .select('*')
+      .order('sort_order', { ascending: true }),
+    supabase
+      .from('faqs')
+      .select('id, question, answer, category_id, sort_order')
+      .eq('active', true)
+      .order('sort_order', { ascending: true })
+      .range(0, 9999),
+  ]);
 
-  // FAQ 조회 (카테고리 정보 포함)
-  const { data: faqs, error } = await supabase
-    .from('faqs')
-    .select('id, question, answer, category_id, sort_order')
-    .eq('active', true)
-    .order('sort_order', { ascending: true })
-    .range(0, 9999);
+  const categories = categoriesRes.data;
+  const faqs = faqsRes.data;
+  const error = faqsRes.error;
 
   if (error) return NextResponse.json({ categories: [], faqs: [] });
-  return NextResponse.json({
-    categories: categories || [],
-    faqs: faqs || [],
-  });
+  return NextResponse.json(
+    {
+      categories: categories || [],
+      faqs: faqs || [],
+    },
+    {
+      headers: {
+        // 60초 브라우저 캐시, 300초 CDN 캐시, stale-while-revalidate 3600초
+        'Cache-Control': 'public, s-maxage=300, max-age=60, stale-while-revalidate=3600',
+      },
+    }
+  );
 }

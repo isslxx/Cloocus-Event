@@ -131,6 +131,11 @@ export default function MyDashboard() {
   useEffect(() => {
     fetch('/api/form-options').then((r) => r.json()).then((d) => setFormOptions(d)).catch(() => {});
     fetch('/api/events').then((r) => r.json()).then((d) => setAllEvents(Array.isArray(d) ? d.map((e: { id: string; name: string }) => ({ id: e.id, name: e.name })) : [])).catch(() => {});
+    // FAQ 프리페치: 로그인 전에 미리 받아두기
+    fetch('/api/faqs').then((r) => r.json()).then((d) => {
+      setFaqs(Array.isArray(d?.faqs) ? d.faqs : []);
+      setFaqCategories(Array.isArray(d?.categories) ? d.categories : []);
+    }).catch(() => {});
   }, []);
 
   const startEdit = () => {
@@ -262,22 +267,23 @@ export default function MyDashboard() {
       setAuthenticated(true);
       trackPortalLogin();
 
-      // Load FAQs
-      try {
-        const faqRes = await fetch('/api/faqs');
-        const faqData = await faqRes.json();
-        setFaqs(Array.isArray(faqData?.faqs) ? faqData.faqs : []);
-        setFaqCategories(Array.isArray(faqData?.categories) ? faqData.categories : []);
-      } catch { /* ignore */ }
+      // FAQ는 이미 프리페치됨 → 캐시가 비어있을 경우에만 재시도
+      if (faqs.length === 0 && faqCategories.length === 0) {
+        fetch('/api/faqs').then((r) => r.json()).then((d) => {
+          setFaqs(Array.isArray(d?.faqs) ? d.faqs : []);
+          setFaqCategories(Array.isArray(d?.categories) ? d.categories : []);
+        }).catch(() => {});
+      }
 
-      // 문의 히스토리 로드
+      // 문의 히스토리 (백그라운드, await 안 함)
       if (data.registration?.inquiry) {
-        try {
-          const iqRes = await fetch(`/api/inquiry-comments?registration_id=${data.registration.id}&pin=${encodeURIComponent(lookupPin || pin)}`);
-          const iqData = await iqRes.json();
-          setInquiryComments(iqData.comments || []);
-          setInquiryStatus(iqData.inquiry_status || 'pending');
-        } catch { /* ignore */ }
+        fetch(`/api/inquiry-comments?registration_id=${data.registration.id}&pin=${encodeURIComponent(lookupPin || pin)}`)
+          .then((r) => r.json())
+          .then((iqData) => {
+            setInquiryComments(iqData.comments || []);
+            setInquiryStatus(iqData.inquiry_status || 'pending');
+          })
+          .catch(() => {});
       }
     } catch {
       setLookupError('네트워크 오류가 발생했습니다.');
@@ -422,11 +428,13 @@ export default function MyDashboard() {
         setRegistration(data.registration);
         setEditable(data.editable);
         setShowEventSelect(false);
-        try {
-          const faqRes = await fetch('/api/faqs');
-          const faqData = await faqRes.json();
-          setFaqs(Array.isArray(faqData) ? faqData : []);
-        } catch { /* ignore */ }
+        // FAQ는 이미 프리페치됨 → 비어있을 때만 재시도
+        if (faqs.length === 0 && faqCategories.length === 0) {
+          fetch('/api/faqs').then((r) => r.json()).then((d) => {
+            setFaqs(Array.isArray(d?.faqs) ? d.faqs : []);
+            setFaqCategories(Array.isArray(d?.categories) ? d.categories : []);
+          }).catch(() => {});
+        }
       } catch { alert('네트워크 오류가 발생했습니다.'); }
     };
 
