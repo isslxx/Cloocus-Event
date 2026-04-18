@@ -15,7 +15,23 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     .eq('registration_id', id)
     .order('created_at', { ascending: true });
 
-  return NextResponse.json(comments || []);
+  // admin_user_id가 있는 코멘트는 현재 display_name으로 덮어쓰기
+  const adminIds = [...new Set((comments || []).filter((c) => c.admin_user_id).map((c) => c.admin_user_id))];
+  let adminNameMap: Record<string, string> = {};
+  if (adminIds.length > 0) {
+    const { data: admins } = await supabase
+      .from('admin_users')
+      .select('id, display_name')
+      .in('id', adminIds);
+    adminNameMap = Object.fromEntries((admins || []).map((a) => [a.id, a.display_name]));
+  }
+
+  const result = (comments || []).map((c) => ({
+    ...c,
+    author_name: c.admin_user_id && adminNameMap[c.admin_user_id] ? adminNameMap[c.admin_user_id] : c.author_name,
+  }));
+
+  return NextResponse.json(result);
 }
 
 // 관리자: 답변 등록
@@ -36,6 +52,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     registration_id: id,
     author_type: 'admin',
     author_name: admin.display_name,
+    admin_user_id: admin.id,
     content: content.trim(),
   });
 

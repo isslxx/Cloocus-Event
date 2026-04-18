@@ -35,10 +35,26 @@ export async function GET(req: NextRequest) {
     .eq('registration_id', registrationId)
     .order('created_at', { ascending: true });
 
+  // admin_user_id가 있는 코멘트는 현재 display_name으로 덮어쓰기
+  const adminIds = [...new Set((comments || []).filter((c) => c.admin_user_id).map((c) => c.admin_user_id))];
+  let adminNameMap: Record<string, string> = {};
+  if (adminIds.length > 0) {
+    const { data: admins } = await supabase
+      .from('admin_users')
+      .select('id, display_name')
+      .in('id', adminIds);
+    adminNameMap = Object.fromEntries((admins || []).map((a) => [a.id, a.display_name]));
+  }
+
+  const resolvedComments = (comments || []).map((c) => ({
+    ...c,
+    author_name: c.admin_user_id && adminNameMap[c.admin_user_id] ? adminNameMap[c.admin_user_id] : c.author_name,
+  }));
+
   return NextResponse.json({
     inquiry: reg.inquiry,
     inquiry_status: reg.inquiry_status || 'pending',
-    comments: comments || [],
+    comments: resolvedComments,
   });
 }
 
