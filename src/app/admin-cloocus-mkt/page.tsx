@@ -10,9 +10,17 @@ import type { Event } from '@/lib/types';
 
 const COLORS = ['#2563eb', '#7c3aed', '#059669', '#d97706', '#dc2626', '#0891b2', '#be185d', '#65a30d', '#c026d3', '#ea580c', '#0369a1', '#4f46e5', '#84cc16'];
 
+type UtmBreakdown = {
+  bySource: { name: string; value: number }[];
+  byMedium: { name: string; value: number }[];
+  byCampaign: { name: string; value: number }[];
+};
+
 type DashData = {
   filter: string;
   range: { start: string | null; end: string | null; days: number | null };
+  compareMode: 'off' | 'prev' | 'event';
+  compareLabel: string | null;
   kpi: {
     total: number;
     today: number;
@@ -23,6 +31,7 @@ type DashData = {
     topReferrer: { name: string; value: number };
     surveyCompletionRate: number;
     certificateRate: number;
+    windowTotal: number;
   };
   funnel: { registered: number; surveyCompleted: number; certificateIssued: number };
   byDay: { date: string; count: number }[];
@@ -31,10 +40,18 @@ type DashData = {
   bySource: { name: string; value: number }[];
   byEvent: { name: string; total: number; surveyCompleted: number; certificateIssued: number; surveyRate: number }[];
   topReferrers: { name: string; value: number }[];
-  byUtm: {
+  byUtm: UtmBreakdown;
+  compare: null | {
+    mode: 'prev' | 'event';
+    label: string;
+    range: { start: string | null; end: string | null };
+    windowTotal: number;
+    funnel: { registered: number; surveyCompleted: number; certificateIssued: number };
+    byDay: { date: string; count: number }[];
+    byIndustryGroup: { name: string; value: number }[];
     bySource: { name: string; value: number }[];
-    byMedium: { name: string; value: number }[];
-    byCampaign: { name: string; value: number }[];
+    byUtm: UtmBreakdown;
+    surveyCompletionRate: number;
   };
   // 레거시
   total: number;
@@ -44,6 +61,7 @@ type DashData = {
 };
 
 type RangePreset = '7' | '14' | '30' | 'custom' | 'all';
+type CompareMode = 'off' | 'prev' | 'event';
 
 export default function AdminDashboard() {
   const { accessToken } = useAdmin();
@@ -58,6 +76,8 @@ export default function AdminDashboard() {
   const [customEnd, setCustomEnd] = useState<string>('');
   const [industryGroupFilter, setIndustryGroupFilter] = useState<string>('all');
   const [utmTab, setUtmTab] = useState<'source' | 'medium' | 'campaign'>('source');
+  const [compareMode, setCompareMode] = useState<CompareMode>('off');
+  const [compareEventId, setCompareEventId] = useState<string>('');
   const exportMenuRef = useRef<HTMLDivElement>(null);
   const dashboardRef = useRef<HTMLDivElement>(null);
 
@@ -71,7 +91,7 @@ export default function AdminDashboard() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  const buildQuery = useCallback((f: string, r: RangePreset) => {
+  const buildQuery = useCallback((f: string, r: RangePreset, cmp: CompareMode, cmpEvt: string) => {
     const params = new URLSearchParams();
     params.set('filter', f);
     if (r === 'custom') {
@@ -81,12 +101,16 @@ export default function AdminDashboard() {
     } else {
       params.set('range', r);
     }
+    if (cmp !== 'off') {
+      params.set('compare', cmp);
+      if (cmp === 'event' && cmpEvt) params.set('compareEventId', cmpEvt);
+    }
     return params.toString();
   }, [customStart, customEnd]);
 
-  const fetchDashboard = useCallback(async (f: string, r: RangePreset) => {
+  const fetchDashboard = useCallback(async (f: string, r: RangePreset, cmp: CompareMode, cmpEvt: string) => {
     try {
-      const qs = buildQuery(f, r);
+      const qs = buildQuery(f, r, cmp, cmpEvt);
       const [dashRes, evtRes] = await Promise.all([
         fetch(`/api/admin/dashboard?${qs}`, { headers: { Authorization: `Bearer ${accessToken}` } }),
         allEvents.length > 0 ? Promise.resolve(null) : fetch('/api/admin/events', { headers: { Authorization: `Bearer ${accessToken}` } }),
@@ -105,26 +129,37 @@ export default function AdminDashboard() {
   }, [accessToken, allEvents.length, buildQuery]);
 
   useEffect(() => {
-    if (accessToken) fetchDashboard(filter, range);
+    if (accessToken) fetchDashboard(filter, range, compareMode, compareEventId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken]);
 
   const handleFilterChange = (f: string) => {
     setFilter(f);
-    fetchDashboard(f, range);
+    fetchDashboard(f, range, compareMode, compareEventId);
   };
   const handleRangeChange = (r: RangePreset) => {
     setRange(r);
-    if (r !== 'custom') fetchDashboard(filter, r);
+    if (r !== 'custom') fetchDashboard(filter, r, compareMode, compareEventId);
   };
   const applyCustomRange = () => {
-    if (customStart && customEnd) fetchDashboard(filter, 'custom');
+    if (customStart && customEnd) fetchDashboard(filter, 'custom', compareMode, compareEventId);
+  };
+  const handleCompareModeChange = (m: CompareMode) => {
+    setCompareMode(m);
+    if (m === 'event' && !compareEventId) return; // 이벤트 선택 후 다시 fetch
+    fetchDashboard(filter, range, m, compareEventId);
+  };
+  const handleCompareEventChange = (id: string) => {
+    setCompareEventId(id);
+    if (compareMode === 'event' && id) fetchDashboard(filter, range, 'event', id);
   };
   const resetAll = () => {
     setFilter('all');
     setRange('30');
     setIndustryGroupFilter('all');
-    fetchDashboard('all', '30');
+    setCompareMode('off');
+    setCompareEventId('');
+    fetchDashboard('all', '30', 'off', '');
   };
 
   // ===== Export (기존 로직 유지, 신규 필드 반영) =====
@@ -308,10 +343,48 @@ export default function AdminDashboard() {
     return data.byIndustryDetail.filter((d) => d.chartLabel === industryGroupFilter);
   }, [data, industryGroupFilter]);
 
-  const utmEntries = useMemo(() => {
+  const utmKey = utmTab === 'source' ? 'bySource' : utmTab === 'medium' ? 'byMedium' : 'byCampaign';
+  const utmEntries = useMemo(() => (data ? data.byUtm[utmKey] : []), [data, utmKey]);
+
+  // 비교 모드용 — primary + compare merged by name (bar charts)
+  const mergeForCompare = useCallback((primary: { name: string; value: number }[], compare?: { name: string; value: number }[]) => {
+    if (!compare) return primary.map((p) => ({ name: p.name, primary: p.value, compare: 0 }));
+    const map = new Map<string, { primary: number; compare: number }>();
+    for (const p of primary) map.set(p.name, { primary: p.value, compare: 0 });
+    for (const c of compare) {
+      const cur = map.get(c.name);
+      if (cur) cur.compare = c.value;
+      else map.set(c.name, { primary: 0, compare: c.value });
+    }
+    return Array.from(map.entries())
+      .map(([name, v]) => ({ name, primary: v.primary, compare: v.compare }))
+      .sort((a, b) => (b.primary + b.compare) - (a.primary + a.compare))
+      .slice(0, 10);
+  }, []);
+
+  // 일별 — primary+compare 을 index로 정렬 (날짜 길이가 같아야 의미있는 비교)
+  const dayCompareSeries = useMemo(() => {
     if (!data) return [];
-    return data.byUtm[utmTab === 'source' ? 'bySource' : utmTab === 'medium' ? 'byMedium' : 'byCampaign'];
-  }, [data, utmTab]);
+    const primary = data.byDay;
+    const compare = data.compare?.byDay;
+    if (!compare) return primary.map((d) => ({ date: d.date, primary: d.count, compare: null as number | null }));
+    const len = Math.max(primary.length, compare.length);
+    const out: { date: string; primary: number | null; compare: number | null }[] = [];
+    for (let i = 0; i < len; i++) {
+      out.push({
+        date: primary[i]?.date || compare[i]?.date || '',
+        primary: primary[i]?.count ?? null,
+        compare: compare[i]?.count ?? null,
+      });
+    }
+    return out;
+  }, [data]);
+
+  const sourceCompareData = useMemo(() => data ? mergeForCompare(data.bySource, data.compare?.bySource) : [], [data, mergeForCompare]);
+  const utmCompareData = useMemo(() => {
+    if (!data) return [];
+    return mergeForCompare(data.byUtm[utmKey], data.compare?.byUtm[utmKey]);
+  }, [data, utmKey, mergeForCompare]);
 
   if (loading) return <p className="text-gray-400">데이터 로딩 중...</p>;
   if (!data) return <p className="text-gray-400">데이터를 불러올 수 없습니다.</p>;
@@ -384,6 +457,29 @@ export default function AdminDashboard() {
               </div>
             )}
 
+            {/* 비교 모드 */}
+            <select
+              value={compareMode}
+              onChange={(e) => handleCompareModeChange(e.target.value as CompareMode)}
+              className="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="off">🔀 비교 끄기</option>
+              <option value="prev">전기간 대비</option>
+              <option value="event">이벤트 비교</option>
+            </select>
+            {compareMode === 'event' && (
+              <select
+                value={compareEventId}
+                onChange={(e) => handleCompareEventChange(e.target.value)}
+                className="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">비교할 이벤트 선택</option>
+                {allEvents.map((evt) => (
+                  <option key={evt.id} value={evt.id} disabled={evt.id === filter}>{evt.name}</option>
+                ))}
+              </select>
+            )}
+
             <button onClick={resetAll} className="text-xs text-gray-500 hover:text-gray-700 px-2 py-2">↻ 초기화</button>
 
             <div className="relative" ref={exportMenuRef}>
@@ -402,7 +498,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* 활성 필터 뱃지 */}
-        {(filter !== 'all' || range !== '30') && (
+        {(filter !== 'all' || range !== '30' || compareMode !== 'off') && (
           <div className="mt-3 flex items-center gap-2 flex-wrap">
             {filter !== 'all' && (
               <span className="text-xs text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full font-medium">
@@ -414,6 +510,11 @@ export default function AdminDashboard() {
             )}
             {range === 'custom' && customStart && customEnd && (
               <span className="text-xs text-purple-700 bg-purple-50 px-2.5 py-1 rounded-full font-medium">📅 {customStart} ~ {customEnd}</span>
+            )}
+            {data.compare && (
+              <span className="text-xs text-orange-700 bg-orange-50 px-2.5 py-1 rounded-full font-medium">
+                🔀 비교: {data.compare.label}
+              </span>
             )}
           </div>
         )}
@@ -458,6 +559,14 @@ export default function AdminDashboard() {
               <h3 className="font-semibold text-lg">전환 퍼널</h3>
               <p className="text-xs text-gray-500 mt-0.5">등록 후 참여 품질 흐름 · 드롭오프 지점을 식별하세요</p>
             </div>
+            {data.compare && (
+              <div className="text-right text-xs">
+                <p className="text-gray-500">비교: <span className="font-medium text-orange-600">{data.compare.label}</span></p>
+                <p className="text-gray-700 mt-0.5">
+                  등록 <span className="font-semibold">{data.compare.funnel.registered}</span> · 설문완료율 <span className="font-semibold">{(data.compare.surveyCompletionRate * 100).toFixed(0)}%</span>
+                </p>
+              </div>
+            )}
           </div>
           <div className="grid grid-cols-3 gap-4">
             {funnelStages.map((s, i) => {
@@ -497,26 +606,41 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
           {/* 일별 추이 */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 className="font-semibold mb-1">일별 등록 추이</h3>
+            <h3 className="font-semibold mb-1">일별 등록 추이 {data.compare && <span className="text-xs text-orange-600 font-normal">· 비교 활성</span>}</h3>
             <p className="text-xs text-gray-500 mb-4">
               {data.range.start && data.range.end ? `${data.range.start} ~ ${data.range.end}` : '전체 기간'}
+              {data.compare && <span className="text-orange-600"> vs {data.compare.label}</span>}
             </p>
             {data.byDay.length > 0 ? (
               <>
                 <ResponsiveContainer width="100%" height={260}>
-                  <LineChart data={data.byDay}>
+                  <LineChart data={dayCompareSeries}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="date" fontSize={11} />
                     <YAxis fontSize={11} allowDecimals={false} />
                     <Tooltip />
-                    <Line type="monotone" dataKey="count" stroke="#2563eb" strokeWidth={2} dot={{ r: 3 }} name="등록수" />
+                    {data.compare && <Legend wrapperStyle={{ fontSize: 11 }} />}
+                    <Line type="monotone" dataKey="primary" stroke="#2563eb" strokeWidth={2} dot={{ r: 3 }} name="현재" />
+                    {data.compare && (
+                      <Line type="monotone" dataKey="compare" stroke="#f97316" strokeWidth={2} strokeDasharray="5 3" dot={{ r: 2 }} name={data.compare.label} />
+                    )}
                   </LineChart>
                 </ResponsiveContainer>
                 <details className="mt-3">
                   <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">상세 테이블 보기 ({data.byDay.length}일)</summary>
                   <table className="w-full text-xs mt-2 border-collapse">
-                    <thead><tr className="bg-gray-50"><th className="px-3 py-2 text-left border border-gray-200">날짜</th><th className="px-3 py-2 text-right border border-gray-200">등록수</th></tr></thead>
-                    <tbody>{data.byDay.map((d) => <tr key={d.date}><td className="px-3 py-1.5 border border-gray-200">{d.date}</td><td className="px-3 py-1.5 text-right border border-gray-200 font-medium">{d.count}</td></tr>)}</tbody>
+                    <thead><tr className="bg-gray-50">
+                      <th className="px-3 py-2 text-left border border-gray-200">#</th>
+                      <th className="px-3 py-2 text-right border border-gray-200">현재</th>
+                      {data.compare && <th className="px-3 py-2 text-right border border-gray-200 text-orange-600">비교</th>}
+                    </tr></thead>
+                    <tbody>{dayCompareSeries.map((d, i) => (
+                      <tr key={i}>
+                        <td className="px-3 py-1.5 border border-gray-200">{d.date || `#${i + 1}`}</td>
+                        <td className="px-3 py-1.5 text-right border border-gray-200 font-medium">{d.primary ?? '-'}</td>
+                        {data.compare && <td className="px-3 py-1.5 text-right border border-gray-200 text-orange-600">{d.compare ?? '-'}</td>}
+                      </tr>
+                    ))}</tbody>
                   </table>
                 </details>
               </>
@@ -541,19 +665,31 @@ export default function AdminDashboard() {
             {utmEntries.length > 0 ? (
               <>
                 <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={utmEntries} layout="vertical" margin={{ left: 8 }}>
+                  <BarChart data={utmCompareData} layout="vertical" margin={{ left: 8 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis type="number" fontSize={11} allowDecimals={false} />
                     <YAxis type="category" dataKey="name" fontSize={11} width={130} />
                     <Tooltip />
-                    <Bar dataKey="value" fill="#0891b2" radius={[0, 4, 4, 0]} name="등록수" />
+                    {data.compare && <Legend wrapperStyle={{ fontSize: 11 }} />}
+                    <Bar dataKey="primary" fill="#0891b2" radius={[0, 4, 4, 0]} name={data.compare ? '현재' : '등록수'} />
+                    {data.compare && <Bar dataKey="compare" fill="#f97316" radius={[0, 4, 4, 0]} name={data.compare.label} />}
                   </BarChart>
                 </ResponsiveContainer>
                 <details className="mt-3">
                   <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">상세 테이블 보기</summary>
                   <table className="w-full text-xs mt-2 border-collapse">
-                    <thead><tr className="bg-gray-50"><th className="px-3 py-2 text-left border border-gray-200">{utmTab}</th><th className="px-3 py-2 text-right border border-gray-200">등록수</th></tr></thead>
-                    <tbody>{utmEntries.map((d) => <tr key={d.name}><td className="px-3 py-1.5 border border-gray-200">{d.name}</td><td className="px-3 py-1.5 text-right border border-gray-200 font-medium">{d.value}</td></tr>)}</tbody>
+                    <thead><tr className="bg-gray-50">
+                      <th className="px-3 py-2 text-left border border-gray-200">{utmTab}</th>
+                      <th className="px-3 py-2 text-right border border-gray-200">현재</th>
+                      {data.compare && <th className="px-3 py-2 text-right border border-gray-200 text-orange-600">비교</th>}
+                    </tr></thead>
+                    <tbody>{utmCompareData.map((d) => (
+                      <tr key={d.name}>
+                        <td className="px-3 py-1.5 border border-gray-200">{d.name}</td>
+                        <td className="px-3 py-1.5 text-right border border-gray-200 font-medium">{d.primary}</td>
+                        {data.compare && <td className="px-3 py-1.5 text-right border border-gray-200 text-orange-600">{d.compare}</td>}
+                      </tr>
+                    ))}</tbody>
                   </table>
                 </details>
               </>
@@ -693,21 +829,35 @@ export default function AdminDashboard() {
             {data.bySource.length > 0 ? (
               <>
                 <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={data.bySource} layout="vertical" margin={{ left: 8 }}>
+                  <BarChart data={sourceCompareData} layout="vertical" margin={{ left: 8 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis type="number" fontSize={11} allowDecimals={false} />
                     <YAxis type="category" dataKey="name" fontSize={11} width={160} />
                     <Tooltip />
-                    <Bar dataKey="value" fill="#7c3aed" radius={[0, 4, 4, 0]} name="등록수" />
+                    {data.compare && <Legend wrapperStyle={{ fontSize: 11 }} />}
+                    <Bar dataKey="primary" fill="#7c3aed" radius={[0, 4, 4, 0]} name={data.compare ? '현재' : '등록수'} />
+                    {data.compare && <Bar dataKey="compare" fill="#f97316" radius={[0, 4, 4, 0]} name={data.compare.label} />}
                   </BarChart>
                 </ResponsiveContainer>
                 <details className="mt-3">
                   <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">상세 테이블</summary>
                   <table className="w-full text-xs mt-2 border-collapse">
-                    <thead><tr className="bg-gray-50"><th className="px-3 py-2 text-left border border-gray-200">신청 경로</th><th className="px-3 py-2 text-right border border-gray-200">등록수</th><th className="px-3 py-2 text-right border border-gray-200">비율</th></tr></thead>
-                    <tbody>{data.bySource.map((d) => {
-                      const pct = kpi.total > 0 ? ((d.value / kpi.total) * 100).toFixed(1) : '0';
-                      return <tr key={d.name}><td className="px-3 py-1.5 border border-gray-200">{d.name}</td><td className="px-3 py-1.5 text-right border border-gray-200 font-medium">{d.value}</td><td className="px-3 py-1.5 text-right border border-gray-200">{pct}%</td></tr>;
+                    <thead><tr className="bg-gray-50">
+                      <th className="px-3 py-2 text-left border border-gray-200">신청 경로</th>
+                      <th className="px-3 py-2 text-right border border-gray-200">{data.compare ? '현재' : '등록수'}</th>
+                      {data.compare && <th className="px-3 py-2 text-right border border-gray-200 text-orange-600">비교</th>}
+                      {!data.compare && <th className="px-3 py-2 text-right border border-gray-200">비율</th>}
+                    </tr></thead>
+                    <tbody>{sourceCompareData.map((d) => {
+                      const pct = kpi.total > 0 ? ((d.primary / kpi.total) * 100).toFixed(1) : '0';
+                      return (
+                        <tr key={d.name}>
+                          <td className="px-3 py-1.5 border border-gray-200">{d.name}</td>
+                          <td className="px-3 py-1.5 text-right border border-gray-200 font-medium">{d.primary}</td>
+                          {data.compare && <td className="px-3 py-1.5 text-right border border-gray-200 text-orange-600">{d.compare}</td>}
+                          {!data.compare && <td className="px-3 py-1.5 text-right border border-gray-200">{pct}%</td>}
+                        </tr>
+                      );
                     })}</tbody>
                   </table>
                 </details>

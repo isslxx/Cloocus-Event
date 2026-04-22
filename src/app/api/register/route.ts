@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
       event_id, pin,
       utm_source, utm_medium, utm_campaign, utm_content, utm_term,
       landing_page, referrer_url,
+      user_id,
     } = body;
 
     // 서버 검증
@@ -90,6 +91,7 @@ export async function POST(req: NextRequest) {
       utm_term:     trimOrNull(utm_term),
       landing_page: trimOrNull(landing_page),
       referrer_url: trimOrNull(referrer_url),
+      user_id:      trimOrNull(user_id),
     };
 
     const { data: insertedData, error } = await supabase

@@ -16,9 +16,9 @@ type Row = {
 };
 
 type CountEntry = { name: string; value: number };
+type DayEntry = { date: string; count: number };
 
 function toKSTDateStr(iso: string): string {
-  // created_at은 UTC. KST(+9) 기준 YYYY-MM-DD로 변환
   const d = new Date(iso);
   const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
   return kst.toISOString().slice(0, 10);
@@ -37,65 +37,55 @@ function offsetKSTDate(days: number): string {
   return kst.toISOString().slice(0, 10);
 }
 
+function addDays(dateStr: string, days: number): string {
+  const d = new Date(dateStr + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function diffDaysInclusive(startStr: string, endStr: string): number {
+  const s = new Date(startStr + 'T00:00:00Z').getTime();
+  const e = new Date(endStr + 'T00:00:00Z').getTime();
+  return Math.floor((e - s) / 86400000) + 1;
+}
+
 function sortTopN<T extends { value: number }>(arr: T[], n = 10): T[] {
   return [...arr].sort((a, b) => b.value - a.value).slice(0, n);
 }
 
-export async function GET(req: NextRequest) {
-  const admin = await getAdminFromToken(req.headers.get('authorization'));
-  if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+type Window = { start: string | null; end: string | null };
 
-  const supabase = getServiceSupabase();
-  const filter = req.nextUrl.searchParams.get('filter') || 'all';
-  const rangeParam = req.nextUrl.searchParams.get('range') || '30'; // 7 | 14 | 30 | all | custom
-  const startParam = req.nextUrl.searchParams.get('start');
-  const endParam = req.nextUrl.searchParams.get('end');
+type Aggregate = {
+  total: number;                // 기간 무관 전체 (primary only)
+  windowTotal: number;          // window 내 건수
+  today: number;                // KST 오늘
+  yesterday: number;            // KST 어제
+  todayDeltaPct: number;
+  topSource: string;
+  topReferrer: { name: string; value: number };
+  surveyCompletionRate: number;
+  certificateRate: number;
+  funnel: { registered: number; surveyCompleted: number; certificateIssued: number };
+  byDay: DayEntry[];
+  byIndustryChart: CountEntry[];
+  byIndustryDetail: { industry: string; chartLabel: string; value: number }[];
+  bySource: CountEntry[];
+  byEvent: {
+    name: string; total: number; surveyCompleted: number; certificateIssued: number; surveyRate: number;
+  }[];
+  topReferrers: CountEntry[];
+  byUtm: { bySource: CountEntry[]; byMedium: CountEntry[]; byCampaign: CountEntry[] };
+};
 
-  // 이벤트 필터 → event_id 목록 확정
-  let eventIdFilter: string[] | null = null;
-  if (filter === 'online' || filter === 'offline') {
-    const { data: filteredEvents } = await supabase
-      .from('events')
-      .select('id')
-      .eq('event_type', filter);
-    eventIdFilter = (filteredEvents || []).map((e) => e.id);
-    if (eventIdFilter.length === 0) {
-      return NextResponse.json(emptyResponse());
-    }
-  } else if (filter !== 'all') {
-    eventIdFilter = [filter];
-  }
-
-  // 기본 쿼리 — soft-delete 제외
-  let query = supabase
-    .from('event_registrations')
-    .select('created_at, industry, referral_source, referrer_name, event_id, survey_completed, certificate_issued, utm_source, utm_medium, utm_campaign')
-    .is('deleted_at', null);
-
-  if (eventIdFilter) query = query.in('event_id', eventIdFilter);
-
-  const [{ data: records }, { data: events }] = await Promise.all([
-    query,
-    supabase.from('events').select('id, name').order('event_date', { ascending: false }),
-  ]);
-
-  if (!records) return NextResponse.json(emptyResponse());
-
-  const eventMap = new Map((events || []).map((e) => [e.id, e.name as string]));
+function aggregate(records: Row[], eventMap: Map<string, string>, win: Window): Aggregate {
   const today = todayKST();
   const yesterday = offsetKSTDate(-1);
 
-  // 기간 필터 경계 (일별 차트 & 일부 KPI에만 적용, 전체 total은 전 기간)
-  const rangeDays = rangeParam === '7' || rangeParam === '14' || rangeParam === '30'
-    ? parseInt(rangeParam, 10) : null;
-  const rangeStart = rangeDays ? offsetKSTDate(-(rangeDays - 1)) : (startParam || null);
-  const rangeEnd = rangeDays ? today : (endParam || null);
-
-  // 집계 버킷
   let todayCount = 0;
   let yesterdayCount = 0;
-  let totalSurveyCompleted = 0;
-  let totalCertificateIssued = 0;
+  let windowTotal = 0;
+  let funnelSurvey = 0;
+  let funnelCert = 0;
 
   const dayMap: Record<string, number> = {};
   const indDetailMap: Record<string, { chartLabel: string; value: number }> = {};
@@ -107,58 +97,50 @@ export async function GET(req: NextRequest) {
   const utmMediumMap: Record<string, number> = {};
   const utmCampaignMap: Record<string, number> = {};
 
-  for (const rRaw of records as Row[]) {
-    const r = rRaw;
+  for (const r of records) {
     const dateKST = toKSTDateStr(r.created_at);
+    const inWindow = !win.start || !win.end || (dateKST >= win.start && dateKST <= win.end);
 
     if (dateKST === today) todayCount++;
     if (dateKST === yesterday) yesterdayCount++;
 
-    // 일별 — 선택된 기간 내부만 집계
-    if (!rangeStart || !rangeEnd || (dateKST >= rangeStart && dateKST <= rangeEnd)) {
+    if (inWindow) {
+      windowTotal++;
       dayMap[dateKST] = (dayMap[dateKST] || 0) + 1;
+
+      // window 내부만 aggregation 집계
+      const industry = r.industry || '미지정';
+      const chartLabel = toChartLabel(r.industry);
+      if (!indDetailMap[industry]) indDetailMap[industry] = { chartLabel, value: 0 };
+      indDetailMap[industry].value++;
+      indChartMap[chartLabel] = (indChartMap[chartLabel] || 0) + 1;
+
+      const src = r.referral_source || '미지정';
+      srcMap[src] = (srcMap[src] || 0) + 1;
+
+      const evtKey = r.event_id ? (eventMap.get(r.event_id) || '기타') : '미지정';
+      if (!evtAgg[evtKey]) evtAgg[evtKey] = { total: 0, surveyCompleted: 0, certificateIssued: 0 };
+      evtAgg[evtKey].total++;
+      if (r.survey_completed) { evtAgg[evtKey].surveyCompleted++; funnelSurvey++; }
+      if (r.certificate_issued) { evtAgg[evtKey].certificateIssued++; funnelCert++; }
+
+      if (r.referrer_name && r.referrer_name.trim()) {
+        const key = r.referrer_name.trim();
+        referrerMap[key] = (referrerMap[key] || 0) + 1;
+      }
+
+      if (r.utm_source)   utmSourceMap[r.utm_source]     = (utmSourceMap[r.utm_source] || 0) + 1;
+      if (r.utm_medium)   utmMediumMap[r.utm_medium]     = (utmMediumMap[r.utm_medium] || 0) + 1;
+      if (r.utm_campaign) utmCampaignMap[r.utm_campaign] = (utmCampaignMap[r.utm_campaign] || 0) + 1;
     }
-
-    // 산업군 — 상세(원본) + 차트용(괄호 제거)
-    const industry = r.industry || '미지정';
-    const chartLabel = toChartLabel(r.industry);
-    if (!indDetailMap[industry]) indDetailMap[industry] = { chartLabel, value: 0 };
-    indDetailMap[industry].value++;
-    indChartMap[chartLabel] = (indChartMap[chartLabel] || 0) + 1;
-
-    // 신청 경로
-    const src = r.referral_source || '미지정';
-    srcMap[src] = (srcMap[src] || 0) + 1;
-
-    // 이벤트별 — 품질 지표 포함
-    const evtKey = r.event_id ? (eventMap.get(r.event_id) || '기타') : '미지정';
-    if (!evtAgg[evtKey]) evtAgg[evtKey] = { total: 0, surveyCompleted: 0, certificateIssued: 0 };
-    evtAgg[evtKey].total++;
-    if (r.survey_completed) evtAgg[evtKey].surveyCompleted++;
-    if (r.certificate_issued) evtAgg[evtKey].certificateIssued++;
-
-    // 퍼널 카운터
-    if (r.survey_completed) totalSurveyCompleted++;
-    if (r.certificate_issued) totalCertificateIssued++;
-
-    // 추천인 — 이름이 있는 경우만
-    if (r.referrer_name && r.referrer_name.trim()) {
-      const key = r.referrer_name.trim();
-      referrerMap[key] = (referrerMap[key] || 0) + 1;
-    }
-
-    // UTM
-    if (r.utm_source) utmSourceMap[r.utm_source] = (utmSourceMap[r.utm_source] || 0) + 1;
-    if (r.utm_medium) utmMediumMap[r.utm_medium] = (utmMediumMap[r.utm_medium] || 0) + 1;
-    if (r.utm_campaign) utmCampaignMap[r.utm_campaign] = (utmCampaignMap[r.utm_campaign] || 0) + 1;
   }
 
-  // 일별 — 선택 기간 내 날짜는 0건도 포함(연속 추이)
-  const byDay: { date: string; count: number }[] = [];
-  if (rangeStart && rangeEnd) {
-    const start = new Date(rangeStart + 'T00:00:00Z');
-    const end = new Date(rangeEnd + 'T00:00:00Z');
-    for (let t = start.getTime(); t <= end.getTime(); t += 86400000) {
+  // 일별 — window 내 연속 날짜 (0건 포함)
+  const byDay: DayEntry[] = [];
+  if (win.start && win.end) {
+    const startMs = new Date(win.start + 'T00:00:00Z').getTime();
+    const endMs = new Date(win.end + 'T00:00:00Z').getTime();
+    for (let t = startMs; t <= endMs; t += 86400000) {
       const key = new Date(t).toISOString().slice(0, 10);
       byDay.push({ date: key.slice(5), count: dayMap[key] || 0 });
     }
@@ -168,12 +150,10 @@ export async function GET(req: NextRequest) {
       .forEach(([date, count]) => byDay.push({ date: date.slice(5), count }));
   }
 
-  // 산업군 차트 — 모든 값 포함, 등록수 내림차순
   const byIndustryChart: CountEntry[] = Object.entries(indChartMap)
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value);
 
-  // 산업군 상세 — 원본 값 그대로 + 차트 라벨 태그
   const byIndustryDetail = Object.entries(indDetailMap)
     .map(([industry, v]) => ({ industry, chartLabel: v.chartLabel, value: v.value }))
     .sort((a, b) => b.value - a.value);
@@ -201,62 +181,172 @@ export async function GET(req: NextRequest) {
   const byUtmMedium   = sortTopN(Object.entries(utmMediumMap).map(([name, value]) => ({ name, value })), 10);
   const byUtmCampaign = sortTopN(Object.entries(utmCampaignMap).map(([name, value]) => ({ name, value })), 10);
 
-  const total = records.length;
   const todayDeltaPct = yesterdayCount > 0
     ? ((todayCount - yesterdayCount) / yesterdayCount) * 100
     : todayCount > 0 ? 100 : 0;
 
-  const surveyCompletionRate = total > 0 ? totalSurveyCompleted / total : 0;
-  const certificateRate = total > 0 ? totalCertificateIssued / total : 0;
+  const surveyCompletionRate = windowTotal > 0 ? funnelSurvey / windowTotal : 0;
+  const certificateRate = windowTotal > 0 ? funnelCert / windowTotal : 0;
 
-  const topReferrer = topReferrers[0] || { name: '-', value: 0 };
-  const topIndustryChart = byIndustryChart[0]?.name || '-';
-  const topSource = bySource[0]?.name || '-';
-
-  // 이전 대시보드와의 호환을 위한 레거시 필드 (Export용)
-  const byIndustry = byIndustryChart;
-
-  return NextResponse.json({
-    filter,
-    range: { start: rangeStart, end: rangeEnd, days: rangeDays },
-
-    // KPI (P0 확장)
-    kpi: {
-      total,
-      today: todayCount,
-      yesterdayCount,
-      todayDeltaPct,
-      topIndustryGroup: topIndustryChart,
-      topSource,
-      topReferrer,
-      surveyCompletionRate,
-      certificateRate,
-    },
-
-    // 퍼널 — DB 플래그 기반 3단계 (GA4 form_start는 P1)
-    funnel: {
-      registered: total,
-      surveyCompleted: totalSurveyCompleted,
-      certificateIssued: totalCertificateIssued,
-    },
-
+  return {
+    total: records.length,
+    windowTotal,
+    today: todayCount,
+    yesterday: yesterdayCount,
+    todayDeltaPct,
+    topSource: bySource[0]?.name || '-',
+    topReferrer: topReferrers[0] || { name: '-', value: 0 },
+    surveyCompletionRate,
+    certificateRate,
+    funnel: { registered: windowTotal, surveyCompleted: funnelSurvey, certificateIssued: funnelCert },
     byDay,
-    byIndustryGroup: byIndustryChart,
+    byIndustryChart,
     byIndustryDetail,
     bySource,
     byEvent,
     topReferrers,
-    byUtm: {
-      bySource: byUtmSource,
-      byMedium: byUtmMedium,
-      byCampaign: byUtmCampaign,
+    byUtm: { bySource: byUtmSource, byMedium: byUtmMedium, byCampaign: byUtmCampaign },
+  };
+}
+
+async function fetchRecords(
+  supabase: ReturnType<typeof getServiceSupabase>,
+  eventIds: string[] | null
+): Promise<Row[]> {
+  let q = supabase
+    .from('event_registrations')
+    .select('created_at, industry, referral_source, referrer_name, event_id, survey_completed, certificate_issued, utm_source, utm_medium, utm_campaign')
+    .is('deleted_at', null);
+  if (eventIds) q = q.in('event_id', eventIds);
+  const { data } = await q;
+  return (data as Row[]) || [];
+}
+
+async function resolveEventIds(
+  supabase: ReturnType<typeof getServiceSupabase>,
+  filter: string
+): Promise<string[] | null | 'empty'> {
+  if (filter === 'all') return null;
+  if (filter === 'online' || filter === 'offline') {
+    const { data } = await supabase.from('events').select('id').eq('event_type', filter);
+    const ids = (data || []).map((e) => e.id);
+    return ids.length === 0 ? 'empty' : ids;
+  }
+  return [filter];
+}
+
+export async function GET(req: NextRequest) {
+  const admin = await getAdminFromToken(req.headers.get('authorization'));
+  if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const supabase = getServiceSupabase();
+  const filter = req.nextUrl.searchParams.get('filter') || 'all';
+  const rangeParam = req.nextUrl.searchParams.get('range') || '30';
+  const startParam = req.nextUrl.searchParams.get('start');
+  const endParam = req.nextUrl.searchParams.get('end');
+  const compare = req.nextUrl.searchParams.get('compare') || 'off'; // off | prev | event
+  const compareEventId = req.nextUrl.searchParams.get('compareEventId');
+
+  // Primary 기간 확정
+  const today = todayKST();
+  const rangeDays = rangeParam === '7' || rangeParam === '14' || rangeParam === '30'
+    ? parseInt(rangeParam, 10) : null;
+  const primaryStart = rangeDays ? offsetKSTDate(-(rangeDays - 1)) : (startParam || null);
+  const primaryEnd = rangeDays ? today : (endParam || null);
+  const primaryWin: Window = { start: primaryStart, end: primaryEnd };
+
+  // Primary 이벤트 필터
+  const eventIds = await resolveEventIds(supabase, filter);
+  if (eventIds === 'empty') return NextResponse.json(emptyResponse());
+
+  // Records fetch (primary)
+  const [primaryRecords, { data: events }] = await Promise.all([
+    fetchRecords(supabase, eventIds as string[] | null),
+    supabase.from('events').select('id, name').order('event_date', { ascending: false }),
+  ]);
+  const eventMap = new Map((events || []).map((e) => [e.id as string, e.name as string]));
+
+  const primary = aggregate(primaryRecords, eventMap, primaryWin);
+
+  // Compare 처리
+  let compareBlock: null | {
+    mode: 'prev' | 'event';
+    label: string;
+    range: Window;
+    agg: Aggregate;
+  } = null;
+
+  if (compare === 'prev' && primaryStart && primaryEnd) {
+    const days = diffDaysInclusive(primaryStart, primaryEnd);
+    const prevEnd = addDays(primaryStart, -1);
+    const prevStart = addDays(prevEnd, -(days - 1));
+    const prevWin: Window = { start: prevStart, end: prevEnd };
+    const prevAgg = aggregate(primaryRecords, eventMap, prevWin);
+    compareBlock = {
+      mode: 'prev',
+      label: `전기간 (${prevStart} ~ ${prevEnd})`,
+      range: prevWin,
+      agg: prevAgg,
+    };
+  } else if (compare === 'event' && compareEventId) {
+    const cmpRecords = await fetchRecords(supabase, [compareEventId]);
+    const cmpAgg = aggregate(cmpRecords, eventMap, primaryWin);
+    const cmpName = eventMap.get(compareEventId) || compareEventId;
+    compareBlock = {
+      mode: 'event',
+      label: cmpName,
+      range: primaryWin,
+      agg: cmpAgg,
+    };
+  }
+
+  return NextResponse.json({
+    filter,
+    range: { start: primaryStart, end: primaryEnd, days: rangeDays },
+    compareMode: compareBlock?.mode || 'off',
+    compareLabel: compareBlock?.label || null,
+
+    kpi: {
+      total: primary.total,
+      today: primary.today,
+      yesterdayCount: primary.yesterday,
+      todayDeltaPct: primary.todayDeltaPct,
+      topIndustryGroup: primary.byIndustryChart[0]?.name || '-',
+      topSource: primary.topSource,
+      topReferrer: primary.topReferrer,
+      surveyCompletionRate: primary.surveyCompletionRate,
+      certificateRate: primary.certificateRate,
+      windowTotal: primary.windowTotal,
     },
 
-    // 레거시 호환 (메트릭 카드·Export)
-    total,
-    today: todayCount,
-    topIndustry: topIndustryChart,
-    byIndustry,
+    funnel: primary.funnel,
+    byDay: primary.byDay,
+    byIndustryGroup: primary.byIndustryChart,
+    byIndustryDetail: primary.byIndustryDetail,
+    bySource: primary.bySource,
+    byEvent: primary.byEvent,
+    topReferrers: primary.topReferrers,
+    byUtm: primary.byUtm,
+
+    // 비교 데이터 (optional)
+    compare: compareBlock ? {
+      mode: compareBlock.mode,
+      label: compareBlock.label,
+      range: compareBlock.range,
+      windowTotal: compareBlock.agg.windowTotal,
+      funnel: compareBlock.agg.funnel,
+      byDay: compareBlock.agg.byDay,
+      byIndustryGroup: compareBlock.agg.byIndustryChart,
+      bySource: compareBlock.agg.bySource,
+      byUtm: compareBlock.agg.byUtm,
+      surveyCompletionRate: compareBlock.agg.surveyCompletionRate,
+    } : null,
+
+    // 레거시 호환
+    total: primary.total,
+    today: primary.today,
+    topIndustry: primary.byIndustryChart[0]?.name || '-',
+    byIndustry: primary.byIndustryChart,
   });
 }
 
@@ -264,16 +354,20 @@ function emptyResponse() {
   return {
     filter: 'all',
     range: { start: null, end: null, days: null },
+    compareMode: 'off',
+    compareLabel: null,
     kpi: {
       total: 0, today: 0, yesterdayCount: 0, todayDeltaPct: 0,
       topIndustryGroup: '-', topSource: '-',
       topReferrer: { name: '-', value: 0 },
       surveyCompletionRate: 0, certificateRate: 0,
+      windowTotal: 0,
     },
     funnel: { registered: 0, surveyCompleted: 0, certificateIssued: 0 },
     byDay: [], byIndustryGroup: [], byIndustryDetail: [],
     bySource: [], byEvent: [], topReferrers: [],
     byUtm: { bySource: [], byMedium: [], byCampaign: [] },
+    compare: null,
     total: 0, today: 0, topIndustry: '-', byIndustry: [],
   };
 }

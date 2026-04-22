@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { INDUSTRIES, COMPANY_SIZES, REFERRAL_SOURCES, PRIVACY_POLICY_TEXT } from '@/lib/constants';
 import { trackFormSubmit, trackEventView, trackFormStart } from '@/lib/analytics';
 import { captureAttribution, readAttribution } from '@/lib/utm';
+import { trackView, trackClick, getUserId } from '@/lib/tracker';
 import type { } from '@/lib/constants'; // keep import for PRIVACY_POLICY_TEXT
 import { formatPhone, isBlockedEmailDomain, validateRegistrationForm } from '@/lib/validation';
 import type { FormErrors } from '@/lib/validation';
@@ -93,9 +94,10 @@ export default function Home() {
   const companyDebounce = useRef<ReturnType<typeof setTimeout>>(undefined);
   const companyRef = useRef<HTMLDivElement>(null);
 
-  // UTM / referrer 캡처 (first-touch, 랜딩 시점 1회)
+  // UTM / referrer 캡처 (first-touch, 랜딩 시점 1회) + page_view 이벤트
   useEffect(() => {
     captureAttribution();
+    trackView('/');
   }, []);
 
   // 이벤트 목록 + 폼 옵션 로드
@@ -221,14 +223,17 @@ export default function Home() {
           body: JSON.stringify(form),
         });
       } else {
-        // 신규 등록 — 첫 터치 시 캡처된 UTM/referrer 동봉
+        // 신규 등록 — 첫 터치 시 캡처된 UTM/referrer + 익명 user_id 동봉
         const attribution = readAttribution();
+        const user_id = getUserId();
+        trackClick('cta-register-submit', { event_id: selectedEvent?.id || null });
         res = await fetch('/api/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             ...form,
             event_id: selectedEvent?.id,
+            user_id,
             ...(attribution || {}),
           }),
         });
@@ -296,6 +301,7 @@ export default function Home() {
                           }
                           setSelectedEvent(event);
                           trackEventView(event.name, event.category);
+                          trackClick('event-select', { event_id: event.id });
                         }}
                         disabled={isEnded}
                         className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
