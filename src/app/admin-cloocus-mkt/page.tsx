@@ -162,34 +162,65 @@ export default function AdminDashboard() {
     fetchDashboard('all', '30', 'off', '');
   };
 
-  // ===== Export (기존 로직 유지, 신규 필드 반영) =====
+  // ===== Export =====
+  // html2canvas는 Tailwind CSS 4가 사용하는 oklch()/lab()/color-mix() 등 현대 색상 함수를 파싱하지 못함.
+  // 해결: onclone 훅으로 복제 DOM에서만 해당 색상을 안전한 rgb/hex로 치환. 원본은 건드리지 않음.
+  const captureDashboard = async (el: HTMLElement): Promise<HTMLCanvasElement> => {
+    const html2canvas = (await import('html2canvas')).default;
+    const UNSAFE = /oklch\(|oklab\(|lab\(|lch\(|color\(|color-mix\(/i;
+    const COLOR_PROPS = [
+      'color', 'background-color',
+      'border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color',
+      'outline-color', 'text-decoration-color', 'caret-color',
+      'fill', 'stroke',
+    ];
+    const fallbackFor = (prop: string): string => {
+      if (prop.includes('background')) return '#ffffff';
+      if (prop.includes('border') || prop.includes('outline')) return '#e5e7eb';
+      if (prop === 'fill' || prop === 'stroke') return '#4b5563';
+      return '#111827';
+    };
+
+    return html2canvas(el, {
+      backgroundColor: '#f9fafb',
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      onclone: (clonedDoc, clonedEl) => {
+        const win = clonedDoc.defaultView;
+        if (!win) return;
+        const nodes = clonedEl.querySelectorAll<HTMLElement>('*');
+        nodes.forEach((node) => {
+          const cs = win.getComputedStyle(node);
+          for (const prop of COLOR_PROPS) {
+            const v = cs.getPropertyValue(prop);
+            if (v && UNSAFE.test(v)) node.style.setProperty(prop, fallbackFor(prop));
+          }
+          // 그라디언트/배경 이미지 안에 oklch 등이 있으면 제거
+          const bg = cs.getPropertyValue('background-image');
+          if (bg && UNSAFE.test(bg)) {
+            node.style.setProperty('background-image', 'none');
+            const bgColor = cs.getPropertyValue('background-color');
+            if (!bgColor || bgColor === 'rgba(0, 0, 0, 0)' || bgColor === 'transparent') {
+              node.style.setProperty('background-color', '#eef2ff');
+            }
+          }
+          // 그림자도 동일 처리
+          const boxShadow = cs.getPropertyValue('box-shadow');
+          if (boxShadow && UNSAFE.test(boxShadow)) node.style.setProperty('box-shadow', 'none');
+          const textShadow = cs.getPropertyValue('text-shadow');
+          if (textShadow && UNSAFE.test(textShadow)) node.style.setProperty('text-shadow', 'none');
+        });
+      },
+    });
+  };
+
   const exportAsPdf = async () => {
     if (!dashboardRef.current) return;
     setExporting('pdf'); setShowExportMenu(false);
     try {
-      const html2canvas = (await import('html2canvas')).default;
       const { jsPDF } = await import('jspdf');
-      const el = dashboardRef.current;
-      const allElements = el.querySelectorAll('*');
-      const originalStyles: { el: HTMLElement; prop: string; value: string }[] = [];
-      allElements.forEach((node) => {
-        const htmlEl = node as HTMLElement;
-        const computed = getComputedStyle(htmlEl);
-        ['color', 'backgroundColor', 'borderColor'].forEach((prop) => {
-          const val = computed.getPropertyValue(prop === 'backgroundColor' ? 'background-color' : prop === 'borderColor' ? 'border-color' : prop);
-          if (val && val.includes('lab(')) {
-            originalStyles.push({ el: htmlEl, prop, value: htmlEl.style.getPropertyValue(prop) });
-            if (prop === 'backgroundColor') htmlEl.style.backgroundColor = '#f9fafb';
-            else if (prop === 'borderColor') htmlEl.style.borderColor = '#e5e7eb';
-            else htmlEl.style.color = '#333333';
-          }
-        });
-      });
-      const canvas = await html2canvas(el, { backgroundColor: '#f9fafb', scale: 2, useCORS: true, logging: false });
-      originalStyles.forEach(({ el: htmlEl, prop, value }) => {
-        if (value) htmlEl.style.setProperty(prop, value);
-        else htmlEl.style.removeProperty(prop);
-      });
+      const canvas = await captureDashboard(dashboardRef.current);
       const imgData = canvas.toDataURL('image/png');
       const imgWidth = canvas.width; const imgHeight = canvas.height;
       const pdfWidth = 210; const pdfMargin = 10;
@@ -289,29 +320,8 @@ export default function AdminDashboard() {
     if (!dashboardRef.current || !data) return;
     setExporting('pptx'); setShowExportMenu(false);
     try {
-      const html2canvas = (await import('html2canvas')).default;
       const PptxGenJS = (await import('pptxgenjs')).default;
-      const el = dashboardRef.current;
-      const allElements = el.querySelectorAll('*');
-      const originalStyles: { el: HTMLElement; prop: string; value: string }[] = [];
-      allElements.forEach((node) => {
-        const htmlEl = node as HTMLElement;
-        const computed = getComputedStyle(htmlEl);
-        ['color', 'backgroundColor', 'borderColor'].forEach((prop) => {
-          const val = computed.getPropertyValue(prop === 'backgroundColor' ? 'background-color' : prop === 'borderColor' ? 'border-color' : prop);
-          if (val && val.includes('lab(')) {
-            originalStyles.push({ el: htmlEl, prop, value: htmlEl.style.getPropertyValue(prop) });
-            if (prop === 'backgroundColor') htmlEl.style.backgroundColor = '#f9fafb';
-            else if (prop === 'borderColor') htmlEl.style.borderColor = '#e5e7eb';
-            else htmlEl.style.color = '#333333';
-          }
-        });
-      });
-      const canvas = await html2canvas(el, { backgroundColor: '#f9fafb', scale: 2, useCORS: true, logging: false });
-      originalStyles.forEach(({ el: htmlEl, prop, value }) => {
-        if (value) htmlEl.style.setProperty(prop, value);
-        else htmlEl.style.removeProperty(prop);
-      });
+      const canvas = await captureDashboard(dashboardRef.current);
       const imgData = canvas.toDataURL('image/png');
       const pptx = new PptxGenJS();
       pptx.layout = 'LAYOUT_WIDE';

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { INDUSTRIES, COMPANY_SIZES, REFERRAL_SOURCES } from '@/lib/constants';
 import { formatPhone } from '@/lib/validation';
 import { trackCertificateDownload, trackSurveyComplete, trackPortalLogin, trackInquirySubmit } from '@/lib/analytics';
+import { trackView, trackClick } from '@/lib/tracker';
 
 type RegistrationData = {
   id: string;
@@ -129,6 +130,7 @@ export default function MyDashboard() {
   const [formOptions, setFormOptions] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
+    trackView('/my');
     fetch('/api/form-options').then((r) => r.json()).then((d) => setFormOptions(d)).catch(() => {});
     fetch('/api/events').then((r) => r.json()).then((d) => setAllEvents(Array.isArray(d) ? d.map((e: { id: string; name: string }) => ({ id: e.id, name: e.name })) : [])).catch(() => {});
     // FAQ 프리페치: 로그인 전에 미리 받아두기
@@ -1236,7 +1238,12 @@ export default function MyDashboard() {
                           {group.items.map((faq, i) => (
                             <div key={faq.id} className={i > 0 ? 'border-t border-gray-200' : ''}>
                               <button
-                                onClick={() => setOpenFaqId(openFaqId === faq.id ? null : faq.id)}
+                                onClick={() => {
+                                  const isOpening = openFaqId !== faq.id;
+                                  setOpenFaqId(isOpening ? faq.id : null);
+                                  // 여는 시점에만 트래킹 — 닫기는 무시
+                                  if (isOpening) trackClick(`faq:${faq.id}`);
+                                }}
                                 className="w-full text-left px-4 py-3 flex items-start justify-between hover:bg-gray-100 transition-colors"
                               >
                                 <span className="text-sm font-medium text-gray-800 pr-3"><span className="text-blue-600 font-bold">Q.</span> {highlightText(faq.question)}</span>
