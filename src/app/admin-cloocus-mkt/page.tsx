@@ -280,11 +280,10 @@ export default function AdminDashboard() {
         const win = clonedDoc.defaultView;
         if (!win) return;
 
-        // 모든 <details>를 닫힌 상태로 복제 — 펼쳐진 상세 테이블이 레이아웃 높이를 과도하게 늘려
-        //   좌우 2열 그리드의 세로 정렬이 어긋나는 문제 해결. 추출물에서는 요약만 캡처.
+        // 모든 <details>를 닫힌 상태로 복제 — 레이아웃 정렬 유지
         clonedEl.querySelectorAll('details').forEach((d) => d.removeAttribute('open'));
 
-        // 캡처 중 폰트가 뭉개지지 않도록 안전한 한글 지원 스택 주입
+        // 폰트·backdrop-filter 정리
         const styleEl = clonedDoc.createElement('style');
         styleEl.textContent = `
           * { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
@@ -292,6 +291,35 @@ export default function AdminDashboard() {
         `;
         clonedDoc.head.appendChild(styleEl);
 
+        // === 핵심: :root (html) 의 모든 CSS 변수를 안전한 rgb로 덮어쓰기 ===
+        // Tailwind 4는 --color-blue-500: oklch(...) 같은 팔레트를 :root에 선언.
+        // 요소들은 color: var(--color-blue-500) 형태로 참조하므로, 루트에서 변수 자체를
+        // 안전한 값으로 덮으면 cascade를 타고 전 DOM에 전파되어 html2canvas가
+        // 어떤 경로로 색을 읽어도 unsafe 함수와 마주치지 않는다.
+        const root = clonedDoc.documentElement;
+        if (root) {
+          const rootCs = win.getComputedStyle(root);
+          for (let i = 0; i < rootCs.length; i++) {
+            const propName = rootCs[i];
+            if (!propName || !propName.startsWith('--')) continue;
+            const val = rootCs.getPropertyValue(propName);
+            if (val && UNSAFE_RE.test(val)) {
+              root.style.setProperty(propName, toSafeCssValue(val));
+            }
+          }
+        }
+
+        // === 추가 안전장치: <style> 태그 raw 텍스트 sanitize ===
+        // 일부 html2canvas 경로는 stylesheet rule 텍스트를 파싱할 수 있음.
+        // 인라인 style 태그 내용에서 unsafe 색상 함수를 전부 rgb로 치환.
+        clonedDoc.querySelectorAll<HTMLStyleElement>('style').forEach((st) => {
+          const original = st.textContent;
+          if (original && UNSAFE_RE.test(original)) {
+            st.textContent = toSafeCssValue(original);
+          }
+        });
+
+        // 개별 element 수준 — 인라인 style 및 computed color 변환 (기존 로직)
         const nodes = clonedEl.querySelectorAll<HTMLElement>('*');
         nodes.forEach((node) => {
           const cs = win.getComputedStyle(node);
@@ -301,7 +329,6 @@ export default function AdminDashboard() {
               node.style.setProperty(prop, toSafeCssValue(v));
             }
           }
-          // 그라디언트 등 background-image 내부의 oklch를 각각 변환 (Top 추천인 rose→pink 바 포함)
           const bg = cs.getPropertyValue('background-image');
           if (bg && UNSAFE_RE.test(bg)) {
             node.style.setProperty('background-image', toSafeCssValue(bg));
@@ -314,9 +341,18 @@ export default function AdminDashboard() {
           if (textShadow && UNSAFE_RE.test(textShadow)) {
             node.style.setProperty('text-shadow', toSafeCssValue(textShadow));
           }
+          // 요소 자체에 선언된 CSS 변수도 처리 (inline style에 --tw-xxx 같은 커스텀 프로퍼티)
+          for (let i = 0; i < cs.length; i++) {
+            const pn = cs[i];
+            if (!pn || !pn.startsWith('--')) continue;
+            const pv = cs.getPropertyValue(pn);
+            if (pv && UNSAFE_RE.test(pv)) {
+              node.style.setProperty(pn, toSafeCssValue(pv));
+            }
+          }
         });
 
-        // SVG 전용 — fill/stroke가 attribute로 설정된 경우도 처리 (Recharts)
+        // SVG attribute — Recharts 차트 대응
         const svgColored = clonedEl.querySelectorAll<SVGElement>('svg [fill], svg [stroke]');
         svgColored.forEach((n) => {
           const f = n.getAttribute('fill');
