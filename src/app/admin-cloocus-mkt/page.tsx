@@ -163,22 +163,69 @@ export default function AdminDashboard() {
   };
 
   // ===== Export =====
-  // html2canvas는 Tailwind CSS 4가 사용하는 oklch()/lab()/color-mix() 등 현대 색상 함수를 파싱하지 못함.
-  // 해결: onclone 훅으로 복제 DOM에서만 해당 색상을 안전한 rgb/hex로 치환. 원본은 건드리지 않음.
+  // html2canvas는 Tailwind CSS 4가 쓰는 oklch()/lab()/color-mix() 등 현대 색상 함수를 파싱하지 못함.
+  // 해결: 브라우저 Canvas 2D가 oklch를 네이티브로 파싱하므로 이를 이용해 rgb로 실제 변환 → 색상 의도 보존.
+  //       그라디언트·box-shadow 같은 복합 값은 내부의 oklch(...) 부분만 찾아 치환.
+  //       원본 DOM은 건드리지 않고 onclone 훅에서 복제본만 수정.
   const captureDashboard = async (el: HTMLElement): Promise<HTMLCanvasElement> => {
     const html2canvas = (await import('html2canvas')).default;
-    const UNSAFE = /oklch\(|oklab\(|lab\(|lch\(|color\(|color-mix\(/i;
+
+    // 웹폰트가 로드된 상태에서 캡처 (한글 글꼴 안정화)
+    if (typeof document !== 'undefined' && document.fonts?.ready) {
+      try { await document.fonts.ready; } catch { /* ignore */ }
+    }
+
+    const UNSAFE_RE = /oklch|oklab|(^|[\s(,])lab\(|(^|[\s(,])lch\(|color-mix|(^|[\s(,])color\(/i;
+    // 개별 색상 함수 호출 단위 매칭 (중첩 괄호 없는 단순 케이스 가정 — Tailwind 4 출력 형식과 일치)
+    const COLOR_FN_RE = /(oklch|oklab|lab|lch|color)\s*\([^()]+\)|color-mix\s*\([^()]+\)/gi;
     const COLOR_PROPS = [
       'color', 'background-color',
       'border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color',
       'outline-color', 'text-decoration-color', 'caret-color',
       'fill', 'stroke',
-    ];
-    const fallbackFor = (prop: string): string => {
-      if (prop.includes('background')) return '#ffffff';
-      if (prop.includes('border') || prop.includes('outline')) return '#e5e7eb';
-      if (prop === 'fill' || prop === 'stroke') return '#4b5563';
-      return '#111827';
+    ] as const;
+
+    // 변환용 공용 canvas (live doc)
+    const convCtx = (() => {
+      try {
+        const c = document.createElement('canvas');
+        return c.getContext('2d');
+      } catch { return null; }
+    })();
+
+    const cache = new Map<string, string>();
+
+    // 단일 색상 값을 rgb/hex로 정규화 (실패 시 null)
+    const canvasConvert = (color: string): string | null => {
+      if (!convCtx) return null;
+      if (cache.has(color)) return cache.get(color) || null;
+      try {
+        convCtx.fillStyle = '#000000';
+        const before = convCtx.fillStyle;
+        convCtx.fillStyle = color;
+        const after = String(convCtx.fillStyle);
+        // fillStyle 이 변하지 않았으면 파싱 실패
+        const ok = !(after === before && color.trim() !== '#000000' && color.trim() !== 'rgb(0, 0, 0)');
+        const result = ok ? after : null;
+        if (result) cache.set(color, result);
+        return result;
+      } catch {
+        return null;
+      }
+    };
+
+    // 복합 CSS 값 내부의 oklch(...) 등을 모두 rgb로 변환
+    const toSafeCssValue = (v: string): string => {
+      if (!v) return v;
+      // 단일 색상으로 먼저 시도
+      const whole = canvasConvert(v.trim());
+      if (whole && !UNSAFE_RE.test(whole)) return whole;
+
+      // 그라디언트·리스트 형태 → 내부 함수 단위 치환
+      return v.replace(COLOR_FN_RE, (match) => {
+        const conv = canvasConvert(match);
+        return conv || '#888888';
+      });
     };
 
     return html2canvas(el, {
@@ -189,27 +236,46 @@ export default function AdminDashboard() {
       onclone: (clonedDoc, clonedEl) => {
         const win = clonedDoc.defaultView;
         if (!win) return;
+
+        // 캡처 중 폰트가 뭉개지지 않도록 안전한 한글 지원 스택 주입 (기존 스타일보다 후순위로 overriding)
+        const styleEl = clonedDoc.createElement('style');
+        styleEl.textContent = `
+          * { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+          svg text, svg tspan { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; }
+        `;
+        clonedDoc.head.appendChild(styleEl);
+
         const nodes = clonedEl.querySelectorAll<HTMLElement>('*');
         nodes.forEach((node) => {
           const cs = win.getComputedStyle(node);
           for (const prop of COLOR_PROPS) {
             const v = cs.getPropertyValue(prop);
-            if (v && UNSAFE.test(v)) node.style.setProperty(prop, fallbackFor(prop));
-          }
-          // 그라디언트/배경 이미지 안에 oklch 등이 있으면 제거
-          const bg = cs.getPropertyValue('background-image');
-          if (bg && UNSAFE.test(bg)) {
-            node.style.setProperty('background-image', 'none');
-            const bgColor = cs.getPropertyValue('background-color');
-            if (!bgColor || bgColor === 'rgba(0, 0, 0, 0)' || bgColor === 'transparent') {
-              node.style.setProperty('background-color', '#eef2ff');
+            if (v && UNSAFE_RE.test(v)) {
+              node.style.setProperty(prop, toSafeCssValue(v));
             }
           }
-          // 그림자도 동일 처리
+          // 그라디언트 등 background-image 내부의 oklch를 각각 변환 (Top 추천인 rose→pink 바 포함)
+          const bg = cs.getPropertyValue('background-image');
+          if (bg && UNSAFE_RE.test(bg)) {
+            node.style.setProperty('background-image', toSafeCssValue(bg));
+          }
           const boxShadow = cs.getPropertyValue('box-shadow');
-          if (boxShadow && UNSAFE.test(boxShadow)) node.style.setProperty('box-shadow', 'none');
+          if (boxShadow && UNSAFE_RE.test(boxShadow)) {
+            node.style.setProperty('box-shadow', toSafeCssValue(boxShadow));
+          }
           const textShadow = cs.getPropertyValue('text-shadow');
-          if (textShadow && UNSAFE.test(textShadow)) node.style.setProperty('text-shadow', 'none');
+          if (textShadow && UNSAFE_RE.test(textShadow)) {
+            node.style.setProperty('text-shadow', toSafeCssValue(textShadow));
+          }
+        });
+
+        // SVG 전용 — fill/stroke가 attribute로 설정된 경우도 처리 (Recharts)
+        const svgColored = clonedEl.querySelectorAll<SVGElement>('svg [fill], svg [stroke]');
+        svgColored.forEach((n) => {
+          const f = n.getAttribute('fill');
+          if (f && UNSAFE_RE.test(f)) n.setAttribute('fill', toSafeCssValue(f));
+          const s = n.getAttribute('stroke');
+          if (s && UNSAFE_RE.test(s)) n.setAttribute('stroke', toSafeCssValue(s));
         });
       },
     });
