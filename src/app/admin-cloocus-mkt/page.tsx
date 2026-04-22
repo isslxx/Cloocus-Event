@@ -175,57 +175,84 @@ export default function AdminDashboard() {
       try { await document.fonts.ready; } catch { /* ignore */ }
     }
 
-    const UNSAFE_RE = /oklch|oklab|(^|[\s(,])lab\(|(^|[\s(,])lch\(|color-mix|(^|[\s(,])color\(/i;
-    // 개별 색상 함수 호출 단위 매칭 (중첩 괄호 없는 단순 케이스 가정 — Tailwind 4 출력 형식과 일치)
-    const COLOR_FN_RE = /(oklch|oklab|lab|lch|color)\s*\([^()]+\)|color-mix\s*\([^()]+\)/gi;
+    // 감지용 (false positive 최소화보다 완전성 우선)
+    const UNSAFE_RE = /oklch\s*\(|oklab\s*\(|\blab\s*\(|\blch\s*\(|color-mix\s*\(|\bcolor\s*\(/i;
+    // 감지·치환 대상 함수 이름 (color-mix는 color 앞에 있어야 prefix 매칭 충돌 방지)
+    const COLOR_FN_NAMES = ['oklch', 'oklab', 'lab', 'lch', 'color-mix', 'color'] as const;
     const COLOR_PROPS = [
       'color', 'background-color',
       'border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color',
-      'outline-color', 'text-decoration-color', 'caret-color',
+      'outline-color', 'text-decoration-color', 'caret-color', 'accent-color',
       'fill', 'stroke',
     ] as const;
 
-    // 변환용 공용 canvas (live doc)
+    // live doc의 Canvas 2D를 공용 변환기로 사용 (oklch/lab/color-mix 네이티브 파싱)
     const convCtx = (() => {
-      try {
-        const c = document.createElement('canvas');
-        return c.getContext('2d');
-      } catch { return null; }
+      try { return document.createElement('canvas').getContext('2d'); } catch { return null; }
     })();
 
     const cache = new Map<string, string>();
 
-    // 단일 색상 값을 rgb/hex로 정규화 (실패 시 null)
+    // 단일 색상 값을 rgb/rgba 문자열로 정규화 (실패 시 null)
     const canvasConvert = (color: string): string | null => {
       if (!convCtx) return null;
-      if (cache.has(color)) return cache.get(color) || null;
+      const key = color.trim();
+      if (cache.has(key)) { const v = cache.get(key)!; return v || null; }
       try {
         convCtx.fillStyle = '#000000';
         const before = convCtx.fillStyle;
         convCtx.fillStyle = color;
         const after = String(convCtx.fillStyle);
-        // fillStyle 이 변하지 않았으면 파싱 실패
-        const ok = !(after === before && color.trim() !== '#000000' && color.trim() !== 'rgb(0, 0, 0)');
-        const result = ok ? after : null;
-        if (result) cache.set(color, result);
-        return result;
-      } catch {
-        return null;
-      }
+        const unchanged = after === before && key !== '#000000' && key !== 'rgb(0, 0, 0)';
+        const stillUnsafe = UNSAFE_RE.test(after);
+        if (unchanged || stillUnsafe) { cache.set(key, ''); return null; }
+        cache.set(key, after);
+        return after;
+      } catch { return null; }
     };
 
-    // 복합 CSS 값 내부의 oklch(...) 등을 모두 rgb로 변환
+    // balanced-paren 워커: 중첩 괄호(color-mix 안의 oklch 등)를 올바르게 스캔하여
+    // 최외곽 색상 함수를 통째로 찾아 canvas-convert. 비-함수 문자는 그대로 유지.
     const toSafeCssValue = (v: string): string => {
       if (!v) return v;
-      // 단일 색상으로 먼저 시도
+      // 1차: 값 전체가 단일 색상이면 그대로 변환 (가장 빠름)
       const whole = canvasConvert(v.trim());
-      if (whole && !UNSAFE_RE.test(whole)) return whole;
+      if (whole) return whole;
+      if (!UNSAFE_RE.test(v)) return v;
 
-      // 그라디언트·리스트 형태 → 내부 함수 단위 치환
-      return v.replace(COLOR_FN_RE, (match) => {
-        const conv = canvasConvert(match);
-        return conv || '#888888';
-      });
+      // 2차: 함수 경계를 찾아 하나씩 치환 (gradient·shadow 등 복합 값 대응)
+      let out = '';
+      let i = 0;
+      while (i < v.length) {
+        const boundary = i === 0 || !/[a-zA-Z0-9_-]/.test(v[i - 1]);
+        let matched = false;
+        if (boundary) {
+          for (const name of COLOR_FN_NAMES) {
+            if (v.substring(i, i + name.length).toLowerCase() !== name) continue;
+            let j = i + name.length;
+            while (j < v.length && /\s/.test(v[j])) j++;
+            if (v[j] !== '(') continue;
+            // balanced close paren 찾기
+            let depth = 1;
+            let k = j + 1;
+            while (k < v.length && depth > 0) {
+              const ch = v[k];
+              if (ch === '(') depth++;
+              else if (ch === ')') depth--;
+              k++;
+            }
+            if (depth !== 0) continue; // 짝 안 맞으면 skip
+            const fullCall = v.substring(i, k);
+            const conv = canvasConvert(fullCall);
+            out += conv || '#888888';
+            i = k;
+            matched = true;
+            break;
+          }
+        }
+        if (!matched) { out += v[i]; i++; }
+      }
+      return out;
     };
 
     return html2canvas(el, {
