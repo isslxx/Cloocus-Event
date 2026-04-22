@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFromToken, getServiceSupabase } from '@/lib/supabase-auth';
-import { toIndustryGroup, INDUSTRY_GROUPS, type IndustryGroup } from '@/lib/industry-groups';
+import { toChartLabel } from '@/lib/industry-groups';
 
 type Row = {
   created_at: string;
@@ -98,8 +98,8 @@ export async function GET(req: NextRequest) {
   let totalCertificateIssued = 0;
 
   const dayMap: Record<string, number> = {};
-  const indDetailMap: Record<string, { group: IndustryGroup; value: number }> = {};
-  const indGroupMap: Record<string, number> = {};
+  const indDetailMap: Record<string, { chartLabel: string; value: number }> = {};
+  const indChartMap: Record<string, number> = {};
   const srcMap: Record<string, number> = {};
   const evtAgg: Record<string, { total: number; surveyCompleted: number; certificateIssued: number }> = {};
   const referrerMap: Record<string, number> = {};
@@ -119,12 +119,12 @@ export async function GET(req: NextRequest) {
       dayMap[dateKST] = (dayMap[dateKST] || 0) + 1;
     }
 
-    // 산업군 — 상세 + 그룹
+    // 산업군 — 상세(원본) + 차트용(괄호 제거)
     const industry = r.industry || '미지정';
-    const group = toIndustryGroup(r.industry);
-    if (!indDetailMap[industry]) indDetailMap[industry] = { group, value: 0 };
+    const chartLabel = toChartLabel(r.industry);
+    if (!indDetailMap[industry]) indDetailMap[industry] = { chartLabel, value: 0 };
     indDetailMap[industry].value++;
-    indGroupMap[group] = (indGroupMap[group] || 0) + 1;
+    indChartMap[chartLabel] = (indChartMap[chartLabel] || 0) + 1;
 
     // 신청 경로
     const src = r.referral_source || '미지정';
@@ -168,15 +168,14 @@ export async function GET(req: NextRequest) {
       .forEach(([date, count]) => byDay.push({ date: date.slice(5), count }));
   }
 
-  // 산업군 그룹 — 고정 순서 유지, 0건 제외
-  const byIndustryGroup: CountEntry[] = INDUSTRY_GROUPS
-    .map((g) => ({ name: g, value: indGroupMap[g] || 0 }))
-    .filter((g) => g.value > 0)
+  // 산업군 차트 — 모든 값 포함, 등록수 내림차순
+  const byIndustryChart: CountEntry[] = Object.entries(indChartMap)
+    .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value);
 
-  // 산업군 상세 — 그룹 태그 포함
+  // 산업군 상세 — 원본 값 그대로 + 차트 라벨 태그
   const byIndustryDetail = Object.entries(indDetailMap)
-    .map(([industry, v]) => ({ industry, group: v.group, value: v.value }))
+    .map(([industry, v]) => ({ industry, chartLabel: v.chartLabel, value: v.value }))
     .sort((a, b) => b.value - a.value);
 
   const bySource: CountEntry[] = Object.entries(srcMap)
@@ -211,11 +210,11 @@ export async function GET(req: NextRequest) {
   const certificateRate = total > 0 ? totalCertificateIssued / total : 0;
 
   const topReferrer = topReferrers[0] || { name: '-', value: 0 };
-  const topGroup = byIndustryGroup[0]?.name || '-';
+  const topIndustryChart = byIndustryChart[0]?.name || '-';
   const topSource = bySource[0]?.name || '-';
 
   // 이전 대시보드와의 호환을 위한 레거시 필드 (Export용)
-  const byIndustry = byIndustryGroup;
+  const byIndustry = byIndustryChart;
 
   return NextResponse.json({
     filter,
@@ -227,7 +226,7 @@ export async function GET(req: NextRequest) {
       today: todayCount,
       yesterdayCount,
       todayDeltaPct,
-      topIndustryGroup: topGroup,
+      topIndustryGroup: topIndustryChart,
       topSource,
       topReferrer,
       surveyCompletionRate,
@@ -242,7 +241,7 @@ export async function GET(req: NextRequest) {
     },
 
     byDay,
-    byIndustryGroup,
+    byIndustryGroup: byIndustryChart,
     byIndustryDetail,
     bySource,
     byEvent,
@@ -256,7 +255,7 @@ export async function GET(req: NextRequest) {
     // 레거시 호환 (메트릭 카드·Export)
     total,
     today: todayCount,
-    topIndustry: topGroup,
+    topIndustry: topIndustryChart,
     byIndustry,
   });
 }

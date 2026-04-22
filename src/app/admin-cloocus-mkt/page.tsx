@@ -27,7 +27,7 @@ type DashData = {
   funnel: { registered: number; surveyCompleted: number; certificateIssued: number };
   byDay: { date: string; count: number }[];
   byIndustryGroup: { name: string; value: number }[];
-  byIndustryDetail: { industry: string; group: string; value: number }[];
+  byIndustryDetail: { industry: string; chartLabel: string; value: number }[];
   bySource: { name: string; value: number }[];
   byEvent: { name: string; total: number; surveyCompleted: number; certificateIssued: number; surveyRate: number }[];
   topReferrers: { name: string; value: number }[];
@@ -209,12 +209,12 @@ export default function AdminDashboard() {
       ws2['!cols'] = [{ wch: 12 }, { wch: 10 }];
       XLSX.utils.book_append_sheet(wb, ws2, '일별 등록');
 
-      const ws3 = XLSX.utils.json_to_sheet(data.byIndustryGroup.map((d) => ({ '산업군(그룹)': d.name, '등록수': d.value })));
-      ws3['!cols'] = [{ wch: 18 }, { wch: 10 }];
-      XLSX.utils.book_append_sheet(wb, ws3, '산업군(그룹)');
+      const ws3 = XLSX.utils.json_to_sheet(data.byIndustryGroup.map((d) => ({ '산업군(차트 라벨)': d.name, '등록수': d.value })));
+      ws3['!cols'] = [{ wch: 20 }, { wch: 10 }];
+      XLSX.utils.book_append_sheet(wb, ws3, '산업군(차트)');
 
-      const ws3d = XLSX.utils.json_to_sheet(data.byIndustryDetail.map((d) => ({ '그룹': d.group, '상세 산업군': d.industry, '등록수': d.value })));
-      ws3d['!cols'] = [{ wch: 12 }, { wch: 28 }, { wch: 10 }];
+      const ws3d = XLSX.utils.json_to_sheet(data.byIndustryDetail.map((d) => ({ '차트 라벨': d.chartLabel, '상세 산업군(원본)': d.industry, '등록수': d.value })));
+      ws3d['!cols'] = [{ wch: 14 }, { wch: 28 }, { wch: 10 }];
       XLSX.utils.book_append_sheet(wb, ws3d, '산업군(상세)');
 
       const ws4 = XLSX.utils.json_to_sheet(data.byEvent.map((d) => ({
@@ -301,11 +301,11 @@ export default function AdminDashboard() {
     } finally { setExporting(null); }
   };
 
-  // 상세 산업군 테이블 — 그룹 필터 적용
+  // 상세 산업군 테이블 — 차트 라벨 필터 적용
   const filteredIndustryDetail = useMemo(() => {
     if (!data) return [];
     if (industryGroupFilter === 'all') return data.byIndustryDetail;
-    return data.byIndustryDetail.filter((d) => d.group === industryGroupFilter);
+    return data.byIndustryDetail.filter((d) => d.chartLabel === industryGroupFilter);
   }, [data, industryGroupFilter]);
 
   const utmEntries = useMemo(() => {
@@ -568,10 +568,10 @@ export default function AdminDashboard() {
 
         {/* ===== L4. 오디언스 — 산업군 그룹 + 이벤트 비교 ===== */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
-          {/* 산업군 그룹 도넛 */}
+          {/* 산업군 도넛 */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 className="font-semibold mb-1">산업군 분포 (그룹)</h3>
-            <p className="text-xs text-gray-500 mb-4">차트는 그룹 단위 · 상세 산업군은 아래 테이블에서 확인</p>
+            <h3 className="font-semibold mb-1">산업군 분포</h3>
+            <p className="text-xs text-gray-500 mb-4">차트는 괄호 안 내용을 생략한 라벨로 표시 · 상세 원본값은 아래 테이블</p>
             {data.byIndustryGroup.length > 0 ? (
               <>
                 <ResponsiveContainer width="100%" height={280}>
@@ -593,13 +593,13 @@ export default function AdminDashboard() {
                 </ResponsiveContainer>
                 <div className="mt-3">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-medium text-gray-700">상세 산업군</span>
+                    <span className="text-xs font-medium text-gray-700">상세 산업군 (원본값)</span>
                     <select
                       value={industryGroupFilter}
                       onChange={(e) => setIndustryGroupFilter(e.target.value)}
                       className="text-xs border border-gray-200 rounded-md px-2 py-1 bg-white"
                     >
-                      <option value="all">전체 그룹</option>
+                      <option value="all">전체 라벨</option>
                       {data.byIndustryGroup.map((g) => <option key={g.name} value={g.name}>{g.name}</option>)}
                     </select>
                   </div>
@@ -607,7 +607,7 @@ export default function AdminDashboard() {
                     <table className="w-full text-xs border-collapse">
                       <thead className="sticky top-0 bg-gray-50">
                         <tr>
-                          <th className="px-3 py-2 text-left border border-gray-200">그룹</th>
+                          <th className="px-3 py-2 text-left border border-gray-200">차트 라벨</th>
                           <th className="px-3 py-2 text-left border border-gray-200">상세 산업군</th>
                           <th className="px-3 py-2 text-right border border-gray-200">등록수</th>
                           <th className="px-3 py-2 text-right border border-gray-200">비율</th>
@@ -618,7 +618,7 @@ export default function AdminDashboard() {
                           const pct = kpi.total > 0 ? ((d.value / kpi.total) * 100).toFixed(1) : '0';
                           return (
                             <tr key={d.industry}>
-                              <td className="px-3 py-1.5 border border-gray-200 text-gray-500">{d.group}</td>
+                              <td className="px-3 py-1.5 border border-gray-200 text-gray-500">{d.chartLabel}</td>
                               <td className="px-3 py-1.5 border border-gray-200">{d.industry}</td>
                               <td className="px-3 py-1.5 text-right border border-gray-200 font-medium">{d.value}</td>
                               <td className="px-3 py-1.5 text-right border border-gray-200">{pct}%</td>
@@ -626,7 +626,7 @@ export default function AdminDashboard() {
                           );
                         })}
                         {filteredIndustryDetail.length === 0 && (
-                          <tr><td colSpan={4} className="px-3 py-4 text-center text-gray-400 border border-gray-200">해당 그룹에 데이터 없음</td></tr>
+                          <tr><td colSpan={4} className="px-3 py-4 text-center text-gray-400 border border-gray-200">해당 라벨에 데이터 없음</td></tr>
                         )}
                       </tbody>
                     </table>

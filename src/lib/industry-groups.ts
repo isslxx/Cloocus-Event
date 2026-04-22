@@ -1,45 +1,25 @@
-// 산업군 상세값 → 요약 그룹 매핑
-// - 차트(도넛)에는 그룹명만 표시 (8~10개로 제한 → 가독성)
-// - 테이블에는 원본 industry 값 전체 표시
-// 원본 값은 constants.ts의 INDUSTRIES 및 "기타: xxx" 형식을 포함
+// 산업군 표시 라벨 변환
+// 정책:
+// - 차트(도넛): 괄호 안 내용 생략하여 요약된 라벨로 집계 (예: "금융(은행)" → "금융")
+// - 테이블: 원본 값 그대로 표시
+// - "기타: XXX" 형식(사용자 직접 입력)은 차트에서 "기타"로 통합
 
-export const INDUSTRY_GROUPS = [
-  'IT',
-  '제조',
-  '유통',
-  '바이오',
-  '서비스',
-  '금융',
-  '공공',
-  '미디어',
-  '건설',
-  '에너지',
-  '1차산업',
-  '기타',
-] as const;
+export function toChartLabel(industry: string | null | undefined): string {
+  if (!industry) return '미지정';
+  const s = industry.trim();
+  if (!s) return '미지정';
 
-export type IndustryGroup = (typeof INDUSTRY_GROUPS)[number];
+  // "기타: 스타트업" 같이 사용자 입력 산업 → 차트에서는 "기타"
+  const colonIdx = s.indexOf(':');
+  if (colonIdx > 0 && s.slice(0, colonIdx).trim() === '기타') return '기타';
 
-const DIRECT_MAP: Record<string, IndustryGroup> = {
-  'IT/통신': 'IT',
-  '게임': 'IT',
-  '제조/산업': '제조',
-  '유통/물류': '유통',
-  '헬스케어/바이오': '바이오',
-  '농축산업': '1차산업',
-  '서비스': '서비스',
-  '금융': '금융',
-  '에너지/자원': '에너지',
-  '공공/교육': '공공',
-  '미디어/엔터테인먼트': '미디어',
-  '건설/부동산': '건설',
-  '기타': '기타',
-};
+  // 반각 괄호 "금융(은행)" → "금융"
+  const paren = s.indexOf('(');
+  if (paren > 0) return s.slice(0, paren).trim() || s;
 
-export function toIndustryGroup(industry: string | null | undefined): IndustryGroup {
-  if (!industry) return '기타';
-  const trimmed = industry.trim();
-  if (DIRECT_MAP[trimmed]) return DIRECT_MAP[trimmed];
-  if (trimmed.startsWith('기타: ') || trimmed.startsWith('기타:')) return '기타';
-  return '기타';
+  // 전각 괄호 "금융（은행）" → "금융"
+  const fullParen = s.indexOf('（');
+  if (fullParen > 0) return s.slice(0, fullParen).trim() || s;
+
+  return s;
 }
