@@ -186,28 +186,44 @@ export default function AdminDashboard() {
       'fill', 'stroke',
     ] as const;
 
-    // live doc의 Canvas 2D를 공용 변환기로 사용 (oklch/lab/color-mix 네이티브 파싱)
+    // 1x1 픽셀 canvas에 실제로 그려서 getImageData로 sRGB 픽셀을 읽는 방식.
+    // fillStyle getter는 브라우저에 따라 color(srgb ...) 같은 비-rgb 형식을 반환할 수 있으므로
+    // 직렬화에 의존하지 않고 실제 렌더된 픽셀을 읽어 표준 rgb/rgba 문자열로 정규화.
     const convCtx = (() => {
-      try { return document.createElement('canvas').getContext('2d'); } catch { return null; }
+      try {
+        const c = document.createElement('canvas');
+        c.width = 1; c.height = 1;
+        return c.getContext('2d', { willReadFrequently: true });
+      } catch { return null; }
     })();
 
     const cache = new Map<string, string>();
 
-    // 단일 색상 값을 rgb/rgba 문자열로 정규화 (실패 시 null)
     const canvasConvert = (color: string): string | null => {
       if (!convCtx) return null;
       const key = color.trim();
       if (cache.has(key)) { const v = cache.get(key)!; return v || null; }
       try {
+        // 이전 호출 픽셀 제거 — 반투명 색상이 알파 합성되지 않도록
+        convCtx.clearRect(0, 0, 1, 1);
+        // fillStyle 유효성 검증: 파싱 실패 시 값이 그대로 유지됨 (spec)
         convCtx.fillStyle = '#000000';
-        const before = convCtx.fillStyle;
         convCtx.fillStyle = color;
-        const after = String(convCtx.fillStyle);
-        const unchanged = after === before && key !== '#000000' && key !== 'rgb(0, 0, 0)';
-        const stillUnsafe = UNSAFE_RE.test(after);
-        if (unchanged || stillUnsafe) { cache.set(key, ''); return null; }
-        cache.set(key, after);
-        return after;
+        // 유효하지 않은 색상이면 이전 값(#000000)이 유지됨 → 입력과 비교
+        const serialized = String(convCtx.fillStyle).toLowerCase();
+        const isBlackInput = /^(#000(000)?|rgb\(0,?\s*0,?\s*0\)|black)$/i.test(key);
+        if (serialized === '#000000' && !isBlackInput) {
+          cache.set(key, ''); return null;
+        }
+        // 실제 픽셀 그리기 → getImageData 로 sRGB 값 읽기
+        convCtx.fillRect(0, 0, 1, 1);
+        const data = convCtx.getImageData(0, 0, 1, 1).data;
+        const r = data[0], g = data[1], b = data[2], a = data[3];
+        const rgba = a === 255
+          ? `rgb(${r}, ${g}, ${b})`
+          : `rgba(${r}, ${g}, ${b}, ${(a / 255).toFixed(3)})`;
+        cache.set(key, rgba);
+        return rgba;
       } catch { return null; }
     };
 
