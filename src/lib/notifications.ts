@@ -21,8 +21,14 @@ export async function notifyAdminSurveyComplete(params: SurveyCompleteParams): P
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://cloocus-event-2026.vercel.app';
   const adminUrl = `${siteUrl}/admin-cloocus-mkt/survey-responses`;
 
+  // 한국 시간(KST, UTC+9) 기준으로 표시
   const now = new Date();
-  const receivedAt = `${now.getFullYear()}. ${String(now.getMonth() + 1).padStart(2, '0')}. ${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const kstParts = new Intl.DateTimeFormat('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(now).reduce<Record<string, string>>((acc, p) => { acc[p.type] = p.value; return acc; }, {});
+  const receivedAt = `${kstParts.year}. ${kstParts.month}. ${kstParts.day} ${kstParts.hour}:${kstParts.minute} (KST)`;
 
   const html = `
 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="font-family:'Malgun Gothic',Arial,sans-serif;background:#f9fafb;padding:30px 0;">
