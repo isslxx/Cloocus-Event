@@ -879,7 +879,7 @@ export default function MyDashboard() {
                                 <p style="font-size:10px;color:#4c2d96;margin:0 0 4px;font-weight:600;letter-spacing:1px;">Cloocus CEO</p>
                                 <div style="position:relative;display:inline-block;margin:0 0 4px;">
                                   <p style="font-size:14px;font-weight:700;color:#222;margin:0;position:relative;z-index:1;">Steve Hong</p>
-                                  <img src="/stamp.png" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:56px;height:56px;opacity:0.75;mix-blend-mode:multiply;pointer-events:none;z-index:2;" crossorigin="anonymous" />
+                                  <img src="/stamp.png" style="position:absolute;top:50%;right:-14px;transform:translateY(-50%);width:56px;height:56px;opacity:0.62;mix-blend-mode:multiply;pointer-events:none;z-index:2;" crossorigin="anonymous" />
                                 </div>
                               </div>
                               <!-- Issued on -->
