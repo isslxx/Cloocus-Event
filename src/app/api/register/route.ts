@@ -18,6 +18,8 @@ export async function POST(req: NextRequest) {
       email, phone, industry, industry_etc, company_size,
       referral_source, referral_source_etc, referrer_name, inquiry, privacy_consent,
       event_id, pin,
+      utm_source, utm_medium, utm_campaign, utm_content, utm_term,
+      landing_page, referrer_url,
     } = body;
 
     // 서버 검증
@@ -63,6 +65,8 @@ export async function POST(req: NextRequest) {
 
     const normalizedCompany = normalizeCompanyName(company_name);
 
+    const trimOrNull = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, 255) : null);
+
     const insertRow = {
       name: name.trim(),
       company_name: normalizedCompany,
@@ -79,6 +83,13 @@ export async function POST(req: NextRequest) {
       privacy_consent,
       event_id: event_id || null,
       pin,
+      utm_source:   trimOrNull(utm_source),
+      utm_medium:   trimOrNull(utm_medium),
+      utm_campaign: trimOrNull(utm_campaign),
+      utm_content:  trimOrNull(utm_content),
+      utm_term:     trimOrNull(utm_term),
+      landing_page: trimOrNull(landing_page),
+      referrer_url: trimOrNull(referrer_url),
     };
 
     const { data: insertedData, error } = await supabase

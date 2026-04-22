@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { INDUSTRIES, COMPANY_SIZES, REFERRAL_SOURCES, PRIVACY_POLICY_TEXT } from '@/lib/constants';
 import { trackFormSubmit, trackEventView, trackFormStart } from '@/lib/analytics';
+import { captureAttribution, readAttribution } from '@/lib/utm';
 import type { } from '@/lib/constants'; // keep import for PRIVACY_POLICY_TEXT
 import { formatPhone, isBlockedEmailDomain, validateRegistrationForm } from '@/lib/validation';
 import type { FormErrors } from '@/lib/validation';
@@ -91,6 +92,11 @@ export default function Home() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const companyDebounce = useRef<ReturnType<typeof setTimeout>>(undefined);
   const companyRef = useRef<HTMLDivElement>(null);
+
+  // UTM / referrer 캡처 (first-touch, 랜딩 시점 1회)
+  useEffect(() => {
+    captureAttribution();
+  }, []);
 
   // 이벤트 목록 + 폼 옵션 로드
   useEffect(() => {
@@ -215,11 +221,16 @@ export default function Home() {
           body: JSON.stringify(form),
         });
       } else {
-        // 신규 등록
+        // 신규 등록 — 첫 터치 시 캡처된 UTM/referrer 동봉
+        const attribution = readAttribution();
         res = await fetch('/api/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...form, event_id: selectedEvent?.id }),
+          body: JSON.stringify({
+            ...form,
+            event_id: selectedEvent?.id,
+            ...(attribution || {}),
+          }),
         });
       }
 
