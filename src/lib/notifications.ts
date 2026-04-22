@@ -18,7 +18,7 @@ export async function notifyAdminSurveyComplete(params: SurveyCompleteParams): P
 
   const adminEmail = process.env.ADMIN_NOTIFY_EMAIL || 'isjeong@cloocus.com';
   const fromAddr = process.env.RESEND_FROM || 'Cloocus Event <onboarding@resend.dev>';
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://cloocus-event-dfgk.vercel.app';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://cloocus-event-2026.vercel.app';
   const adminUrl = `${siteUrl}/admin-cloocus-mkt/survey-responses`;
 
   const now = new Date();
