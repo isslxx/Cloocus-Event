@@ -427,7 +427,7 @@ export default function Home() {
               href="/my"
               className="w-full mt-3 text-sm text-gray-400 hover:text-gray-600 hover:underline block text-center"
             >
-              등록 정보 조회
+              등록 정보 조회ㅣ신청자 포털
             </a>
           </div>
 
