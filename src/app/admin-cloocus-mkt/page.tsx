@@ -280,14 +280,25 @@ export default function AdminDashboard() {
         const win = clonedDoc.defaultView;
         if (!win) return;
 
-        // 모든 <details>를 닫힌 상태로 복제 — 레이아웃 정렬 유지
-        clonedEl.querySelectorAll('details').forEach((d) => d.removeAttribute('open'));
+        // 모든 <details>를 "펼친 상태"로 강제 — 추출물에 상세 테이블도 포함되도록
+        clonedEl.querySelectorAll('details').forEach((d) => d.setAttribute('open', ''));
 
-        // 폰트·backdrop-filter 정리
+        // 폰트·backdrop-filter 정리 + KPI 카드 글자 짤림 해결
+        //   .truncate 의 overflow:hidden + line-height 반올림 때문에 html2canvas에서
+        //   숫자 아랫부분이 1~2px 잘리는 버그가 있음 → 캡처 시 overflow visible 강제.
         const styleEl = clonedDoc.createElement('style');
         styleEl.textContent = `
           * { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
           svg text, svg tspan { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; }
+          .truncate { overflow: visible !important; text-overflow: clip !important; white-space: normal !important; }
+          /* KPI 카드 내부는 확실히 clipping 없이 렌더 */
+          [data-export-group="kpi"] * { overflow: visible !important; }
+          [data-export-group="kpi"] > div { min-height: 96px !important; }
+          /* 라인 높이 여유로 숫자 꼬리 잘림 방지 */
+          [data-export-group="kpi"] p { line-height: 1.35 !important; }
+          /* details 펼쳤을 때 summary 삼각 아이콘 숨겨 깔끔하게 */
+          details[open] > summary { list-style: none !important; cursor: default !important; }
+          details[open] > summary::-webkit-details-marker { display: none !important; }
         `;
         clonedDoc.head.appendChild(styleEl);
 
