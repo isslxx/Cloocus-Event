@@ -874,14 +874,14 @@ export default function MyDashboard() {
 
                             <!-- 좌측 하단: CEO + Issued on + Issued by + QR (1열, 동일 레벨) -->
                             <div style="display:flex;gap:30px;align-items:flex-start;">
-                              <!-- CEO + 서명 + 날인 -->
+                              <!-- CEO + 서명 + 직인 -->
                               <div>
                                 <p style="font-size:10px;color:#4c2d96;margin:0 0 4px;font-weight:600;letter-spacing:1px;">Cloocus CEO</p>
-                                <div style="position:relative;display:inline-block;margin:0 0 4px;">
+                                <div style="position:relative;display:inline-block;padding-top:42px;margin:0 0 4px;">
                                   <img src="/sign.jpeg" style="position:absolute;bottom:10px;left:28px;width:90px;height:auto;opacity:0.88;" crossorigin="anonymous" />
+                                  <img src="/stamp.png" style="position:absolute;top:-2px;right:-4px;width:48px;height:48px;opacity:0.92;" crossorigin="anonymous" />
                                   <p style="font-size:14px;font-weight:700;color:#222;margin:0;position:relative;">Steve Hong</p>
                                 </div>
-                                <img src="/stamp.jpg" style="width:70px;height:auto;margin-top:4px;display:block;" crossorigin="anonymous" />
                               </div>
                               <!-- Issued on -->
                               <div>
