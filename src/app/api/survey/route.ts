@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { notifyAdminSurveyComplete } from '@/lib/notifications';
 
 function getServiceSupabase() {
   return createClient(
@@ -87,6 +88,27 @@ export async function POST(req: NextRequest) {
         .from('event_registrations')
         .update({ survey_completed: true })
         .eq('id', registration_id);
+
+      // 관리자 알림 (신규 설문 접수만, 수정 시에는 발송 안 함)
+      try {
+        const { data: regFull } = await supabase
+          .from('event_registrations')
+          .select('name, company_name, event_id, events(name, category)')
+          .eq('id', registration_id)
+          .maybeSingle();
+        const evt = (regFull as unknown as { events?: { name: string; category: string } })?.events;
+        if (regFull && evt) {
+          await notifyAdminSurveyComplete({
+            userName: regFull.name,
+            companyName: regFull.company_name,
+            eventName: evt.name,
+            eventCategory: evt.category,
+            registrationId: registration_id,
+          });
+        }
+      } catch (err) {
+        console.error('[survey] admin notify failed:', err);
+      }
     }
 
     return NextResponse.json({ success: true });
