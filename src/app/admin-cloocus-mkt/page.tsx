@@ -280,7 +280,11 @@ export default function AdminDashboard() {
         const win = clonedDoc.defaultView;
         if (!win) return;
 
-        // 캡처 중 폰트가 뭉개지지 않도록 안전한 한글 지원 스택 주입 (기존 스타일보다 후순위로 overriding)
+        // 모든 <details>를 닫힌 상태로 복제 — 펼쳐진 상세 테이블이 레이아웃 높이를 과도하게 늘려
+        //   좌우 2열 그리드의 세로 정렬이 어긋나는 문제 해결. 추출물에서는 요약만 캡처.
+        clonedEl.querySelectorAll('details').forEach((d) => d.removeAttribute('open'));
+
+        // 캡처 중 폰트가 뭉개지지 않도록 안전한 한글 지원 스택 주입
         const styleEl = clonedDoc.createElement('style');
         styleEl.textContent = `
           * { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
@@ -324,26 +328,60 @@ export default function AdminDashboard() {
     });
   };
 
+  // 대시보드 내부의 논리적 섹션을 순서대로 수집 (data-export-group 속성 기준)
+  const getExportSections = (): HTMLElement[] => {
+    if (!dashboardRef.current) return [];
+    return Array.from(dashboardRef.current.querySelectorAll<HTMLElement>('[data-export-group]'));
+  };
+
   const exportAsPdf = async () => {
     if (!dashboardRef.current) return;
     setExporting('pdf'); setShowExportMenu(false);
     try {
       const { jsPDF } = await import('jspdf');
-      const canvas = await captureDashboard(dashboardRef.current);
-      const imgData = canvas.toDataURL('image/png');
-      const imgWidth = canvas.width; const imgHeight = canvas.height;
-      const pdfWidth = 210; const pdfMargin = 10;
-      const contentWidth = pdfWidth - pdfMargin * 2;
-      const ratio = contentWidth / imgWidth;
-      const contentHeight = imgHeight * ratio;
       const doc = new jsPDF('p', 'mm', 'a4');
-      const pageHeight = 297 - pdfMargin * 2;
-      let position = 0; let page = 0;
-      while (position < contentHeight) {
-        if (page > 0) doc.addPage();
-        doc.addImage(imgData, 'PNG', pdfMargin, pdfMargin - position, contentWidth, contentHeight);
-        position += pageHeight; page++;
+      const PAGE_W = 210, PAGE_H = 297, MARGIN = 10;
+      const CONTENT_W = PAGE_W - MARGIN * 2;
+      const CONTENT_H = PAGE_H - MARGIN * 2;
+
+      const sections = getExportSections();
+      const targets = sections.length > 0 ? sections : [dashboardRef.current];
+
+      let cursorY = MARGIN;
+      let isFirstPage = true;
+
+      for (const section of targets) {
+        const canvas = await captureDashboard(section);
+        const imgData = canvas.toDataURL('image/png');
+        const ratio = CONTENT_W / canvas.width;
+        const sectionH = canvas.height * ratio;
+
+        if (sectionH <= CONTENT_H) {
+          // 섹션이 한 페이지에 들어감 — 현재 커서 위치 확인
+          if (!isFirstPage && cursorY + sectionH > PAGE_H - MARGIN) {
+            doc.addPage(); cursorY = MARGIN;
+          }
+          doc.addImage(imgData, 'PNG', MARGIN, cursorY, CONTENT_W, sectionH);
+          cursorY += sectionH + 6; // 섹션 간 6mm 간격
+          isFirstPage = false;
+        } else {
+          // 섹션이 한 페이지보다 큼 — 새 페이지에서 시작해 여러 페이지에 걸쳐 렌더
+          if (!isFirstPage) { doc.addPage(); cursorY = MARGIN; }
+          let offset = 0;
+          let firstChunk = true;
+          while (offset < sectionH) {
+            if (!firstChunk) { doc.addPage(); }
+            doc.addImage(imgData, 'PNG', MARGIN, MARGIN - offset, CONTENT_W, sectionH);
+            offset += CONTENT_H;
+            firstChunk = false;
+          }
+          cursorY = MARGIN;
+          isFirstPage = false;
+          // 다음 섹션은 무조건 새 페이지에서 시작
+          if (offset >= sectionH) { doc.addPage(); cursorY = MARGIN; }
+        }
       }
+
       doc.save(`cloocus_dashboard_${new Date().toISOString().slice(0, 10)}.pdf`);
     } catch (err) {
       alert('PDF 오류: ' + String(err));
@@ -430,25 +468,65 @@ export default function AdminDashboard() {
     setExporting('pptx'); setShowExportMenu(false);
     try {
       const PptxGenJS = (await import('pptxgenjs')).default;
-      const canvas = await captureDashboard(dashboardRef.current);
-      const imgData = canvas.toDataURL('image/png');
       const pptx = new PptxGenJS();
-      pptx.layout = 'LAYOUT_WIDE';
-      const titleSlide = pptx.addSlide();
-      titleSlide.addText('Cloocus 이벤트 대시보드', { x: 0.5, y: 1.5, w: 12, fontSize: 32, bold: true, color: '2563eb' });
-      titleSlide.addText(new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }), { x: 0.5, y: 2.5, w: 12, fontSize: 16, color: '666666' });
-      titleSlide.addText(`총 등록: ${data.kpi.total}  |  오늘: ${data.kpi.today} (${data.kpi.todayDeltaPct >= 0 ? '+' : ''}${data.kpi.todayDeltaPct.toFixed(0)}%)  |  설문완료율: ${(data.kpi.surveyCompletionRate * 100).toFixed(1)}%`,
-        { x: 0.5, y: 3.5, w: 12, fontSize: 14, color: '444444' });
+      pptx.layout = 'LAYOUT_WIDE'; // 13.333 x 7.5 inch
 
-      const imgWidth = 12.5;
-      const imgHeight = (canvas.height / canvas.width) * imgWidth;
-      const pageHeight = 7.5;
-      let yOffset = 0;
-      while (yOffset * (canvas.width / imgWidth) < canvas.height) {
-        const slide = pptx.addSlide();
-        slide.addImage({ data: imgData, x: 0.15, y: -yOffset, w: imgWidth, h: imgHeight });
-        yOffset += pageHeight;
+      // 슬라이드 상수 (inch)
+      const SLIDE_W = 13.333, SLIDE_H = 7.5;
+      const MARGIN = 0.4;
+      const TITLE_H = 0.65;
+
+      // 1. 타이틀 슬라이드
+      const titleSlide = pptx.addSlide();
+      titleSlide.addText('Cloocus 이벤트 대시보드', {
+        x: 0.5, y: 2.6, w: SLIDE_W - 1, h: 0.9, fontSize: 36, bold: true, color: '2563eb', align: 'center',
+      });
+      titleSlide.addText(new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }), {
+        x: 0.5, y: 3.6, w: SLIDE_W - 1, h: 0.5, fontSize: 18, color: '666666', align: 'center',
+      });
+      titleSlide.addText(
+        `총 등록 ${data.kpi.total.toLocaleString()}  |  오늘 ${data.kpi.today} (${data.kpi.todayDeltaPct >= 0 ? '+' : ''}${data.kpi.todayDeltaPct.toFixed(0)}%)  |  설문 완료율 ${(data.kpi.surveyCompletionRate * 100).toFixed(1)}%`,
+        { x: 0.5, y: 4.3, w: SLIDE_W - 1, h: 0.5, fontSize: 14, color: '444444', align: 'center' }
+      );
+      if (data.range.start && data.range.end) {
+        titleSlide.addText(`분석 기간: ${data.range.start} ~ ${data.range.end}`, {
+          x: 0.5, y: 4.85, w: SLIDE_W - 1, h: 0.4, fontSize: 12, color: '888888', align: 'center',
+        });
       }
+
+      // 2. 섹션별 슬라이드
+      const sections = getExportSections();
+      const targets = sections.length > 0 ? sections : (dashboardRef.current ? [dashboardRef.current] : []);
+
+      for (const section of targets) {
+        const title = section.getAttribute('data-export-title') || '';
+        const canvas = await captureDashboard(section);
+        const imgData = canvas.toDataURL('image/png');
+
+        const slide = pptx.addSlide();
+        if (title) {
+          slide.addText(title, {
+            x: MARGIN, y: MARGIN, w: SLIDE_W - MARGIN * 2, h: TITLE_H,
+            fontSize: 22, bold: true, color: '111827',
+          });
+        }
+
+        // 본문 영역: 타이틀 아래 남은 공간
+        const contentTop = MARGIN + TITLE_H;
+        const contentW = SLIDE_W - MARGIN * 2;
+        const contentH = SLIDE_H - contentTop - MARGIN;
+
+        // 이미지 aspect fit (세로·가로 중 긴 쪽 기준)
+        const imgRatio = canvas.width / canvas.height;
+        let w = contentW;
+        let h = w / imgRatio;
+        if (h > contentH) { h = contentH; w = h * imgRatio; }
+        const x = (SLIDE_W - w) / 2;
+        const y = contentTop + (contentH - h) / 2;
+
+        slide.addImage({ data: imgData, x, y, w, h });
+      }
+
       await pptx.writeFile({ fileName: `cloocus_dashboard_${new Date().toISOString().slice(0, 10)}.pptx` });
     } catch (err) {
       alert('PPT 오류: ' + String(err));
@@ -641,7 +719,7 @@ export default function AdminDashboard() {
 
       <div ref={dashboardRef}>
         {/* ===== L1. KPI 카드 ===== */}
-        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 mb-8">
+        <div data-export-group="kpi" data-export-title="KPI 요약" className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 mb-8">
           <KpiCard label="총 등록수" value={kpi.total.toLocaleString()} tone="blue" />
           <KpiCard
             label="오늘 등록"
@@ -672,7 +750,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* ===== L2. 전환 퍼널 (Hero) ===== */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-8">
+        <div data-export-group="funnel" data-export-title="전환 퍼널" className="bg-white rounded-xl border border-gray-200 p-6 mb-8">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-semibold text-lg">전환 퍼널</h3>
@@ -722,7 +800,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* ===== L3. 획득 (Acquisition) — 일별 추이 + 신청 경로 + UTM ===== */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
+        <div data-export-group="acquisition" data-export-title="획득 — 일별 등록 추이 & 유입 채널" className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
           {/* 일별 추이 */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <h3 className="font-semibold mb-1">일별 등록 추이 {data.compare && <span className="text-xs text-orange-600 font-normal">· 비교 활성</span>}</h3>
@@ -822,7 +900,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* ===== L4. 오디언스 — 산업군 그룹 + 이벤트 비교 ===== */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
+        <div data-export-group="audience" data-export-title="오디언스 — 산업군 & 이벤트별 등록" className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
           {/* 산업군 도넛 */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <h3 className="font-semibold mb-1">산업군 분포</h3>
@@ -940,7 +1018,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* ===== L5. 신청 경로 + Top 추천인 ===== */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div data-export-group="source-referrer" data-export-title="신청 경로 & Top 추천인" className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           {/* 신청 경로 */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <h3 className="font-semibold mb-1">신청 경로 (자가 응답)</h3>
