@@ -19,6 +19,7 @@ type RegistrationData = {
   referral_source: string;
   referrer_name: string;
   inquiry: string;
+  survey_feedback?: string | null;
   event_id: string;
   registration_status: string;
   event_name: string;
@@ -278,7 +279,7 @@ export default function MyDashboard() {
       }
 
       // 문의 히스토리 (백그라운드, await 안 함)
-      if (data.registration?.inquiry) {
+      if (data.registration?.inquiry || data.registration?.survey_feedback) {
         fetch(`/api/inquiry-comments?registration_id=${data.registration.id}&pin=${encodeURIComponent(lookupPin || pin)}`)
           .then((r) => r.json())
           .then((iqData) => {
@@ -1051,7 +1052,7 @@ export default function MyDashboard() {
         )}
 
         {/* 문의사항 대화형 UI */}
-        {registration.inquiry && (
+        {(registration.inquiry || registration.survey_feedback) && (
           <div className="bg-white rounded-xl border border-gray-200 p-5 mb-4">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-medium text-gray-500 flex items-center gap-2">
@@ -1072,16 +1073,32 @@ export default function MyDashboard() {
             {/* 대화 히스토리 */}
             <div className="space-y-3 mb-4">
               {/* 최초 문의 (등록 시 작성) */}
-              <div className="flex justify-end">
-                <div className="max-w-[80%]">
-                  <div className="bg-blue-50 rounded-xl rounded-tr-sm px-4 py-3">
-                    <p className="text-sm text-gray-800 whitespace-pre-wrap">{registration.inquiry}</p>
+              {registration.inquiry && (
+                <div className="flex justify-end">
+                  <div className="max-w-[80%]">
+                    <div className="bg-blue-50 rounded-xl rounded-tr-sm px-4 py-3">
+                      <p className="text-sm text-gray-800 whitespace-pre-wrap">{registration.inquiry}</p>
+                    </div>
+                    <p className="text-xs text-gray-400 text-right mt-1">
+                      {registration.name} · {new Date(registration.created_at || '').toLocaleDateString('ko-KR')}
+                    </p>
                   </div>
-                  <p className="text-xs text-gray-400 text-right mt-1">
-                    {registration.name} · {new Date(registration.created_at || '').toLocaleDateString('ko-KR')}
-                  </p>
                 </div>
-              </div>
+              )}
+
+              {/* 설문 피드백 (q6) — 채팅 메시지 형태로 이어서 표시 */}
+              {registration.survey_feedback && (
+                <div className="flex justify-end">
+                  <div className="max-w-[80%]">
+                    <div className="bg-blue-50 rounded-xl rounded-tr-sm px-4 py-3">
+                      <p className="text-sm text-gray-800 whitespace-pre-wrap">{registration.survey_feedback}</p>
+                    </div>
+                    <p className="text-xs text-gray-400 text-right mt-1">
+                      {registration.name} · 설문 피드백
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* 코멘트 히스토리 */}
               {inquiryComments.map((comment) => (

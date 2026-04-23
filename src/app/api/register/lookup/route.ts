@@ -40,6 +40,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '일치하는 신청 내역이 없습니다. 이메일 주소와 확인 암호를 다시 확인해주세요.' }, { status: 404 });
     }
 
+    // 설문 q6_feedback 매핑 (문의사항 채팅에 함께 노출)
+    const regIds = data.map((r) => (r as Record<string, unknown>).id as string);
+    const feedbackMap: Record<string, string> = {};
+    if (regIds.length > 0) {
+      const { data: surveys } = await supabase
+        .from('surveys')
+        .select('registration_id, q6_feedback')
+        .in('registration_id', regIds);
+      for (const s of surveys || []) {
+        if (s.q6_feedback && s.q6_feedback.trim() !== '') {
+          feedbackMap[s.registration_id] = s.q6_feedback;
+        }
+      }
+    }
+
     function mapRecord(r: Record<string, unknown>) {
       const eventsRaw = r.events;
       const evt = Array.isArray(eventsRaw) ? eventsRaw[0] : eventsRaw;
@@ -58,6 +73,7 @@ export async function POST(req: NextRequest) {
           referral_source: r.referral_source,
           referrer_name: r.referrer_name,
           inquiry: r.inquiry,
+          survey_feedback: feedbackMap[r.id as string] || null,
           event_id: r.event_id,
           event_name: (evt as Record<string, unknown>)?.name || '',
           event_date: (evt as Record<string, unknown>)?.event_date || '',

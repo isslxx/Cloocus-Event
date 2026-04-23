@@ -40,6 +40,19 @@ export async function GET(
     const evt = Array.isArray(data.events) ? data.events[0] : data.events;
     const eventStatus = evt?.status || 'closed';
 
+    // 설문 q6_feedback 매핑
+    let survey_feedback: string | null = null;
+    const { data: survey } = await supabase
+      .from('surveys')
+      .select('q6_feedback')
+      .eq('registration_id', data.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (survey?.q6_feedback && survey.q6_feedback.trim() !== '') {
+      survey_feedback = survey.q6_feedback;
+    }
+
     return NextResponse.json({
       registration: {
         id: data.id,
@@ -54,6 +67,7 @@ export async function GET(
         referral_source: data.referral_source,
         referrer_name: data.referrer_name,
         inquiry: data.inquiry,
+        survey_feedback,
         event_id: data.event_id,
         event_name: evt?.name || '',
         event_date: evt?.event_date || '',
