@@ -13,6 +13,7 @@ type InquiryItem = {
   event_id: string;
   event_name: string;
   comment_count: number;
+  survey_feedback: string | null;
   created_at: string;
 };
 
@@ -188,7 +189,7 @@ export default function InquiriesPage() {
                           <span className="text-xs text-gray-400">{new Date(item.created_at).toLocaleDateString('ko-KR')}</span>
                         </div>
                       </div>
-                      <p className="text-sm text-gray-600 truncate">{item.inquiry}</p>
+                      <p className="text-sm text-gray-600 truncate">{item.inquiry || item.survey_feedback}</p>
                       <p className="text-xs text-gray-400 mt-1">{item.event_name}</p>
                     </div>
                   );
@@ -225,23 +226,42 @@ export default function InquiriesPage() {
 
             {/* 대화 히스토리 */}
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-              {/* 최초 문의 */}
-              <div className="flex justify-start">
-                <div className="max-w-[85%]">
-                  <div className="bg-gray-100 rounded-xl rounded-tl-sm px-4 py-3">
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <span className="w-5 h-5 bg-gray-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold">
-                        {selectedItem.name[0]}
-                      </span>
-                      <span className="text-xs font-medium text-gray-600">{selectedItem.name}</span>
+              {/* 최초 문의 (등록 시 작성) */}
+              {selectedItem.inquiry && (
+                <div className="flex justify-start">
+                  <div className="max-w-[85%]">
+                    <div className="bg-gray-100 rounded-xl rounded-tl-sm px-4 py-3">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="w-5 h-5 bg-gray-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold">
+                          {selectedItem.name[0]}
+                        </span>
+                        <span className="text-xs font-medium text-gray-600">{selectedItem.name}</span>
+                      </div>
+                      <p className="text-sm text-gray-800 whitespace-pre-wrap">{selectedItem.inquiry}</p>
                     </div>
-                    <p className="text-sm text-gray-800 whitespace-pre-wrap">{selectedItem.inquiry}</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {new Date(selectedItem.created_at).toLocaleDateString('ko-KR')} (등록 시 작성)
+                    </p>
                   </div>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {new Date(selectedItem.created_at).toLocaleDateString('ko-KR')} (등록 시 작성)
-                  </p>
                 </div>
-              </div>
+              )}
+
+              {/* 설문 피드백 (q6) — 기존 문의 채팅에 추가되는 메시지 형태 */}
+              {selectedItem.survey_feedback && (
+                <div className="flex justify-start">
+                  <div className="max-w-[85%]">
+                    <div className="bg-gray-100 rounded-xl rounded-tl-sm px-4 py-3">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="w-5 h-5 bg-gray-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold">
+                          {selectedItem.name[0]}
+                        </span>
+                        <span className="text-xs font-medium text-gray-600">{selectedItem.name}</span>
+                      </div>
+                      <p className="text-sm text-gray-800 whitespace-pre-wrap">{selectedItem.survey_feedback}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {commentsLoading ? (
                 <div className="text-center py-4 text-gray-400 text-sm">로딩 중...</div>

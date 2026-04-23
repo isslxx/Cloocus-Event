@@ -16,6 +16,9 @@ type SurveyParticipant = {
   company_size: string;
   referral_source: string;
   referrer_name: string;
+  inquiry: string | null;
+  inquiry_status: string | null;
+  survey_feedback: string | null;
   registration_status: string;
   survey_completed: boolean;
   created_at: string;
@@ -76,10 +79,13 @@ export default function SurveyListPage() {
       '신청 경로': r.referral_source, '추천인': r.referrer_name || '-',
       '등록 상태': r.registration_status === 'confirmed' ? '등록 확정' : r.registration_status === 'rejected' ? '등록 불가' : '등록 대기',
       '설문 완료': r.survey_completed ? 'O' : 'X',
+      '문의사항': r.inquiry || '',
+      '문의 상태': r.inquiry_status === 'answered' ? '답변 완료' : r.inquiry_status === 'dismissed' ? '응답 불필요' : r.inquiry ? '답변 대기' : '',
+      '설문 피드백 (Q6)': r.survey_feedback || '',
       '등록일': new Date(r.created_at).toLocaleDateString('ko-KR'),
     }));
     const ws = XLSX.utils.json_to_sheet(exportData);
-    ws['!cols'] = [{ wch: 10 }, { wch: 15 }, { wch: 12 }, { wch: 10 }, { wch: 25 }, { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 10 }, { wch: 10 }, { wch: 8 }, { wch: 12 }];
+    ws['!cols'] = [{ wch: 10 }, { wch: 15 }, { wch: 12 }, { wch: 10 }, { wch: 25 }, { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 10 }, { wch: 10 }, { wch: 8 }, { wch: 40 }, { wch: 10 }, { wch: 40 }, { wch: 12 }];
     XLSX.utils.book_append_sheet(wb, ws, '설문 리스트');
     const evtName = events.find((e) => e.id === selectedEvent)?.name || '전체';
     XLSX.writeFile(wb, `설문리스트_${evtName}_${new Date().toISOString().slice(0, 10)}.xlsx`);
@@ -203,6 +209,8 @@ export default function SurveyListPage() {
                       { key: 'industry', label: '산업군', align: 'left' },
                       { key: 'registration_status', label: '등록 상태', align: 'left' },
                       { key: 'survey_completed', label: '설문', align: 'center' },
+                      { key: 'inquiry', label: '문의사항', align: 'left' },
+                      { key: 'survey_feedback', label: '설문 피드백', align: 'left' },
                       { key: 'created_at', label: '등록일', align: 'left' },
                     ].map((col) => (
                       <th key={col.key} className={`px-4 py-3 text-${col.align} font-medium whitespace-nowrap cursor-pointer hover:bg-gray-100 bg-gray-50 ${sortKey === col.key ? 'text-blue-700 bg-blue-50/50' : 'text-gray-600'}`} onClick={() => handleSort(col.key)}>
@@ -231,6 +239,17 @@ export default function SurveyListPage() {
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${r.survey_completed ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
                           {r.survey_completed ? '완료' : '미완료'}
                         </span>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-600 max-w-xs truncate" title={r.inquiry || ''}>
+                        {r.inquiry ? (
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className={`w-1.5 h-1.5 rounded-full ${r.inquiry_status === 'answered' ? 'bg-green-500' : r.inquiry_status === 'dismissed' ? 'bg-gray-400' : 'bg-yellow-500'}`} />
+                            <span className="truncate">{r.inquiry}</span>
+                          </span>
+                        ) : <span className="text-gray-300">-</span>}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-600 max-w-xs truncate" title={r.survey_feedback || ''}>
+                        {r.survey_feedback ? <span className="truncate">{r.survey_feedback}</span> : <span className="text-gray-300">-</span>}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-500">{new Date(r.created_at).toLocaleDateString('ko-KR')}</td>
                     </tr>

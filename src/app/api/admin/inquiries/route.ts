@@ -15,19 +15,41 @@ export async function GET(req: NextRequest) {
   let query = supabase
     .from('event_registrations')
     .select('id, name, company_name, email, inquiry, inquiry_status, event_id, created_at')
-    .neq('inquiry', '')
-    .not('inquiry', 'is', null)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .range(0, 9999);
 
   if (eventId) query = query.eq('event_id', eventId);
-  if (status && status !== 'all') query = query.eq('inquiry_status', status);
 
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  let results = data || [];
+  // 설문 q6_feedback을 문의사항으로 간주: 등록별로 매핑
+  const allRegIds = (data || []).map((r) => r.id);
+  const surveyFeedbackMap: Record<string, string> = {};
+  if (allRegIds.length > 0) {
+    const { data: surveys } = await supabase
+      .from('surveys')
+      .select('registration_id, q6_feedback')
+      .in('registration_id', allRegIds);
+    for (const s of surveys || []) {
+      if (s.q6_feedback && s.q6_feedback.trim() !== '') {
+        surveyFeedbackMap[s.registration_id] = s.q6_feedback;
+      }
+    }
+  }
+
+  // inquiry 또는 q6_feedback 둘 중 하나라도 있는 건만 노출
+  let results = (data || []).filter((r) => {
+    const hasInquiry = r.inquiry && r.inquiry.trim() !== '';
+    const hasFeedback = !!surveyFeedbackMap[r.id];
+    return hasInquiry || hasFeedback;
+  });
+
+  // 상태 필터
+  if (status && status !== 'all') {
+    results = results.filter((r) => (r.inquiry_status || 'pending') === status);
+  }
 
   // 검색 필터 (서버사이드)
   if (search?.trim()) {
@@ -35,7 +57,8 @@ export async function GET(req: NextRequest) {
     results = results.filter((r) =>
       r.name?.toLowerCase().includes(s) ||
       r.company_name?.toLowerCase().includes(s) ||
-      r.inquiry?.toLowerCase().includes(s)
+      r.inquiry?.toLowerCase().includes(s) ||
+      surveyFeedbackMap[r.id]?.toLowerCase().includes(s)
     );
   }
 
@@ -67,5 +90,6 @@ export async function GET(req: NextRequest) {
     ...r,
     event_name: eventMap[r.event_id || ''] || '-',
     comment_count: commentCounts[r.id] || 0,
+    survey_feedback: surveyFeedbackMap[r.id] || null,
   })));
 }
