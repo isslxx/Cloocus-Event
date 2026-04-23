@@ -6,8 +6,10 @@ import type { Event } from '@/lib/types';
 
 type SurveyParticipant = {
   id: string;
+  event_id: string | null;
   name: string;
   company_name: string;
+  company_name_raw?: string | null;
   department: string;
   job_title: string;
   email: string;
@@ -18,10 +20,22 @@ type SurveyParticipant = {
   referrer_name: string;
   inquiry: string | null;
   inquiry_status: string | null;
-  survey_feedback: string | null;
   registration_status: string;
+  survey_enabled: boolean;
   survey_completed: boolean;
+  email_status: string | null;
+  certificate_issued?: boolean;
+  certificate_issued_at?: string | null;
   created_at: string;
+  // 설문 응답
+  q1_azure_level: string | null;
+  q2_difficulty: string | null;
+  q3_purpose: string[] | null;
+  q4_adoption: string | null;
+  q5_consulting: string[] | null;
+  q6_feedback: string | null;
+  survey_feedback: string | null;
+  survey_submitted_at: string | null;
 };
 
 export default function SurveyListPage() {
@@ -74,18 +88,27 @@ export default function SurveyListPage() {
     const XLSX = await import('xlsx');
     const wb = XLSX.utils.book_new();
     const exportData = (selected.size > 0 ? participants.filter((r) => selected.has(r.id)) : participants).map((r) => ({
-      '성함': r.name, '회사명': r.company_name, '부서명': r.department, '직급': r.job_title,
-      '이메일': r.email, '연락처': r.phone, '산업군': r.industry, '기업 규모': r.company_size,
-      '신청 경로': r.referral_source, '추천인': r.referrer_name || '-',
-      '등록 상태': r.registration_status === 'confirmed' ? '등록 확정' : r.registration_status === 'rejected' ? '등록 불가' : '등록 대기',
+      '성함': r.name,
+      '회사명': r.company_name_raw || r.company_name,
+      '부서명': r.department,
+      '직급': r.job_title,
+      '이메일': r.email,
+      '연락처': r.phone,
+      '산업군': r.industry,
+      '기업 규모': r.company_size,
+      '신청 경로': r.referral_source,
+      '추천인': r.referrer_name || '-',
       '설문 완료': r.survey_completed ? 'O' : 'X',
-      '문의사항': r.inquiry || '',
-      '문의 상태': r.inquiry_status === 'answered' ? '답변 완료' : r.inquiry_status === 'dismissed' ? '응답 불필요' : r.inquiry ? '답변 대기' : '',
-      '설문 피드백 (Q6)': r.survey_feedback || '',
-      '등록일': new Date(r.created_at).toLocaleDateString('ko-KR'),
+      'Q1. Azure 이해 수준': r.q1_azure_level || '',
+      'Q2. 난이도': r.q2_difficulty || '',
+      'Q3. 참여 목적': Array.isArray(r.q3_purpose) ? r.q3_purpose.join(', ') : (r.q3_purpose || ''),
+      'Q4. 도입 계획': r.q4_adoption || '',
+      'Q5. 상담 희망': Array.isArray(r.q5_consulting) ? r.q5_consulting.join(', ') : (r.q5_consulting || ''),
+      'Q6. 피드백': r.q6_feedback || '',
+      '설문 완료일': r.survey_submitted_at ? new Date(r.survey_submitted_at).toLocaleString('ko-KR') : '',
     }));
     const ws = XLSX.utils.json_to_sheet(exportData);
-    ws['!cols'] = [{ wch: 10 }, { wch: 15 }, { wch: 12 }, { wch: 10 }, { wch: 25 }, { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 10 }, { wch: 10 }, { wch: 8 }, { wch: 40 }, { wch: 10 }, { wch: 40 }, { wch: 12 }];
+    ws['!cols'] = Array(Object.keys(exportData[0] || {}).length).fill({ wch: 16 });
     XLSX.utils.book_append_sheet(wb, ws, '설문 리스트');
     const evtName = events.find((e) => e.id === selectedEvent)?.name || '전체';
     XLSX.writeFile(wb, `설문리스트_${evtName}_${new Date().toISOString().slice(0, 10)}.xlsx`);
@@ -100,7 +123,7 @@ export default function SurveyListPage() {
   const filteredParticipants = participants.filter((r) => {
     if (!searchTerm) return true;
     const q = searchTerm.toLowerCase();
-    return r.name.toLowerCase().includes(q) || r.company_name.toLowerCase().includes(q) || r.email.toLowerCase().includes(q);
+    return r.name?.toLowerCase().includes(q) || r.company_name?.toLowerCase().includes(q) || r.email?.toLowerCase().includes(q);
   });
   const sortedParticipants = [...filteredParticipants].sort((a, b) => {
     const va = (a as Record<string, unknown>)[sortKey];
@@ -110,6 +133,28 @@ export default function SurveyListPage() {
   });
 
   const completedCount = filteredParticipants.filter((r) => r.survey_completed).length;
+
+  const formatArr = (v: unknown): string => Array.isArray(v) ? v.join(', ') : (v ? String(v) : '');
+
+  // 정렬 가능한 일반 컬럼
+  const middleCols: { key: string; label: string }[] = [
+    { key: 'department', label: '부서명' },
+    { key: 'job_title', label: '직급' },
+    { key: 'email', label: '이메일' },
+    { key: 'phone', label: '연락처' },
+    { key: 'industry', label: '산업군' },
+    { key: 'company_size', label: '기업 규모' },
+    { key: 'referral_source', label: '신청 경로' },
+    { key: 'referrer_name', label: '추천인' },
+    { key: 'survey_completed', label: '설문' },
+    { key: 'q1_azure_level', label: 'Q1. Azure 이해 수준' },
+    { key: 'q2_difficulty', label: 'Q2. 난이도' },
+    { key: 'q3_purpose', label: 'Q3. 참여 목적' },
+    { key: 'q4_adoption', label: 'Q4. 도입 계획' },
+    { key: 'q5_consulting', label: 'Q5. 상담 희망' },
+    { key: 'q6_feedback', label: 'Q6. 피드백' },
+    { key: 'survey_submitted_at', label: '설문 완료일' },
+  ];
 
   return (
     <div>
@@ -189,79 +234,68 @@ export default function SurveyListPage() {
 
           {/* 테이블 */}
           <div className="bg-white rounded-xl border border-gray-200 overflow-auto" style={{ maxHeight: 'calc(100vh - 300px)', minHeight: '400px' }}>
-              <table className="w-full text-sm">
-                <thead className="sticky top-0 z-20">
-                  <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="px-3 py-3 w-10 bg-gray-50 sticky left-0 z-30">
-                      <input type="checkbox" checked={participants.length > 0 && selected.size === participants.length} onChange={toggleSelectAll} className="w-4 h-4 rounded accent-blue-600" />
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 z-20">
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="px-3 py-3 w-10 bg-gray-50 sticky left-0 z-30">
+                    <input type="checkbox" checked={participants.length > 0 && selected.size === participants.length} onChange={toggleSelectAll} className="w-4 h-4 rounded accent-blue-600" />
+                  </th>
+                  <th className={`px-4 py-3 text-left font-medium whitespace-nowrap cursor-pointer hover:bg-gray-100 bg-gray-50 sticky left-[40px] z-30 ${sortKey === 'name' ? 'text-blue-700 bg-blue-50/50' : 'text-gray-600'}`} onClick={() => handleSort('name')}>
+                    성함{sortIcon('name')}
+                  </th>
+                  <th className={`px-4 py-3 text-left font-medium whitespace-nowrap cursor-pointer hover:bg-gray-100 bg-gray-50 sticky left-[120px] z-30 border-r border-gray-200 ${sortKey === 'company_name' ? 'text-blue-700 bg-blue-50/50' : 'text-gray-600'}`} onClick={() => handleSort('company_name')}>
+                    회사명{sortIcon('company_name')}
+                  </th>
+                  {middleCols.map((col) => (
+                    <th key={col.key} className={`px-4 py-3 text-left font-medium whitespace-nowrap cursor-pointer hover:bg-gray-100 bg-gray-50 ${sortKey === col.key ? 'text-blue-700 bg-blue-50/50' : 'text-gray-600'}`} onClick={() => handleSort(col.key)}>
+                      {col.label}{sortIcon(col.key)}
                     </th>
-                    <th className={`px-4 py-3 text-left font-medium whitespace-nowrap cursor-pointer hover:bg-gray-100 bg-gray-50 sticky left-[40px] z-30 ${sortKey === 'name' ? 'text-blue-700 bg-blue-50/50' : 'text-gray-600'}`} onClick={() => handleSort('name')}>
-                      성함{sortIcon('name')}
-                    </th>
-                    <th className={`px-4 py-3 text-left font-medium whitespace-nowrap cursor-pointer hover:bg-gray-100 bg-gray-50 sticky left-[120px] z-30 border-r border-gray-200 ${sortKey === 'company_name' ? 'text-blue-700 bg-blue-50/50' : 'text-gray-600'}`} onClick={() => handleSort('company_name')}>
-                      회사명{sortIcon('company_name')}
-                    </th>
-                    {[
-                      { key: 'department', label: '부서', align: 'left' },
-                      { key: 'job_title', label: '직급', align: 'left' },
-                      { key: 'email', label: '이메일', align: 'left' },
-                      { key: 'phone', label: '연락처', align: 'left' },
-                      { key: 'industry', label: '산업군', align: 'left' },
-                      { key: 'registration_status', label: '등록 상태', align: 'left' },
-                      { key: 'survey_completed', label: '설문', align: 'center' },
-                      { key: 'inquiry', label: '문의사항', align: 'left' },
-                      { key: 'survey_feedback', label: '설문 피드백', align: 'left' },
-                      { key: 'created_at', label: '등록일', align: 'left' },
-                    ].map((col) => (
-                      <th key={col.key} className={`px-4 py-3 text-${col.align} font-medium whitespace-nowrap cursor-pointer hover:bg-gray-100 bg-gray-50 ${sortKey === col.key ? 'text-blue-700 bg-blue-50/50' : 'text-gray-600'}`} onClick={() => handleSort(col.key)}>
-                        {col.label}{sortIcon(col.key)}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedParticipants.map((r) => (
-                    <tr key={r.id} className={`border-b border-gray-100 hover:bg-gray-50 ${selected.has(r.id) ? 'bg-blue-50/50' : ''}`}>
-                      <td className={`px-3 py-3 sticky left-0 z-10 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`}><input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleSelect(r.id)} className="w-4 h-4 rounded accent-blue-600" /></td>
-                      <td className={`px-4 py-3 font-medium whitespace-nowrap sticky left-[40px] z-10 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`}>{r.name}</td>
-                      <td className={`px-4 py-3 whitespace-nowrap sticky left-[120px] z-10 border-r border-gray-100 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`}>{r.company_name}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.department}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.job_title}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.email}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.phone}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-xs">{r.industry}</td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${r.registration_status === 'confirmed' ? 'bg-green-100 text-green-700' : r.registration_status === 'rejected' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-700'}`}>
-                          {r.registration_status === 'confirmed' ? '확정' : r.registration_status === 'rejected' ? '불가' : '대기'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${r.survey_completed ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
-                          {r.survey_completed ? '완료' : '미완료'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-gray-600 max-w-xs truncate" title={r.inquiry || ''}>
-                        {r.inquiry ? (
-                          <span className="inline-flex items-center gap-1.5">
-                            <span className={`w-1.5 h-1.5 rounded-full ${r.inquiry_status === 'answered' ? 'bg-green-500' : r.inquiry_status === 'dismissed' ? 'bg-gray-400' : 'bg-yellow-500'}`} />
-                            <span className="truncate">{r.inquiry}</span>
-                          </span>
-                        ) : <span className="text-gray-300">-</span>}
-                      </td>
-                      <td className="px-4 py-3 text-xs text-gray-600 max-w-xs truncate" title={r.survey_feedback || ''}>
-                        {r.survey_feedback ? <span className="truncate">{r.survey_feedback}</span> : <span className="text-gray-300">-</span>}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-500">{new Date(r.created_at).toLocaleDateString('ko-KR')}</td>
-                    </tr>
                   ))}
-                </tbody>
-              </table>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedParticipants.map((r) => (
+                  <tr key={r.id} className={`border-b border-gray-100 hover:bg-gray-50 ${selected.has(r.id) ? 'bg-blue-50/50' : ''}`}>
+                    <td className={`px-3 py-3 w-10 sticky left-0 z-10 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`}>
+                      <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleSelect(r.id)} className="w-4 h-4 rounded accent-blue-600" />
+                    </td>
+                    <td className={`px-4 py-3 whitespace-nowrap font-medium sticky left-[40px] z-10 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`}>{r.name}</td>
+                    <td className={`px-4 py-3 whitespace-nowrap sticky left-[120px] z-10 border-r border-gray-100 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`}>{r.company_name_raw || r.company_name}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.department || '-'}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.job_title || '-'}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.email}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.phone}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.industry || '-'}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.company_size || '-'}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">{r.referral_source || '-'}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.referrer_name || '-'}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-center">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${r.survey_completed ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
+                        {r.survey_completed ? '완료' : '미완료'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-500 max-w-[200px] truncate" title={r.q1_azure_level || ''}>{r.q1_azure_level || '-'}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.q2_difficulty || '-'}</td>
+                    <td className="px-4 py-3 text-gray-500 max-w-[220px] truncate" title={formatArr(r.q3_purpose)}>{formatArr(r.q3_purpose) || '-'}</td>
+                    <td className="px-4 py-3 text-gray-500 max-w-[200px] truncate" title={r.q4_adoption || ''}>{r.q4_adoption || '-'}</td>
+                    <td className="px-4 py-3 text-gray-500 max-w-[220px] truncate" title={formatArr(r.q5_consulting)}>{formatArr(r.q5_consulting) || '-'}</td>
+                    <td className="px-4 py-3 text-gray-500 max-w-[260px] truncate" title={r.q6_feedback || ''}>{r.q6_feedback || '-'}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-500">
+                      {r.survey_submitted_at ? new Date(r.survey_submitted_at).toLocaleString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
 
           {/* 하단 고정 카운트 바 */}
-          <div className="sticky bottom-0 z-20 bg-white border-t border-gray-200 rounded-b-xl shadow-[0_-2px_8px_rgba(0,0,0,0.06)]">
-            <div className="px-4 py-3 text-sm text-gray-500">
-              총 {participants.length}명{selected.size > 0 && ` (${selected.size}명 선택)`}
+          <div className="fixed bottom-0 left-0 lg:left-60 right-0 z-20 bg-white border-t border-gray-200 shadow-[0_-2px_8px_rgba(0,0,0,0.08)]">
+            <div className="flex items-center justify-between px-4 lg:px-8 py-3">
+              <p className="text-sm text-gray-500">
+                총 {filteredParticipants.length}명 / 완료 {completedCount}명 / 미완료 {filteredParticipants.length - completedCount}명
+                {selected.size > 0 && ` · ${selected.size}명 선택`}
+              </p>
             </div>
           </div>
         </>

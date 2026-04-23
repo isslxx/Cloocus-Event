@@ -10,10 +10,10 @@ export async function GET(req: NextRequest) {
 
   const supabase = getServiceSupabase();
 
-  // 설문 활성화된 등록자 목록 (개인정보 포함)
+  // 설문 활성화된 등록자 목록 (전체 필드)
   const { data } = await supabase
     .from('event_registrations')
-    .select('id, name, company_name, department, job_title, email, phone, industry, company_size, referral_source, referrer_name, inquiry, inquiry_status, registration_status, survey_completed, created_at')
+    .select('*')
     .eq('event_id', eventId)
     .eq('survey_enabled', true)
     .is('deleted_at', null)
@@ -22,22 +22,31 @@ export async function GET(req: NextRequest) {
   const regs = data || [];
   const regIds = regs.map((r) => r.id);
 
-  // 설문 q6_feedback 병합 (설문 피드백을 문의사항과 함께 노출)
-  const feedbackMap: Record<string, string> = {};
+  // 설문 응답 병합 (q1~q6)
+  const surveyMap: Record<string, Record<string, unknown>> = {};
   if (regIds.length > 0) {
     const { data: surveys } = await supabase
       .from('surveys')
-      .select('registration_id, q6_feedback')
+      .select('registration_id, q1_azure_level, q2_difficulty, q3_purpose, q4_adoption, q5_consulting, q6_feedback, created_at')
       .in('registration_id', regIds);
     for (const s of surveys || []) {
-      if (s.q6_feedback && s.q6_feedback.trim() !== '') {
-        feedbackMap[s.registration_id] = s.q6_feedback;
-      }
+      surveyMap[s.registration_id] = s;
     }
   }
 
-  return NextResponse.json(regs.map((r) => ({
-    ...r,
-    survey_feedback: feedbackMap[r.id] || null,
-  })));
+  return NextResponse.json(regs.map((r) => {
+    const s = surveyMap[r.id] || {};
+    const q6 = (s.q6_feedback as string | null) || '';
+    return {
+      ...r,
+      q1_azure_level: s.q1_azure_level || null,
+      q2_difficulty: s.q2_difficulty || null,
+      q3_purpose: s.q3_purpose || null,
+      q4_adoption: s.q4_adoption || null,
+      q5_consulting: s.q5_consulting || null,
+      q6_feedback: q6 || null,
+      survey_feedback: q6.trim() !== '' ? q6 : null,
+      survey_submitted_at: s.created_at || null,
+    };
+  }));
 }
