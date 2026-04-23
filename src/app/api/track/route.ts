@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { isInternalRequest } from '@/lib/internal-ip';
 
 // 경량 이벤트 ingest 엔드포인트 (view / click)
 // - 인증 없음 (공개 트래킹)
@@ -36,6 +37,9 @@ function detectDevice(ua: string | null): string | null {
 
 export async function POST(req: NextRequest) {
   try {
+    // 내부 IP는 트래킹 제외 (데이터 정확도)
+    if (isInternalRequest(req.headers)) return NextResponse.json({ ok: true });
+
     const body = await req.json().catch(() => null);
     if (!body || typeof body !== 'object') return NextResponse.json({ ok: true });
 

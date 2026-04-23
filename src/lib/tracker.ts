@@ -51,8 +51,15 @@ type TrackPayload = {
   event_id?: string | null;
 };
 
+function isInternalTraffic(): boolean {
+  if (typeof window === 'undefined') return false;
+  return (window as unknown as { __INTERNAL_TRAFFIC__?: boolean }).__INTERNAL_TRAFFIC__ === true;
+}
+
 function post(payload: Record<string, unknown>): void {
   if (typeof window === 'undefined') return;
+  // 내부 IP는 트래킹 제외 (서버에서도 차단되지만 대역폭 절약)
+  if (isInternalTraffic()) return;
   try {
     const body = JSON.stringify(payload);
     // 페이지 전환·탭 닫기에도 유실 없이 전송

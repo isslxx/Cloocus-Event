@@ -9,11 +9,14 @@ declare global {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     gtag?: (...args: any[]) => void;
     dataLayer?: unknown[];
+    __INTERNAL_TRAFFIC__?: boolean;
   }
 }
 
 export function trackEvent(eventName: string, params?: GtagParams) {
   if (typeof window === 'undefined') return;
+  // 내부 IP는 GA 이벤트 전송 제외
+  if (window.__INTERNAL_TRAFFIC__ === true) return;
   if (typeof window.gtag !== 'function') return;
   window.gtag('event', eventName, params || {});
 }
