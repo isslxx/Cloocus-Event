@@ -31,6 +31,7 @@ export async function GET(
       .eq('id', id)
       .eq('pin', pin)
       .is('deleted_at', null)
+      .is('cancelled_at', null)
       .single();
 
     if (error || !data) {
@@ -133,7 +134,7 @@ export async function DELETE(
 
     const { error } = await supabase
       .from('event_registrations')
-      .update({ deleted_at: new Date().toISOString() })
+      .update({ cancelled_at: new Date().toISOString() })
       .eq('id', id);
 
     if (error) {

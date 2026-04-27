@@ -359,6 +359,7 @@ export default function RegistrationsPage() {
                 { key: 'referral_source' as SortKey, label: '신청 경로' },
                 { key: 'referrer_name' as SortKey, label: '추천인' },
                 { key: 'inquiry' as SortKey, label: '문의사항' },
+                { key: 'cancelled_at' as SortKey, label: '취소여부' },
                 { key: 'registration_status' as SortKey, label: '등록 상태' },
                 { key: 'survey_enabled' as SortKey, label: '설문조사' },
               ].map((col) => (
@@ -374,9 +375,9 @@ export default function RegistrationsPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={18} className="px-4 py-12 text-center text-gray-400">로딩 중...</td></tr>
+              <tr><td colSpan={19} className="px-4 py-12 text-center text-gray-400">로딩 중...</td></tr>
             ) : records.length === 0 ? (
-              <tr><td colSpan={18} className="px-4 py-12 text-center text-gray-400">등록 데이터가 없습니다.</td></tr>
+              <tr><td colSpan={19} className="px-4 py-12 text-center text-gray-400">등록 데이터가 없습니다.</td></tr>
             ) : records.map((r) => (
               <tr key={r.id} className={`border-b border-gray-100 hover:bg-gray-50 ${selected.has(r.id) ? 'bg-blue-50/50' : ''}`}>
                 <td className={`px-3 py-3 w-10 sticky left-0 z-10 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`}>
@@ -395,6 +396,15 @@ export default function RegistrationsPage() {
                 <td className="px-4 py-3 whitespace-nowrap">{r.referral_source || '-'}</td>
                 <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.referrer_name || '-'}</td>
                 <td className="px-4 py-3 whitespace-nowrap text-gray-500 max-w-[200px] truncate">{r.inquiry || '-'}</td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  {r.cancelled_at ? (
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 font-medium" title={`${new Date(r.cancelled_at).toLocaleString('ko-KR')} 신청자 직접 취소`}>
+                      취소
+                    </span>
+                  ) : (
+                    <span className="text-xs text-gray-300">-</span>
+                  )}
+                </td>
                 <td className="px-4 py-3 whitespace-nowrap">
                   {canEditRecord ? (
                     <select

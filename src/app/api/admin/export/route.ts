@@ -39,6 +39,7 @@ export async function GET(req: NextRequest) {
     '신청 경로': r.referral_source,
     '추천인': r.referrer_name || '',
     '문의사항': r.inquiry || '',
+    '취소여부': r.cancelled_at ? `취소 (${new Date(r.cancelled_at).toLocaleString('ko-KR')})` : '',
     '개인정보 동의': r.privacy_consent ? 'Y' : 'N',
     '등록일': new Date(r.created_at).toLocaleString('ko-KR'),
   }));
@@ -53,7 +54,7 @@ export async function GET(req: NextRequest) {
     ws['!cols'] = [
       { wch: 5 }, { wch: 10 }, { wch: 20 }, { wch: 12 }, { wch: 10 },
       { wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 12 }, { wch: 18 },
-      { wch: 10 }, { wch: 30 }, { wch: 10 }, { wch: 20 },
+      { wch: 10 }, { wch: 30 }, { wch: 22 }, { wch: 10 }, { wch: 20 },
     ];
 
     XLSX.utils.book_append_sheet(wb, ws, '등록 목록');

@@ -38,6 +38,7 @@ export type Registration = {
   survey_completed: boolean;
   certificate_issued: boolean;
   certificate_issued_at: string | null;
+  cancelled_at: string | null;
   created_at: string;
   updated_at: string;
 };
