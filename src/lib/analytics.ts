@@ -75,3 +75,11 @@ export const trackInquirySubmit = (eventName: string) => {
     event_name_label: eventName,
   });
 };
+
+// 신청자 본인 등록 취소 (성공 시)
+export const trackRegistrationCancel = (eventName: string, eventCategory: string) => {
+  trackEvent('registration_cancel', {
+    event_name_label: eventName,
+    event_category: eventCategory,
+  });
+};

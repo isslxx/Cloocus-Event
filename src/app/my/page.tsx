@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { INDUSTRIES, COMPANY_SIZES, REFERRAL_SOURCES } from '@/lib/constants';
 import { formatPhone } from '@/lib/validation';
-import { trackCertificateDownload, trackSurveyComplete, trackPortalLogin, trackInquirySubmit } from '@/lib/analytics';
+import { trackCertificateDownload, trackSurveyComplete, trackPortalLogin, trackInquirySubmit, trackRegistrationCancel } from '@/lib/analytics';
 import { trackView, trackClick } from '@/lib/tracker';
 
 type RegistrationData = {
@@ -102,6 +102,7 @@ export default function MyDashboard() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelled, setCancelled] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   const [showSurvey, setShowSurvey] = useState(false);
   const [showSurveyChoice, setShowSurveyChoice] = useState(false);
@@ -327,21 +328,45 @@ export default function MyDashboard() {
   const handleCancel = async () => {
     if (!registration) return;
     setCancelling(true);
+    setCancelError(null);
+    trackClick('register-cancel-confirm');
     try {
       const res = await fetch(`/api/register/${registration.id}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pin }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(data.error || '취소에 실패했습니다.');
+        trackClick('register-cancel-fail');
+        setCancelError(data.error || `취소 처리에 실패했습니다. (오류 코드: ${res.status}) 잠시 후 다시 시도해 주세요.`);
         return;
       }
+
+      // 취소가 실제로 반영됐는지 검증: 같은 PIN으로 재조회 시 not found여야 정상
+      try {
+        const verifyRes = await fetch(`/api/register/${registration.id}?pin=${encodeURIComponent(pin)}`);
+        if (verifyRes.ok) {
+          // 여전히 활성 상태로 조회되면 취소가 반영되지 않은 것
+          trackClick('register-cancel-not-reflected');
+          setCancelError('취소 요청이 정상 반영되지 않았습니다. 한번 더 "등록 취소" 버튼을 눌러 주세요. 같은 증상이 반복되면 marketing@cloocus.com 으로 알려주세요.');
+          return;
+        }
+      } catch {
+        // 검증 호출 자체가 네트워크 오류면 일단 진행 (서버는 200 반환했으므로)
+      }
+
+      // 성공 트래킹
+      try {
+        trackRegistrationCancel(registration.event_name, registration.event_category || '');
+        trackClick('register-cancel-success');
+      } catch { /* ignore */ }
+
       setCancelled(true);
       setShowCancelConfirm(false);
     } catch {
-      alert('네트워크 오류가 발생했습니다.');
+      trackClick('register-cancel-network-error');
+      setCancelError('네트워크 오류가 발생했습니다. 인터넷 연결을 확인하고 다시 시도해 주세요.');
     } finally {
       setCancelling(false);
     }
@@ -1538,7 +1563,11 @@ export default function MyDashboard() {
               </button>
             )}
             {canEditInfo && (
-              <button onClick={() => setShowCancelConfirm(true)} className="btn-danger flex-1" style={{ padding: '12px 0', fontSize: 15, fontWeight: 600 }}>
+              <button
+                onClick={() => { trackClick('register-cancel-open'); setShowCancelConfirm(true); setCancelError(null); }}
+                className="btn-danger flex-1"
+                style={{ padding: '12px 0', fontSize: 15, fontWeight: 600 }}
+              >
                 등록 취소
               </button>
             )}
@@ -1555,10 +1584,24 @@ export default function MyDashboard() {
           <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6 text-center">
             <h3 className="text-lg font-bold mb-2">등록을 취소하시겠습니까?</h3>
             <p className="text-sm text-gray-500 mb-6">취소 후에는 다시 등록해야 합니다.</p>
+            {cancelError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 text-left">
+                <div className="flex items-start gap-2">
+                  <span className="text-red-500 text-sm shrink-0">⚠️</span>
+                  <p className="text-xs text-red-700 leading-relaxed whitespace-pre-line">{cancelError}</p>
+                </div>
+              </div>
+            )}
             <div className="flex gap-3">
-              <button onClick={() => setShowCancelConfirm(false)} className="btn-secondary flex-1">아니오</button>
+              <button
+                onClick={() => { setShowCancelConfirm(false); setCancelError(null); }}
+                className="btn-secondary flex-1"
+                disabled={cancelling}
+              >
+                아니오
+              </button>
               <button onClick={handleCancel} disabled={cancelling} className="btn-danger flex-1">
-                {cancelling ? '취소 중...' : '등록 취소'}
+                {cancelling ? '취소 중...' : cancelError ? '다시 시도' : '등록 취소'}
               </button>
             </div>
           </div>
