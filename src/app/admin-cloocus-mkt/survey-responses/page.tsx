@@ -94,7 +94,7 @@ export default function SurveyResponsesPage() {
       '성함': r.name, '회사명': r.company_name, '이메일': r.email, '연락처': r.phone,
       'Q1. Azure 이해 수준': r.q1_azure_level, 'Q2. 난이도': r.q2_difficulty,
       'Q3. 참여 목적': (r.q3_purpose || []).join(', '), 'Q4. Azure 도입 계획': r.q4_adoption,
-      'Q5. 컨설팅 필요': (r.q5_consulting || []).join(', '), 'Q6. 피드백': r.q6_feedback,
+      'Q5. 컨설팅 희망 여부': (r.q5_consulting || []).join(', '), 'Q6. 피드백': r.q6_feedback,
       '제출일': new Date(r.created_at).toLocaleDateString('ko-KR'),
     }));
     const ws = XLSX.utils.json_to_sheet(exportData);
@@ -193,7 +193,7 @@ export default function SurveyResponsesPage() {
                   </div>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-5">
-                  <h3 className="font-semibold text-sm mb-3">Q3. 참여 목적 (복수)</h3>
+                  <h3 className="font-semibold text-sm mb-3">Q3. 참여 목적 (복수 응답 가능)</h3>
                   <div className="space-y-1">
                     {stats.q3.map((d, i) => <StatBar key={d.name} label={d.name} count={d.count} total={stats.total} color={colors[i % colors.length]} />)}
                   </div>
@@ -201,11 +201,11 @@ export default function SurveyResponsesPage() {
                 <div className="bg-white rounded-xl border border-gray-200 p-5">
                   <h3 className="font-semibold text-sm mb-3">Q4. Azure 도입 계획</h3>
                   <div className="space-y-1">
-                    {stats.q4.map((d, i) => <StatBar key={d.name} label={d.name.split('(')[0]?.trim()} count={d.count} total={stats.total} color={colors[i % colors.length]} />)}
+                    {stats.q4.map((d, i) => <StatBar key={d.name} label={d.name} count={d.count} total={stats.total} color={colors[i % colors.length]} />)}
                   </div>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-5">
-                  <h3 className="font-semibold text-sm mb-3">Q5. 컨설팅 필요 (복수)</h3>
+                  <h3 className="font-semibold text-sm mb-3">Q5. 컨설팅 희망 여부 (복수 응답 가능)</h3>
                   <div className="space-y-1">
                     {stats.q5.map((d, i) => <StatBar key={d.name} label={d.name} count={d.count} total={stats.total} color={colors[i % colors.length]} />)}
                   </div>
@@ -242,7 +242,7 @@ export default function SurveyResponsesPage() {
                     <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Q2. 난이도</th>
                     <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Q3. 참여 목적</th>
                     <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Q4. 도입 계획</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Q5. 컨설팅</th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Q5. 컨설팅 희망 여부</th>
                     <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Q6. 피드백</th>
                     <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">제출일</th>
                   </tr>
@@ -256,7 +256,7 @@ export default function SurveyResponsesPage() {
                       <td className="px-4 py-3 text-xs">{r.q1_azure_level?.split('(')[0]?.trim()}</td>
                       <td className="px-4 py-3 text-xs">{r.q2_difficulty}</td>
                       <td className="px-4 py-3 text-xs max-w-[150px] truncate">{(r.q3_purpose || []).join(', ')}</td>
-                      <td className="px-4 py-3 text-xs max-w-[120px] truncate">{r.q4_adoption?.split('(')[0]?.trim()}</td>
+                      <td className="px-4 py-3 text-xs max-w-[200px] truncate" title={r.q4_adoption || ''}>{r.q4_adoption}</td>
                       <td className="px-4 py-3 text-xs max-w-[120px] truncate">{(r.q5_consulting || []).join(', ')}</td>
                       <td className="px-4 py-3 text-xs max-w-[150px] truncate text-gray-500">{r.q6_feedback || '-'}</td>
                       <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{new Date(r.created_at).toLocaleDateString('ko-KR')}</td>
