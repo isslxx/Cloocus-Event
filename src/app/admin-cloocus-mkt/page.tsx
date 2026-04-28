@@ -83,6 +83,7 @@ export default function AdminDashboard() {
   const [customEnd, setCustomEnd] = useState<string>('');
   const [industryGroupFilter, setIndustryGroupFilter] = useState<string>('all');
   const [utmTab, setUtmTab] = useState<'source' | 'medium' | 'campaign'>('source');
+  const [visitUtmTab, setVisitUtmTab] = useState<'source' | 'medium' | 'campaign'>('source');
   const [compareMode, setCompareMode] = useState<CompareMode>('off');
   const [compareEventId, setCompareEventId] = useState<string>('');
   const exportMenuRef = useRef<HTMLDivElement>(null);
@@ -596,6 +597,7 @@ export default function AdminDashboard() {
 
   const utmKey = utmTab === 'source' ? 'bySource' : utmTab === 'medium' ? 'byMedium' : 'byCampaign';
   const utmEntries = useMemo(() => (data ? data.byUtm[utmKey] : []), [data, utmKey]);
+  const visitUtmKey = visitUtmTab === 'source' ? 'bySource' : visitUtmTab === 'medium' ? 'byMedium' : 'byCampaign';
 
   // 비교 모드용 — primary + compare merged by name (bar charts)
   const mergeForCompare = useCallback((primary: { name: string; value: number }[], compare?: { name: string; value: number }[]) => {
@@ -903,7 +905,7 @@ export default function AdminDashboard() {
           {/* UTM 채널 */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <div className="flex items-center justify-between mb-1">
-              <h3 className="font-semibold">유입 채널 (UTM)</h3>
+              <h3 className="font-semibold">등록 기준 유입 채널</h3>
               <div className="flex items-center border border-gray-200 rounded-md overflow-hidden text-xs">
                 {(['source', 'medium', 'campaign'] as const).map((t) => (
                   <button key={t} onClick={() => setUtmTab(t)} className={`px-2.5 py-1 ${utmTab === t ? 'bg-gray-900 text-white' : 'hover:bg-gray-50'}`}>
@@ -912,7 +914,7 @@ export default function AdminDashboard() {
                 ))}
               </div>
             </div>
-            <p className="text-xs text-gray-500 mb-4">랜딩 URL 기준 어트리뷰션 · 상위 10개</p>
+            <p className="text-xs text-gray-500 mb-4">등록 시점 first-touch UTM · UTM 없이 등록한 사용자는 <em>(direct)</em> · 상위 10개</p>
             {utmEntries.length > 0 ? (
               <>
                 <ResponsiveContainer width="100%" height={260}>
@@ -946,8 +948,8 @@ export default function AdminDashboard() {
               </>
             ) : (
               <div className="text-sm h-[260px] flex flex-col items-center justify-center gap-2 text-gray-400">
-                <p>UTM 데이터가 아직 없습니다</p>
-                <p className="text-xs text-gray-400">링크에 <code className="px-1 bg-gray-100 rounded">?utm_source=...&utm_medium=...&utm_campaign=...</code> 파라미터를 붙여 캠페인을 집행하면 자동 수집됩니다.</p>
+                <p>등록 데이터가 아직 없습니다</p>
+                <p className="text-xs text-gray-400">캠페인 효과 측정을 위해 링크에 <code className="px-1 bg-gray-100 rounded">?utm_source=...&utm_medium=...&utm_campaign=...</code> 파라미터를 붙여 배포하세요.</p>
               </div>
             )}
           </div>
@@ -956,25 +958,25 @@ export default function AdminDashboard() {
         {/* ===== L3.5 방문 기준 UTM — page_events에서 집계 (등록과는 별개로 캠페인 도달 측정) ===== */}
         <div data-export-group="visit-utm" data-export-title="방문 기준 UTM — 캠페인 도달" className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
           <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
-            <h3 className="font-semibold">방문 기준 UTM (캠페인 도달)</h3>
+            <h3 className="font-semibold">방문 기준 유입 채널</h3>
             <div className="flex items-center border border-gray-200 rounded-md overflow-hidden text-xs">
               {(['source', 'medium', 'campaign'] as const).map((t) => (
-                <button key={t} onClick={() => setUtmTab(t)} className={`px-2.5 py-1 ${utmTab === t ? 'bg-gray-900 text-white' : 'hover:bg-gray-50'}`}>
+                <button key={t} onClick={() => setVisitUtmTab(t)} className={`px-2.5 py-1 ${visitUtmTab === t ? 'bg-gray-900 text-white' : 'hover:bg-gray-50'}`}>
                   {t}
                 </button>
               ))}
             </div>
           </div>
           <p className="text-xs text-gray-500 mb-3">
-            page_events 기반 · 등록 여부와 무관하게 UTM 링크로 들어온 모든 방문 집계
+            page_events 기반 · UTM 유무 관계없이 모든 방문 집계 (UTM 없으면 <em>(direct)</em>로 묶임)
             {data.visitUtm && (
               <> · <strong className="text-gray-700">{data.visitUtm.totalVisits}건</strong> ({data.visitUtm.uniqueSessions} 세션)</>
             )}
           </p>
-          {data.visitUtm && data.visitUtm[utmKey] && data.visitUtm[utmKey].length > 0 ? (
+          {data.visitUtm && data.visitUtm[visitUtmKey] && data.visitUtm[visitUtmKey].length > 0 ? (
             <>
               <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={data.visitUtm[utmKey]} layout="vertical" margin={{ left: 8 }}>
+                <BarChart data={data.visitUtm[visitUtmKey]} layout="vertical" margin={{ left: 8 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis type="number" fontSize={11} allowDecimals={false} />
                   <YAxis type="category" dataKey="name" fontSize={11} width={130} />
@@ -986,13 +988,13 @@ export default function AdminDashboard() {
                 <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">상세 테이블 보기 (등록 전환율 비교)</summary>
                 <table className="w-full text-xs mt-2 border-collapse">
                   <thead><tr className="bg-gray-50">
-                    <th className="px-3 py-2 text-left border border-gray-200">{utmTab}</th>
+                    <th className="px-3 py-2 text-left border border-gray-200">{visitUtmTab}</th>
                     <th className="px-3 py-2 text-right border border-gray-200">방문</th>
                     <th className="px-3 py-2 text-right border border-gray-200">등록</th>
                     <th className="px-3 py-2 text-right border border-gray-200">전환율</th>
                   </tr></thead>
-                  <tbody>{data.visitUtm[utmKey].map((d) => {
-                    const reg = data.byUtm[utmKey].find((r) => r.name === d.name)?.value || 0;
+                  <tbody>{data.visitUtm[visitUtmKey].map((d) => {
+                    const reg = data.byUtm[visitUtmKey].find((r) => r.name === d.name)?.value || 0;
                     const conv = d.value > 0 ? (reg / d.value) * 100 : 0;
                     return (
                       <tr key={d.name}>

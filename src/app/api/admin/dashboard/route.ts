@@ -18,6 +18,9 @@ type Row = {
 type CountEntry = { name: string; value: number };
 type DayEntry = { date: string; count: number };
 
+// UTM 없는 트래픽을 묶는 버킷 라벨 (GA4 표준 default channel grouping과 유사)
+const DIRECT_BUCKET = '(direct)';
+
 function toKSTDateStr(iso: string): string {
   const d = new Date(iso);
   const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
@@ -129,9 +132,13 @@ function aggregate(records: Row[], eventMap: Map<string, string>, win: Window): 
         referrerMap[key] = (referrerMap[key] || 0) + 1;
       }
 
-      if (r.utm_source)   utmSourceMap[r.utm_source]     = (utmSourceMap[r.utm_source] || 0) + 1;
-      if (r.utm_medium)   utmMediumMap[r.utm_medium]     = (utmMediumMap[r.utm_medium] || 0) + 1;
-      if (r.utm_campaign) utmCampaignMap[r.utm_campaign] = (utmCampaignMap[r.utm_campaign] || 0) + 1;
+      // UTM 없는 등록도 집계: '(직접/내부)' 버킷으로 묶어 전체 트래픽 가시성 확보
+      const usrc = r.utm_source   || DIRECT_BUCKET;
+      const umed = r.utm_medium   || DIRECT_BUCKET;
+      const ucmp = r.utm_campaign || DIRECT_BUCKET;
+      utmSourceMap[usrc]   = (utmSourceMap[usrc]   || 0) + 1;
+      utmMediumMap[umed]   = (utmMediumMap[umed]   || 0) + 1;
+      utmCampaignMap[ucmp] = (utmCampaignMap[ucmp] || 0) + 1;
     }
   }
 
@@ -230,7 +237,7 @@ type VisitUtmAggregate = {
   byCampaign: CountEntry[];
 };
 
-// page_events에서 UTM이 붙은 트래픽 집계 (방문 기준 - 등록과는 별개로 캠페인 도달 측정)
+// 방문 기준 — page_events 전체 트래픽을 UTM별로 집계 (UTM 없는 방문은 '(직접/내부)' 버킷)
 async function fetchVisitUtm(
   supabase: ReturnType<typeof getServiceSupabase>,
   win: Window,
@@ -238,13 +245,14 @@ async function fetchVisitUtm(
 ): Promise<VisitUtmAggregate> {
   let q = supabase
     .from('page_events')
-    .select('session_id, utm_source, utm_medium, utm_campaign, created_at, event_id')
-    .not('utm_source', 'is', null);
+    .select('session_id, utm_source, utm_medium, utm_campaign, created_at, event_id, action_type');
+
+  // 방문(view)만 카운트 — click 이벤트 중복 집계 방지
+  q = q.eq('action_type', 'view');
 
   if (win.start) q = q.gte('created_at', `${win.start}T00:00:00+09:00`);
   if (win.end)   q = q.lte('created_at', `${win.end}T23:59:59+09:00`);
   if (eventIds && eventIds.length > 0) {
-    // page_events에는 event_id가 있을 수도 없을 수도 있어 → IN 필터 시 NULL은 자동 제외 (이벤트 필터 적용 시 의도한 동작)
     q = q.in('event_id', eventIds);
   }
 
@@ -258,9 +266,12 @@ async function fetchVisitUtm(
 
   for (const r of rows) {
     if (r.session_id) sessions.add(r.session_id);
-    if (r.utm_source)   sourceMap[r.utm_source]     = (sourceMap[r.utm_source] || 0) + 1;
-    if (r.utm_medium)   mediumMap[r.utm_medium]     = (mediumMap[r.utm_medium] || 0) + 1;
-    if (r.utm_campaign) campaignMap[r.utm_campaign] = (campaignMap[r.utm_campaign] || 0) + 1;
+    const src = r.utm_source   || DIRECT_BUCKET;
+    const med = r.utm_medium   || DIRECT_BUCKET;
+    const cmp = r.utm_campaign || DIRECT_BUCKET;
+    sourceMap[src]   = (sourceMap[src]   || 0) + 1;
+    mediumMap[med]   = (mediumMap[med]   || 0) + 1;
+    campaignMap[cmp] = (campaignMap[cmp] || 0) + 1;
   }
 
   return {
