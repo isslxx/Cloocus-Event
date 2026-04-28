@@ -26,10 +26,11 @@ function countValues(arr: string[]): { name: string; count: number }[] {
   return Object.entries(map).sort(([, a], [, b]) => b - a).map(([name, count]) => ({ name, count }));
 }
 
-function StatBar({ label, count, total, color }: { label: string; count: number; total: number; color: string }) {
+function StatBar({ label, count, total, color, splitParen = true }: { label: string; count: number; total: number; color: string; splitParen?: boolean }) {
   const pct = total > 0 ? Math.round((count / total) * 100) : 0;
   // 라벨이 "본문 (부가설명)" 형태면 두 줄로 분리해 부가설명까지 보이게 함
-  const parenMatch = label.match(/^([^(]+)\s*\((.+)\)\s*$/);
+  // splitParen=false 면 한 줄 그대로 노출 (짧은 옵션이 본문/부가로 갈리면 오히려 가독성↓)
+  const parenMatch = splitParen ? label.match(/^([^(]+)\s*\((.+)\)\s*$/) : null;
   const main = parenMatch ? parenMatch[1].trim() : label;
   const sub = parenMatch ? parenMatch[2].trim() : '';
   return (
@@ -214,7 +215,7 @@ export default function SurveyResponsesPage() {
                 <div className="bg-white rounded-xl border border-gray-200 p-5">
                   <h3 className="font-semibold text-sm mb-3">Q5. 컨설팅 희망 여부 (복수 응답 가능)</h3>
                   <div className="space-y-1">
-                    {stats.q5.map((d, i) => <StatBar key={d.name} label={d.name} count={d.count} total={stats.total} color={colors[i % colors.length]} />)}
+                    {stats.q5.map((d, i) => <StatBar key={d.name} label={d.name} count={d.count} total={stats.total} color={colors[i % colors.length]} splitParen={false} />)}
                   </div>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-5">
