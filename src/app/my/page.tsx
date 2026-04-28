@@ -5,6 +5,7 @@ import { INDUSTRIES, COMPANY_SIZES, REFERRAL_SOURCES } from '@/lib/constants';
 import { formatPhone } from '@/lib/validation';
 import { trackCertificateDownload, trackSurveyComplete, trackPortalLogin, trackInquirySubmit, trackRegistrationCancel } from '@/lib/analytics';
 import { trackView, trackClick } from '@/lib/tracker';
+import { captureAttribution } from '@/lib/utm';
 
 type RegistrationData = {
   id: string;
@@ -132,6 +133,7 @@ export default function MyDashboard() {
   const [formOptions, setFormOptions] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
+    captureAttribution();
     trackView('/my');
     fetch('/api/form-options').then((r) => r.json()).then((d) => setFormOptions(d)).catch(() => {});
     fetch('/api/events').then((r) => r.json()).then((d) => setAllEvents(Array.isArray(d) ? d.map((e: { id: string; name: string }) => ({ id: e.id, name: e.name })) : [])).catch(() => {});

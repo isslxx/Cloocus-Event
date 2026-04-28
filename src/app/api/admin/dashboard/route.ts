@@ -222,6 +222,56 @@ async function fetchRecords(
   return (data as Row[]) || [];
 }
 
+type VisitUtmAggregate = {
+  totalVisits: number;
+  uniqueSessions: number;
+  bySource:   CountEntry[];
+  byMedium:   CountEntry[];
+  byCampaign: CountEntry[];
+};
+
+// page_events에서 UTM이 붙은 트래픽 집계 (방문 기준 - 등록과는 별개로 캠페인 도달 측정)
+async function fetchVisitUtm(
+  supabase: ReturnType<typeof getServiceSupabase>,
+  win: Window,
+  eventIds: string[] | null
+): Promise<VisitUtmAggregate> {
+  let q = supabase
+    .from('page_events')
+    .select('session_id, utm_source, utm_medium, utm_campaign, created_at, event_id')
+    .not('utm_source', 'is', null);
+
+  if (win.start) q = q.gte('created_at', `${win.start}T00:00:00+09:00`);
+  if (win.end)   q = q.lte('created_at', `${win.end}T23:59:59+09:00`);
+  if (eventIds && eventIds.length > 0) {
+    // page_events에는 event_id가 있을 수도 없을 수도 있어 → IN 필터 시 NULL은 자동 제외 (이벤트 필터 적용 시 의도한 동작)
+    q = q.in('event_id', eventIds);
+  }
+
+  const { data } = await q.range(0, 49999);
+  const rows = (data as { session_id: string; utm_source: string | null; utm_medium: string | null; utm_campaign: string | null }[]) || [];
+
+  const sourceMap: Record<string, number> = {};
+  const mediumMap: Record<string, number> = {};
+  const campaignMap: Record<string, number> = {};
+  const sessions = new Set<string>();
+
+  for (const r of rows) {
+    if (r.session_id) sessions.add(r.session_id);
+    if (r.utm_source)   sourceMap[r.utm_source]     = (sourceMap[r.utm_source] || 0) + 1;
+    if (r.utm_medium)   mediumMap[r.utm_medium]     = (mediumMap[r.utm_medium] || 0) + 1;
+    if (r.utm_campaign) campaignMap[r.utm_campaign] = (campaignMap[r.utm_campaign] || 0) + 1;
+  }
+
+  return {
+    totalVisits: rows.length,
+    uniqueSessions: sessions.size,
+    bySource:   sortTopN(Object.entries(sourceMap).map(([name, value])   => ({ name, value })), 10),
+    byMedium:   sortTopN(Object.entries(mediumMap).map(([name, value])   => ({ name, value })), 10),
+    byCampaign: sortTopN(Object.entries(campaignMap).map(([name, value]) => ({ name, value })), 10),
+  };
+}
+
 async function resolveEventIds(
   supabase: ReturnType<typeof getServiceSupabase>,
   filter: string
@@ -259,10 +309,11 @@ export async function GET(req: NextRequest) {
   const eventIds = await resolveEventIds(supabase, filter);
   if (eventIds === 'empty') return NextResponse.json(emptyResponse());
 
-  // Records fetch (primary)
-  const [primaryRecords, { data: events }] = await Promise.all([
+  // Records fetch (primary) + page_events UTM (방문 기준)
+  const [primaryRecords, { data: events }, primaryVisitUtm] = await Promise.all([
     fetchRecords(supabase, eventIds as string[] | null),
     supabase.from('events').select('id, name').order('event_date', { ascending: false }),
+    fetchVisitUtm(supabase, primaryWin, eventIds as string[] | null),
   ]);
   const eventMap = new Map((events || []).map((e) => [e.id as string, e.name as string]));
 
@@ -327,6 +378,7 @@ export async function GET(req: NextRequest) {
     byEvent: primary.byEvent,
     topReferrers: primary.topReferrers,
     byUtm: primary.byUtm,
+    visitUtm: primaryVisitUtm,
 
     // 비교 데이터 (optional)
     compare: compareBlock ? {
@@ -367,6 +419,7 @@ function emptyResponse() {
     byDay: [], byIndustryGroup: [], byIndustryDetail: [],
     bySource: [], byEvent: [], topReferrers: [],
     byUtm: { bySource: [], byMedium: [], byCampaign: [] },
+    visitUtm: { totalVisits: 0, uniqueSessions: 0, bySource: [], byMedium: [], byCampaign: [] },
     compare: null,
     total: 0, today: 0, topIndustry: '-', byIndustry: [],
   };

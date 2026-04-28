@@ -41,6 +41,13 @@ type DashData = {
   byEvent: { name: string; total: number; surveyCompleted: number; certificateIssued: number; surveyRate: number }[];
   topReferrers: { name: string; value: number }[];
   byUtm: UtmBreakdown;
+  visitUtm: {
+    totalVisits: number;
+    uniqueSessions: number;
+    bySource: { name: string; value: number }[];
+    byMedium: { name: string; value: number }[];
+    byCampaign: { name: string; value: number }[];
+  };
   compare: null | {
     mode: 'prev' | 'event';
     label: string;
@@ -944,6 +951,67 @@ export default function AdminDashboard() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* ===== L3.5 방문 기준 UTM — page_events에서 집계 (등록과는 별개로 캠페인 도달 측정) ===== */}
+        <div data-export-group="visit-utm" data-export-title="방문 기준 UTM — 캠페인 도달" className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
+          <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
+            <h3 className="font-semibold">방문 기준 UTM (캠페인 도달)</h3>
+            <div className="flex items-center border border-gray-200 rounded-md overflow-hidden text-xs">
+              {(['source', 'medium', 'campaign'] as const).map((t) => (
+                <button key={t} onClick={() => setUtmTab(t)} className={`px-2.5 py-1 ${utmTab === t ? 'bg-gray-900 text-white' : 'hover:bg-gray-50'}`}>
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 mb-3">
+            page_events 기반 · 등록 여부와 무관하게 UTM 링크로 들어온 모든 방문 집계
+            {data.visitUtm && (
+              <> · <strong className="text-gray-700">{data.visitUtm.totalVisits}건</strong> ({data.visitUtm.uniqueSessions} 세션)</>
+            )}
+          </p>
+          {data.visitUtm && data.visitUtm[utmKey] && data.visitUtm[utmKey].length > 0 ? (
+            <>
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={data.visitUtm[utmKey]} layout="vertical" margin={{ left: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis type="number" fontSize={11} allowDecimals={false} />
+                  <YAxis type="category" dataKey="name" fontSize={11} width={130} />
+                  <Tooltip />
+                  <Bar dataKey="value" fill="#7c3aed" radius={[0, 4, 4, 0]} name="방문수" />
+                </BarChart>
+              </ResponsiveContainer>
+              <details className="mt-3">
+                <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">상세 테이블 보기 (등록 전환율 비교)</summary>
+                <table className="w-full text-xs mt-2 border-collapse">
+                  <thead><tr className="bg-gray-50">
+                    <th className="px-3 py-2 text-left border border-gray-200">{utmTab}</th>
+                    <th className="px-3 py-2 text-right border border-gray-200">방문</th>
+                    <th className="px-3 py-2 text-right border border-gray-200">등록</th>
+                    <th className="px-3 py-2 text-right border border-gray-200">전환율</th>
+                  </tr></thead>
+                  <tbody>{data.visitUtm[utmKey].map((d) => {
+                    const reg = data.byUtm[utmKey].find((r) => r.name === d.name)?.value || 0;
+                    const conv = d.value > 0 ? (reg / d.value) * 100 : 0;
+                    return (
+                      <tr key={d.name}>
+                        <td className="px-3 py-1.5 border border-gray-200">{d.name}</td>
+                        <td className="px-3 py-1.5 text-right border border-gray-200 font-medium">{d.value}</td>
+                        <td className="px-3 py-1.5 text-right border border-gray-200">{reg}</td>
+                        <td className="px-3 py-1.5 text-right border border-gray-200 text-gray-600">{conv.toFixed(1)}%</td>
+                      </tr>
+                    );
+                  })}</tbody>
+                </table>
+              </details>
+            </>
+          ) : (
+            <div className="text-sm h-[200px] flex flex-col items-center justify-center gap-2 text-gray-400">
+              <p>방문 UTM 데이터가 아직 없습니다</p>
+              <p className="text-xs text-gray-400">UTM 링크 배포 후 첫 방문이 발생하면 즉시 집계됩니다.</p>
+            </div>
+          )}
         </div>
 
         {/* ===== L4. 오디언스 — 산업군 그룹 + 이벤트 비교 ===== */}

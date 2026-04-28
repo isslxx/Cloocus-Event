@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState, use } from 'react';
+import { captureAttribution } from '@/lib/utm';
+import { trackView } from '@/lib/tracker';
 
 type VerifyData = {
   valid: boolean;
@@ -21,6 +23,8 @@ export default function VerifyPage({ params }: { params: Promise<{ id: string }>
   const [error, setError] = useState('');
 
   useEffect(() => {
+    captureAttribution();
+    trackView(`/verify/${id}`);
     fetch(`/api/verify/${id}`)
       .then((r) => r.json())
       .then((d) => {
