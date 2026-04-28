@@ -3,16 +3,17 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState, useId } from 'react';
 import {
-  ADMIN_NAV,
-  ADMIN_NAV_FOOTER,
+  applyCustomization,
+  loadCustomization,
   findGroupIdByPath,
   isPathActive,
+  NAV_STORAGE_KEY,
   type AdminNavEntry,
   type AdminNavGroup,
   type AdminNavItem,
 } from './adminNav';
 
-const STORAGE_KEY = 'admin_sidebar_open_section';
+const OPEN_KEY = 'admin_sidebar_open_section';
 
 type Props = {
   pathname: string;
@@ -119,43 +120,58 @@ function AccordionSection({
 }
 
 export default function AdminSidebar({ pathname, isAdminRole, onNavigate }: Props) {
-  // 권한 필터
-  const visibleEntries = useMemo<AdminNavEntry[]>(
-    () => ADMIN_NAV.filter((e) => !e.adminOnly || isAdminRole),
-    [isAdminRole]
-  );
+  // localStorage 커스터마이징 적용된 메뉴 로드. 다른 탭/페이지에서 변경 시 storage 이벤트로 갱신
+  const [version, setVersion] = useState(0);
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === NAV_STORAGE_KEY) setVersion((v) => v + 1);
+    };
+    window.addEventListener('storage', onStorage);
+    // 같은 탭 내 변경 알림용 커스텀 이벤트
+    const onLocal = () => setVersion((v) => v + 1);
+    window.addEventListener('admin-nav-changed', onLocal);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('admin-nav-changed', onLocal);
+    };
+  }, []);
+
+  const entries = useMemo<AdminNavEntry[]>(() => {
+    const c = loadCustomization();
+    return applyCustomization(c).filter((e) => !e.adminOnly || isAdminRole);
+    // version은 의도적으로 의존성에 포함해 재계산 트리거
+  }, [isAdminRole, version]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 단일 오픈: 한 번에 한 그룹만 펼침. localStorage에 마지막 상태 저장
   const [openId, setOpenId] = useState<string | null>(null);
 
-  // 초기 1회: 현재 경로의 그룹 자동 펼침 → 없으면 localStorage 복원
+  // 초기 1회 + 라우트/메뉴 변경: 현재 경로의 그룹 자동 펼침 → 없으면 localStorage 복원
   useEffect(() => {
-    const fromPath = findGroupIdByPath(pathname);
+    const fromPath = findGroupIdByPath(entries, pathname);
     if (fromPath) {
       setOpenId(fromPath);
       return;
     }
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
+      const saved = localStorage.getItem(OPEN_KEY);
       if (saved) setOpenId(saved);
     } catch { /* noop */ }
-    // pathname 변경 시 자동 펼침을 갱신하려고 의존성에 넣음
-  }, [pathname]);
+  }, [pathname, entries]);
 
   const toggleGroup = (id: string) => {
     setOpenId((prev) => {
       const next = prev === id ? null : id;
       try {
-        if (next) localStorage.setItem(STORAGE_KEY, next);
-        else localStorage.removeItem(STORAGE_KEY);
+        if (next) localStorage.setItem(OPEN_KEY, next);
+        else localStorage.removeItem(OPEN_KEY);
       } catch { /* noop */ }
       return next;
     });
   };
 
   return (
-    <nav aria-label="관리자 메인 메뉴" className="flex-1 px-3 py-3 space-y-1 overflow-y-auto">
-      {visibleEntries.map((entry) => {
+    <nav aria-label="관리자 메인 메뉴" className="px-3 py-3 space-y-1">
+      {entries.map((entry) => {
         if (entry.type === 'item') {
           return (
             <MenuItem
@@ -177,15 +193,6 @@ export default function AdminSidebar({ pathname, isAdminRole, onNavigate }: Prop
           />
         );
       })}
-
-      {/* 하단 고정 영역은 layout 측에서 렌더 — 여기선 본문 메뉴까지 */}
-      <div className="pt-2 mt-2 border-t border-gray-100">
-        <MenuItem
-          item={ADMIN_NAV_FOOTER}
-          active={isPathActive(pathname, ADMIN_NAV_FOOTER.href)}
-          onNavigate={onNavigate}
-        />
-      </div>
     </nav>
   );
 }

@@ -14,7 +14,7 @@ export type AdminNavItem = {
 
 export type AdminNavGroup = {
   type: 'group';
-  id: string;            // 아코디언 상태 저장용 고유 키
+  id: string;            // 아코디언 상태 + 사용자 커스터마이징 키
   label: string;
   icon: string;
   children: AdminNavItem[];
@@ -81,10 +81,112 @@ export const ADMIN_NAV_FOOTER: AdminNavItem = {
   icon: '🗑️',
 };
 
+/**
+ * localStorage에 저장되는 사용자 커스터마이즈 형태
+ * - groupOrder: top-level 엔트리 식별자 순서 (item은 href, group은 'group:'+id)
+ * - childOrder: 각 group id별 children href 순서
+ * - overrides:  엔트리/자식별 라벨/아이콘 덮어쓰기
+ */
+export type NavCustomization = {
+  groupOrder: string[];
+  childOrder: Record<string, string[]>;
+  overrides: Record<string, { label?: string; icon?: string }>;
+};
+
+export const NAV_STORAGE_KEY = 'admin_sidebar_customization_v1';
+
+export const EMPTY_CUSTOMIZATION: NavCustomization = {
+  groupOrder: [],
+  childOrder: {},
+  overrides: {},
+};
+
+// 엔트리/자식의 안정 식별자
+export function entryKey(e: AdminNavEntry): string {
+  return e.type === 'group' ? `group:${e.id}` : e.href;
+}
+export function itemKey(i: AdminNavItem): string {
+  return i.href;
+}
+
+export function loadCustomization(): NavCustomization {
+  if (typeof window === 'undefined') return EMPTY_CUSTOMIZATION;
+  try {
+    const raw = window.localStorage.getItem(NAV_STORAGE_KEY);
+    if (!raw) return EMPTY_CUSTOMIZATION;
+    const parsed = JSON.parse(raw);
+    return {
+      groupOrder: Array.isArray(parsed.groupOrder) ? parsed.groupOrder : [],
+      childOrder: parsed.childOrder && typeof parsed.childOrder === 'object' ? parsed.childOrder : {},
+      overrides:  parsed.overrides  && typeof parsed.overrides  === 'object' ? parsed.overrides  : {},
+    };
+  } catch {
+    return EMPTY_CUSTOMIZATION;
+  }
+}
+
+export function saveCustomization(c: NavCustomization) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(NAV_STORAGE_KEY, JSON.stringify(c));
+  } catch { /* noop */ }
+}
+
+export function clearCustomization() {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem(NAV_STORAGE_KEY);
+  } catch { /* noop */ }
+}
+
+// 커스터마이즈 적용된 메뉴 트리 반환
+export function applyCustomization(c: NavCustomization): AdminNavEntry[] {
+  const base = ADMIN_NAV;
+  const byKey = new Map<string, AdminNavEntry>(base.map((e) => [entryKey(e), e]));
+
+  // 1) top-level 순서 결정
+  const orderedKeys = c.groupOrder.length > 0
+    ? [...c.groupOrder.filter((k) => byKey.has(k)), ...base.map(entryKey).filter((k) => !c.groupOrder.includes(k))]
+    : base.map(entryKey);
+
+  return orderedKeys.map((k) => {
+    const e = byKey.get(k)!;
+    const ov = c.overrides[k] || {};
+
+    if (e.type === 'item') {
+      return {
+        ...e,
+        label: ov.label ?? e.label,
+        icon:  ov.icon  ?? e.icon,
+      };
+    }
+
+    // group: children 순서/오버라이드
+    const childByHref = new Map(e.children.map((ch) => [ch.href, ch]));
+    const savedChildOrder = c.childOrder[e.id] || [];
+    const orderedChildHrefs = savedChildOrder.length > 0
+      ? [...savedChildOrder.filter((h) => childByHref.has(h)), ...e.children.map((ch) => ch.href).filter((h) => !savedChildOrder.includes(h))]
+      : e.children.map((ch) => ch.href);
+
+    const groupOv = c.overrides[entryKey(e)] || {};
+
+    return {
+      ...e,
+      label: groupOv.label ?? e.label,
+      icon:  groupOv.icon  ?? e.icon,
+      children: orderedChildHrefs.map((h) => {
+        const ch = childByHref.get(h)!;
+        const co = c.overrides[itemKey(ch)] || {};
+        return { ...ch, label: co.label ?? ch.label, icon: co.icon ?? ch.icon };
+      }),
+    };
+  });
+}
+
 // pathname → 어느 그룹에 속한 항목인지 역인덱스 (자동 펼침에 사용)
-export function findGroupIdByPath(path: string | null): string | null {
+export function findGroupIdByPath(entries: AdminNavEntry[], path: string | null): string | null {
   if (!path) return null;
-  for (const entry of ADMIN_NAV) {
+  for (const entry of entries) {
     if (entry.type === 'group') {
       const hit = entry.children.find((c) => isPathActive(path, c.href));
       if (hit) return entry.id;
