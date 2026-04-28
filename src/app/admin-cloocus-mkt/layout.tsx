@@ -125,35 +125,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           `}
         >
           {/* 상단 헤더 */}
-          <div className="p-4 border-b border-gray-200 shrink-0 flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <h2 className="font-bold text-lg">Cloocus Admin</h2>
-              <p className="text-xs text-gray-500 mt-1">이벤트 관리 시스템</p>
-            </div>
-            <Link
-              href={settingsHref}
-              onClick={() => setSidebarOpen(false)}
-              aria-label="사이드바 설정"
-              title="사이드바 설정 (라벨/순서 편집)"
-              aria-current={settingsActive ? 'page' : undefined}
-              className={`shrink-0 mt-0.5 p-2 rounded-md transition-colors ${
-                settingsActive ? 'bg-blue-50 text-blue-700' : 'text-gray-500 hover:text-gray-800 hover:bg-gray-100'
-              }`}
-            >
-              <svg
-                className="w-5 h-5"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                xmlns="http://www.w3.org/2000/svg"
-                aria-hidden="true"
-              >
-                <path
-                  fillRule="evenodd"
-                  clipRule="evenodd"
-                  d="M11.078 2.25c-.917 0-1.699.663-1.85 1.567L9.05 4.889a8.95 8.95 0 0 0-1.51.626l-.998-.643c-.768-.494-1.795-.342-2.394.4l-.461.57a1.875 1.875 0 0 0 .088 2.43l.806.93a8.96 8.96 0 0 0 0 1.596l-.806.93a1.875 1.875 0 0 0-.088 2.43l.46.57c.6.741 1.627.893 2.395.399l.998-.643c.477.265.98.476 1.51.626l.179 1.072c.151.904.933 1.567 1.85 1.567h1.844c.917 0 1.699-.663 1.85-1.567l.179-1.072c.53-.15 1.033-.36 1.51-.626l.998.643c.768.494 1.795.342 2.395-.4l.46-.57a1.875 1.875 0 0 0-.088-2.43l-.806-.93a8.96 8.96 0 0 0 0-1.596l.806-.93a1.875 1.875 0 0 0 .088-2.43l-.46-.57c-.6-.741-1.627-.893-2.395-.399l-.998.643a8.95 8.95 0 0 0-1.51-.626l-.18-1.072A1.875 1.875 0 0 0 12.923 2.25h-1.844zM12 15.75a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5z"
-                />
-              </svg>
-            </Link>
+          <div className="p-4 border-b border-gray-200 shrink-0">
+            <h2 className="font-bold text-lg">Cloocus Admin</h2>
+            <p className="text-xs text-gray-500 mt-1">이벤트 관리 시스템</p>
           </div>
 
           {/* 메뉴 (스크롤 영역) */}
@@ -165,20 +139,47 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             />
           </div>
 
-          {/* 하단 footer: 휴지통(약한 강조) */}
-          <Link
-            href={ADMIN_NAV_FOOTER.href}
-            onClick={() => setSidebarOpen(false)}
-            aria-current={trashActive ? 'page' : undefined}
-            className={`shrink-0 flex items-center gap-2 px-4 py-2 text-xs border-t border-gray-100 transition-colors
-              ${trashActive
-                ? 'bg-gray-100 text-gray-700'
-                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}
-            `}
-          >
-            <span aria-hidden="true" className="text-xs">{ADMIN_NAV_FOOTER.icon}</span>
-            <span className="truncate">{ADMIN_NAV_FOOTER.label}</span>
-          </Link>
+          {/* 하단 footer: 휴지통 + 사이드바 설정 (약한 강조, 동일 레벨) */}
+          <div className="shrink-0 border-t border-gray-100 flex">
+            <Link
+              href={ADMIN_NAV_FOOTER.href}
+              onClick={() => setSidebarOpen(false)}
+              aria-current={trashActive ? 'page' : undefined}
+              className={`flex-1 flex items-center gap-2 px-4 py-2 text-xs transition-colors
+                ${trashActive
+                  ? 'bg-gray-100 text-gray-700'
+                  : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}
+              `}
+            >
+              <span aria-hidden="true" className="text-xs">{ADMIN_NAV_FOOTER.icon}</span>
+              <span className="truncate">{ADMIN_NAV_FOOTER.label}</span>
+            </Link>
+            <Link
+              href={settingsHref}
+              onClick={() => setSidebarOpen(false)}
+              aria-label="사이드바 설정"
+              title="사이드바 설정 (라벨/순서 편집)"
+              aria-current={settingsActive ? 'page' : undefined}
+              className={`flex items-center gap-1.5 px-4 py-2 text-xs border-l border-gray-100 transition-colors
+                ${settingsActive
+                  ? 'bg-gray-100 text-gray-700'
+                  : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}
+              `}
+            >
+              <svg
+                className="w-3.5 h-3.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.7}
+                stroke="currentColor"
+                aria-hidden="true"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 0 1 1.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.894.149c-.424.07-.764.383-.929.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 0 1-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 0 1-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.425-.07.765-.383.93-.78.165-.398.143-.854-.107-1.204l-.527-.738a1.125 1.125 0 0 1 .12-1.45l.773-.773a1.125 1.125 0 0 1 1.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+              </svg>
+              <span>설정</span>
+            </Link>
+          </div>
 
           {/* 하단 고정: 사용자 정보 + 로그아웃 (항상 화면 하단) */}
           <div className="shrink-0 border-t border-gray-200 p-4 bg-white">
