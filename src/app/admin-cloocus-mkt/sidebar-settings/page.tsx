@@ -102,9 +102,11 @@ export default function SidebarSettingsPage() {
     const to = dragOverKey.current;
     dragKey.current = null;
     dragOverKey.current = null;
+    const prefix = `${groupId}:`;
     if (!from || !to || from === to) return;
-    const [, fromHref] = from.split(':');
-    const [, toHref] = to.split(':');
+    if (!from.startsWith(prefix) || !to.startsWith(prefix)) return; // 다른 그룹/상위 엔트리에 떨어진 경우 무시
+    const fromHref = from.slice(prefix.length);
+    const toHref = to.slice(prefix.length);
     const next = entries.map((e) => {
       if (e.type !== 'group' || e.id !== groupId) return e;
       const fromIdx = e.children.findIndex((c) => c.href === fromHref);
@@ -238,10 +240,10 @@ export default function SidebarSettingsPage() {
                   <div
                     key={child.href}
                     draggable
-                    onDragStart={() => onChildDragStart((entry as AdminNavGroup).id, child.href)}
-                    onDragEnter={() => onChildDragEnter((entry as AdminNavGroup).id, child.href)}
-                    onDragEnd={() => onChildDragEnd((entry as AdminNavGroup).id)}
-                    onDragOver={(e) => e.preventDefault()}
+                    onDragStart={(e) => { e.stopPropagation(); onChildDragStart((entry as AdminNavGroup).id, child.href); }}
+                    onDragEnter={(e) => { e.stopPropagation(); onChildDragEnter((entry as AdminNavGroup).id, child.href); }}
+                    onDragEnd={(e) => { e.stopPropagation(); onChildDragEnd((entry as AdminNavGroup).id); }}
+                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
                     className="flex items-center gap-2 pl-10 pr-4 py-2.5 hover:bg-gray-50"
                   >
                     <span className="text-gray-300 cursor-grab active:cursor-grabbing select-none" title="드래그하여 순서 변경">⠿</span>

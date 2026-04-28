@@ -136,13 +136,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               aria-label="사이드바 설정"
               title="사이드바 설정 (라벨/순서 편집)"
               aria-current={settingsActive ? 'page' : undefined}
-              className={`shrink-0 mt-0.5 p-1.5 rounded-md transition-colors ${
-                settingsActive ? 'bg-blue-50 text-blue-700' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'
+              className={`shrink-0 mt-0.5 p-2 rounded-md transition-colors ${
+                settingsActive ? 'bg-blue-50 text-blue-700' : 'text-gray-500 hover:text-gray-800 hover:bg-gray-100'
               }`}
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317a1 1 0 011.35 0l.7.6a1 1 0 00.95.225l.9-.225a1 1 0 011.213.7l.225.9a1 1 0 00.7.7l.9.225a1 1 0 01.7 1.213l-.225.9a1 1 0 00.225.95l.6.7a1 1 0 010 1.35l-.6.7a1 1 0 00-.225.95l.225.9a1 1 0 01-.7 1.213l-.9.225a1 1 0 00-.7.7l-.225.9a1 1 0 01-1.213.7l-.9-.225a1 1 0 00-.95.225l-.7.6a1 1 0 01-1.35 0l-.7-.6a1 1 0 00-.95-.225l-.9.225a1 1 0 01-1.213-.7l-.225-.9a1 1 0 00-.7-.7l-.9-.225a1 1 0 01-.7-1.213l.225-.9a1 1 0 00-.225-.95l-.6-.7a1 1 0 010-1.35l.6-.7a1 1 0 00.225-.95l-.225-.9a1 1 0 01.7-1.213l.9-.225a1 1 0 00.7-.7l.225-.9a1 1 0 011.213-.7l.9.225a1 1 0 00.95-.225l.7-.6z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <svg
+                className="w-5 h-5"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                xmlns="http://www.w3.org/2000/svg"
+                aria-hidden="true"
+              >
+                <path
+                  fillRule="evenodd"
+                  clipRule="evenodd"
+                  d="M11.078 2.25c-.917 0-1.699.663-1.85 1.567L9.05 4.889a8.95 8.95 0 0 0-1.51.626l-.998-.643c-.768-.494-1.795-.342-2.394.4l-.461.57a1.875 1.875 0 0 0 .088 2.43l.806.93a8.96 8.96 0 0 0 0 1.596l-.806.93a1.875 1.875 0 0 0-.088 2.43l.46.57c.6.741 1.627.893 2.395.399l.998-.643c.477.265.98.476 1.51.626l.179 1.072c.151.904.933 1.567 1.85 1.567h1.844c.917 0 1.699-.663 1.85-1.567l.179-1.072c.53-.15 1.033-.36 1.51-.626l.998.643c.768.494 1.795.342 2.395-.4l.46-.57a1.875 1.875 0 0 0-.088-2.43l-.806-.93a8.96 8.96 0 0 0 0-1.596l.806-.93a1.875 1.875 0 0 0 .088-2.43l-.46-.57c-.6-.741-1.627-.893-2.395-.399l-.998.643a8.95 8.95 0 0 0-1.51-.626l-.18-1.072A1.875 1.875 0 0 0 12.923 2.25h-1.844zM12 15.75a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5z"
+                />
               </svg>
             </Link>
           </div>
