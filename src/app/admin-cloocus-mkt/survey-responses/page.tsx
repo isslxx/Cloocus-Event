@@ -28,9 +28,16 @@ function countValues(arr: string[]): { name: string; count: number }[] {
 
 function StatBar({ label, count, total, color }: { label: string; count: number; total: number; color: string }) {
   const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+  // 라벨이 "본문 (부가설명)" 형태면 두 줄로 분리해 부가설명까지 보이게 함
+  const parenMatch = label.match(/^([^(]+)\s*\((.+)\)\s*$/);
+  const main = parenMatch ? parenMatch[1].trim() : label;
+  const sub = parenMatch ? parenMatch[2].trim() : '';
   return (
-    <div className="flex items-center gap-2 py-1">
-      <span className="text-xs text-gray-600 w-[180px] shrink-0 truncate">{label}</span>
+    <div className="flex items-center gap-2 py-1.5">
+      <div className="w-[180px] shrink-0 leading-tight" title={label}>
+        <p className="text-xs text-gray-700 truncate">{main}</p>
+        {sub && <p className="text-[10px] text-gray-400 truncate">({sub})</p>}
+      </div>
       <div className="flex-1 bg-gray-100 rounded-full h-4 overflow-hidden">
         <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
       </div>
@@ -183,7 +190,7 @@ export default function SurveyResponsesPage() {
                 <div className="bg-white rounded-xl border border-gray-200 p-5">
                   <h3 className="font-semibold text-sm mb-3">Q1. Azure 이해 수준</h3>
                   <div className="space-y-1">
-                    {stats.q1.map((d, i) => <StatBar key={d.name} label={d.name.split('(')[0]?.trim()} count={d.count} total={stats.total} color={colors[i % colors.length]} />)}
+                    {stats.q1.map((d, i) => <StatBar key={d.name} label={d.name} count={d.count} total={stats.total} color={colors[i % colors.length]} />)}
                   </div>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-5">
