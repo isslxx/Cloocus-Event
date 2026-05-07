@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 
     let query = supabase
       .from('event_registrations')
-      .select('id, name, company_name, company_name_raw, department, job_title, email, phone, industry, company_size, referral_source, referrer_name, inquiry, event_id, registration_status, survey_enabled, survey_completed, events!event_registrations_event_id_fkey(name, status, event_date, event_type, capacity, location, event_time, category, ended_at)')
+      .select('id, name, company_name, company_name_raw, department, job_title, email, phone, industry, company_size, referral_source, referrer_name, inquiry, custom_answers, event_id, registration_status, survey_enabled, survey_completed, events!event_registrations_event_id_fkey(name, status, event_date, event_type, capacity, location, event_time, category, ended_at)')
       .eq('email', email.toLowerCase().trim())
       .eq('pin', pin)
       .is('deleted_at', null)
@@ -74,6 +74,7 @@ export async function POST(req: NextRequest) {
           referral_source: r.referral_source,
           referrer_name: r.referrer_name,
           inquiry: r.inquiry,
+          custom_answers: r.custom_answers || {},
           survey_feedback: feedbackMap[r.id as string] || null,
           event_id: r.event_id,
           event_name: (evt as Record<string, unknown>)?.name || '',

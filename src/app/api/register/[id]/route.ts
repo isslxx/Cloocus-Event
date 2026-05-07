@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { normalizeCompanyName } from '@/lib/company-normalize';
 import { isValidEmail, isValidPhone } from '@/lib/validation';
+import { validateAndPrepareCustomAnswers } from '@/lib/custom-answers';
 
 function getServiceSupabase() {
   return createClient(
@@ -68,6 +69,7 @@ export async function GET(
         referral_source: data.referral_source,
         referrer_name: data.referrer_name,
         inquiry: data.inquiry,
+        custom_answers: data.custom_answers || {},
         survey_feedback,
         event_id: data.event_id,
         event_name: evt?.name || '',
@@ -159,7 +161,7 @@ export async function PUT(
       name, company_name, department, job_title,
       email, phone, industry, industry_etc, company_size,
       referral_source, referral_source_etc, referrer_name, inquiry, pin,
-      force_survey_edit,
+      force_survey_edit, custom_answers,
     } = body;
 
     // PIN 검증
@@ -231,23 +233,33 @@ export async function PUT(
 
     const normalizedCompany = normalizeCompanyName(company_name);
 
+    const updates: Record<string, unknown> = {
+      name: name.trim(),
+      company_name: normalizedCompany,
+      company_name_raw: company_name.trim(),
+      department: department.trim(),
+      job_title: job_title.trim(),
+      email: email.toLowerCase().trim(),
+      phone,
+      industry: industry === '기타' && industry_etc ? `기타: ${industry_etc.trim()}` : industry,
+      company_size,
+      referral_source: referral_source === '기타' && referral_source_etc ? `기타: ${referral_source_etc.trim()}` : referral_source,
+      referrer_name: referrer_name?.trim() || '',
+      inquiry: inquiry?.trim() || '',
+      updated_at: new Date().toISOString(),
+    };
+
+    if (custom_answers !== undefined) {
+      const customResult = await validateAndPrepareCustomAnswers(supabase, reg.event_id, custom_answers);
+      if (!customResult.ok) {
+        return NextResponse.json({ error: customResult.error }, { status: 400 });
+      }
+      updates.custom_answers = customResult.value;
+    }
+
     const { error } = await supabase
       .from('event_registrations')
-      .update({
-        name: name.trim(),
-        company_name: normalizedCompany,
-        company_name_raw: company_name.trim(),
-        department: department.trim(),
-        job_title: job_title.trim(),
-        email: email.toLowerCase().trim(),
-        phone,
-        industry: industry === '기타' && industry_etc ? `기타: ${industry_etc.trim()}` : industry,
-        company_size,
-        referral_source: referral_source === '기타' && referral_source_etc ? `기타: ${referral_source_etc.trim()}` : referral_source,
-        referrer_name: referrer_name?.trim() || '',
-        inquiry: inquiry?.trim() || '',
-        updated_at: new Date().toISOString(),
-      })
+      .update(updates)
       .eq('id', id);
 
     if (error) {

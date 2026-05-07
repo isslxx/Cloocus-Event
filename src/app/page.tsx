@@ -28,6 +28,17 @@ const EMPTY_FORM = {
   pin: '',
 };
 
+type CustomQuestionType = 'short_text' | 'long_text' | 'single_choice' | 'multi_choice' | 'agreement';
+type PublicCustomQuestion = {
+  id: string;
+  question_type: CustomQuestionType;
+  label: string;
+  description: string | null;
+  options: { label: string }[];
+  required: boolean;
+};
+type CustomAnswerValue = string | string[] | boolean;
+
 function BrandFooter() {
   return (
     <footer className="py-4 sm:py-5 px-4 border-t border-gray-200" style={{ backgroundColor: '#eef0f4' }}>
@@ -61,6 +72,11 @@ export default function Home() {
   const [formOptions, setFormOptions] = useState<Record<string, string[]>>({});
   const [privacyContent, setPrivacyContent] = useState('');
   const [privacyTitle, setPrivacyTitle] = useState('');
+
+  // 이벤트 전용 추가 문항
+  const [customQuestions, setCustomQuestions] = useState<PublicCustomQuestion[]>([]);
+  const [customAnswers, setCustomAnswers] = useState<Record<string, CustomAnswerValue>>({});
+  const [customErrors, setCustomErrors] = useState<Record<string, string>>({});
 
   // Step 2: 폼
   const [form, setForm] = useState(EMPTY_FORM);
@@ -113,6 +129,78 @@ export default function Home() {
       .then((data) => setFormOptions(data))
       .catch(() => {});
   }, []);
+
+  // 미리보기 모드: ?preview_event=<id> 가 있으면 해당 이벤트로 자동 진입
+  useEffect(() => {
+    if (events.length === 0) return;
+    const params = new URLSearchParams(window.location.search);
+    const previewId = params.get('preview_event');
+    if (previewId) {
+      const evt = events.find((e) => e.id === previewId);
+      if (evt) {
+        setSelectedEvent(evt);
+        setStep(2);
+      }
+    }
+  }, [events]);
+
+  // 선택 이벤트 변경 시 커스텀 문항 로드
+  useEffect(() => {
+    if (!selectedEvent) {
+      setCustomQuestions([]);
+      setCustomAnswers({});
+      setCustomErrors({});
+      return;
+    }
+    fetch(`/api/events/${selectedEvent.id}/questions`)
+      .then((res) => res.json())
+      .then((data) => {
+        const list: PublicCustomQuestion[] = Array.isArray(data) ? data : [];
+        setCustomQuestions(list);
+        // 기본값: multi_choice → [], agreement → false, 그 외 → ''
+        setCustomAnswers((prev) => {
+          const next: Record<string, CustomAnswerValue> = {};
+          for (const q of list) {
+            if (q.id in prev) next[q.id] = prev[q.id];
+            else if (q.question_type === 'multi_choice') next[q.id] = [];
+            else if (q.question_type === 'agreement') next[q.id] = false;
+            else next[q.id] = '';
+          }
+          return next;
+        });
+      })
+      .catch(() => setCustomQuestions([]));
+  }, [selectedEvent]);
+
+  const setCustomAnswer = (id: string, value: CustomAnswerValue) => {
+    setCustomAnswers((prev) => ({ ...prev, [id]: value }));
+    if (customErrors[id]) {
+      setCustomErrors((prev) => {
+        const n = { ...prev };
+        delete n[id];
+        return n;
+      });
+    }
+  };
+
+  const validateCustomAnswers = (): string[] => {
+    const errs: Record<string, string> = {};
+    const popup: string[] = [];
+    for (const q of customQuestions) {
+      if (!q.required) continue;
+      const v = customAnswers[q.id];
+      const empty =
+        (q.question_type === 'multi_choice' && Array.isArray(v) && v.length === 0) ||
+        (q.question_type === 'agreement' && v !== true) ||
+        ((q.question_type === 'short_text' || q.question_type === 'long_text' || q.question_type === 'single_choice') && (typeof v !== 'string' || !v.trim()));
+      if (empty) {
+        errs[q.id] = q.question_type === 'agreement' ? '동의가 필요합니다.' : '필수 항목입니다.';
+        popup.push(`[추가 문항] ${q.label}`);
+      }
+    }
+    setCustomErrors(errs);
+    return popup;
+  };
 
   // 외부 클릭 시 자동완성 닫기
   useEffect(() => {
@@ -204,9 +292,10 @@ export default function Home() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const validationErrors = validateRegistrationForm(form);
+    const customPopup = validateCustomAnswers();
     setErrors(validationErrors);
-    if (Object.keys(validationErrors).length > 0) {
-      setValidationPopup(Object.values(validationErrors));
+    if (Object.keys(validationErrors).length > 0 || customPopup.length > 0) {
+      setValidationPopup([...Object.values(validationErrors), ...customPopup]);
       return;
     }
 
@@ -220,7 +309,7 @@ export default function Home() {
         res = await fetch(`/api/register/${registrationId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(form),
+          body: JSON.stringify({ ...form, custom_answers: customAnswers }),
         });
       } else {
         // 신규 등록 — 첫 터치 시 캡처된 UTM/referrer + 익명 user_id 동봉
@@ -234,6 +323,7 @@ export default function Home() {
             ...form,
             event_id: selectedEvent?.id,
             user_id,
+            custom_answers: customAnswers,
             ...(attribution || {}),
           }),
         });
@@ -536,6 +626,9 @@ export default function Home() {
                           privacy_consent: true,
                           pin: lookupPin,
                         });
+                        if (r.custom_answers && typeof r.custom_answers === 'object') {
+                          setCustomAnswers(r.custom_answers as Record<string, CustomAnswerValue>);
+                        }
                         setRegistrationId(r.id);
                         setEventEditable(data.editable);
                         setEditMode(true);
@@ -987,6 +1080,124 @@ export default function Home() {
               />
             </div>
           </div>
+
+          {customQuestions.length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-5 mt-6">
+              <div className="flex items-center justify-between border-b pb-3 mb-2">
+                <h2 className="text-lg font-semibold">{selectedEvent?.custom_questions_section_title?.trim() || '맞춤 혜택 안내를 위한 추가 정보'}</h2>
+              </div>
+              {customQuestions.map((q, idx) => {
+                const err = customErrors[q.id];
+                const num = idx + 1;
+                const numberPrefix = <span className="text-gray-500 font-medium mr-1">{num}.</span>;
+                if (q.question_type === 'short_text') {
+                  return (
+                    <div key={q.id} className="field">
+                      <label>{numberPrefix}{q.label} {q.required && <span className="required">*</span>}</label>
+                      {q.description && <p className="text-xs text-gray-500 mb-1.5">{q.description}</p>}
+                      <input
+                        type="text"
+                        value={typeof customAnswers[q.id] === 'string' ? (customAnswers[q.id] as string) : ''}
+                        onChange={(e) => setCustomAnswer(q.id, e.target.value)}
+                        className={err ? 'error' : ''}
+                      />
+                      {err && <span className="error-msg">{err}</span>}
+                    </div>
+                  );
+                }
+                if (q.question_type === 'long_text') {
+                  return (
+                    <div key={q.id} className="field">
+                      <label>{numberPrefix}{q.label} {q.required && <span className="required">*</span>}</label>
+                      {q.description && <p className="text-xs text-gray-500 mb-1.5">{q.description}</p>}
+                      <textarea
+                        rows={3}
+                        value={typeof customAnswers[q.id] === 'string' ? (customAnswers[q.id] as string) : ''}
+                        onChange={(e) => setCustomAnswer(q.id, e.target.value)}
+                        className={err ? 'error' : ''}
+                      />
+                      {err && <span className="error-msg">{err}</span>}
+                    </div>
+                  );
+                }
+                if (q.question_type === 'single_choice') {
+                  return (
+                    <div key={q.id} className="field">
+                      <label>{numberPrefix}{q.label} {q.required && <span className="required">*</span>}</label>
+                      {q.description && <p className="text-xs text-gray-500 mb-1.5">{q.description}</p>}
+                      <div className="space-y-1.5">
+                        {q.options.map((opt, i) => (
+                          <label key={i} className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name={`custom-${q.id}`}
+                              value={opt.label}
+                              checked={customAnswers[q.id] === opt.label}
+                              onChange={() => setCustomAnswer(q.id, opt.label)}
+                              className="w-4 h-4 accent-blue-600"
+                            />
+                            <span className="text-sm">{opt.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                      {err && <span className="error-msg">{err}</span>}
+                    </div>
+                  );
+                }
+                if (q.question_type === 'multi_choice') {
+                  const arr = Array.isArray(customAnswers[q.id]) ? (customAnswers[q.id] as string[]) : [];
+                  return (
+                    <div key={q.id} className="field">
+                      <label>{numberPrefix}{q.label} {q.required && <span className="required">*</span>}</label>
+                      {q.description && <p className="text-xs text-gray-500 mb-1.5">{q.description}</p>}
+                      <div className="space-y-1.5">
+                        {q.options.map((opt, i) => {
+                          const checked = arr.includes(opt.label);
+                          return (
+                            <label key={i} className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={(e) => {
+                                  const next = e.target.checked
+                                    ? [...arr, opt.label]
+                                    : arr.filter((v) => v !== opt.label);
+                                  setCustomAnswer(q.id, next);
+                                }}
+                                className="w-4 h-4 rounded accent-blue-600"
+                              />
+                              <span className="text-sm">{opt.label}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                      {err && <span className="error-msg">{err}</span>}
+                    </div>
+                  );
+                }
+                if (q.question_type === 'agreement') {
+                  const checked = customAnswers[q.id] === true;
+                  return (
+                    <div key={q.id} className="field">
+                      <label className="flex items-start gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) => setCustomAnswer(q.id, e.target.checked)}
+                          className="mt-0.5 w-4 h-4 rounded accent-blue-600"
+                        />
+                        <span className="text-sm">
+                          <span className="text-gray-500 font-medium mr-1">{num}.</span>{q.label} {q.required && <span className="text-red-500">*</span>}
+                        </span>
+                      </label>
+                      {err && <span className="error-msg mt-1 block">{err}</span>}
+                    </div>
+                  );
+                }
+                return null;
+              })}
+            </div>
+          )}
 
           <div className="bg-white rounded-xl border border-gray-200 p-6 mt-6">
             <h2 className="text-lg font-semibold border-b pb-3 mb-4">{privacyTitle || '개인정보 수집 및 이용 동의'}</h2>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { normalizeCompanyName } from '@/lib/company-normalize';
 import { isBlockedEmailDomain, isValidEmail, isValidPhone } from '@/lib/validation';
+import { validateAndPrepareCustomAnswers } from '@/lib/custom-answers';
 
 function getServiceSupabase() {
   return createClient(
@@ -21,6 +22,7 @@ export async function POST(req: NextRequest) {
       utm_source, utm_medium, utm_campaign, utm_content, utm_term,
       landing_page, referrer_url,
       user_id,
+      custom_answers,
     } = body;
 
     // 서버 검증
@@ -64,6 +66,12 @@ export async function POST(req: NextRequest) {
 
     const supabase = getServiceSupabase();
 
+    // 커스텀 문항 응답 검증
+    const customResult = await validateAndPrepareCustomAnswers(supabase, event_id || null, custom_answers);
+    if (!customResult.ok) {
+      return NextResponse.json({ error: customResult.error }, { status: 400 });
+    }
+
     const normalizedCompany = normalizeCompanyName(company_name);
 
     const trimOrNull = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, 255) : null);
@@ -92,6 +100,7 @@ export async function POST(req: NextRequest) {
       landing_page: trimOrNull(landing_page),
       referrer_url: trimOrNull(referrer_url),
       user_id:      trimOrNull(user_id),
+      custom_answers: customResult.value,
     };
 
     const { data: insertedData, error } = await supabase

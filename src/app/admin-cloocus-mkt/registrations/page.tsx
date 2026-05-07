@@ -38,6 +38,7 @@ export default function RegistrationsPage() {
   const [editing, setEditing] = useState<Registration | null>(null);
   const [editForm, setEditForm] = useState<Partial<Registration>>({});
   const [saving, setSaving] = useState(false);
+  const [editingQuestions, setEditingQuestions] = useState<Array<{ id: string; question_type: string; label: string; options: { label: string }[] }>>([]);
 
   // 삭제 확인
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -137,6 +138,15 @@ export default function RegistrationsPage() {
   const handleEdit = (record: Registration) => {
     setEditing(record);
     setEditForm({ ...record });
+    setEditingQuestions([]);
+    if (record.event_id) {
+      fetch(`/api/admin/event-questions?event_id=${record.event_id}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+        .then((r) => r.json())
+        .then((d) => setEditingQuestions(Array.isArray(d) ? d : []))
+        .catch(() => {});
+    }
   };
 
   const handleSave = async () => {
@@ -494,6 +504,28 @@ export default function RegistrationsPage() {
               <div className="field"><label>신청 경로</label><select value={editForm.referral_source || ''} onChange={(e) => setEditForm({ ...editForm, referral_source: e.target.value })}>{REFERRAL_SOURCES.map((v) => <option key={v} value={v}>{v}</option>)}</select></div>
               <div className="field"><label>추천인</label><input type="text" value={String(editForm.referrer_name || '')} onChange={(e) => setEditForm({ ...editForm, referrer_name: e.target.value })} /></div>
               <div className="field"><label>문의사항</label><textarea rows={3} value={String(editForm.inquiry || '')} onChange={(e) => setEditForm({ ...editForm, inquiry: e.target.value })} /></div>
+
+              {editingQuestions.length > 0 && (
+                <div className="mt-2 pt-4 border-t border-gray-200">
+                  <p className="text-xs font-semibold text-amber-700 mb-3">✨ 이벤트 전용 추가 문항 응답</p>
+                  <div className="space-y-3">
+                    {editingQuestions.map((q) => {
+                      const a = (editing?.custom_answers || {})[q.id];
+                      let display: string;
+                      if (Array.isArray(a)) display = a.length > 0 ? a.join(', ') : '(응답 없음)';
+                      else if (typeof a === 'boolean') display = a ? '동의함' : '미동의';
+                      else if (typeof a === 'string') display = a || '(응답 없음)';
+                      else display = '(응답 없음)';
+                      return (
+                        <div key={q.id} className="text-xs">
+                          <p className="text-gray-500 mb-0.5">{q.label}</p>
+                          <p className="text-gray-900 whitespace-pre-wrap">{display}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
             <div className="flex gap-2 mt-6">
               <button onClick={handleSave} disabled={saving} className="btn-primary flex-1">{saving ? '저장 중...' : '저장'}</button>

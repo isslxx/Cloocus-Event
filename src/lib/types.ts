@@ -11,6 +11,7 @@ export type Event = {
   category: string;
   location: string;
   event_time: string;
+  custom_questions_section_title: string | null;
   created_at: string;
 };
 
@@ -41,6 +42,7 @@ export type Registration = {
   cancelled_at: string | null;
   created_at: string;
   updated_at: string;
+  custom_answers?: Record<string, string | string[] | boolean>;
 };
 
 export type AdminUser = {
