@@ -176,18 +176,10 @@ function PremiumEventCard({ event, isSelected, onSelect }: {
           </div>
         </div>
 
-        {/* 우측 ambient + arrow */}
-        <div className="shrink-0 flex items-stretch gap-2 sm:gap-2.5 self-stretch">
+        {/* 우측 ambient (Neural Flow) — 카드를 살아있는 AI capability 처럼 표현 */}
+        <div className="shrink-0 self-center">
           <div className="premium-ambient" aria-hidden="true">
             <NeuralFlow />
-          </div>
-          <div className="self-center">
-            <span className="premium-arrow" aria-hidden="true">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="5" y1="12" x2="19" y2="12" />
-                <polyline points="12 5 19 12 12 19" />
-              </svg>
-            </span>
           </div>
         </div>
       </div>
