@@ -164,19 +164,13 @@ export default function MyDashboard() {
     }).catch(() => {});
   }, []);
 
-  // 등록 정보 로드 시 해당 이벤트의 추가 문항 정의 가져오기
+  // 추가 문항은 lookup·GET 응답에 함께 포함되므로 setRegistration 시점에 같이 set.
+  // (이전엔 별도 fetch 로 인한 지연이 있었음 — 지금은 단일 라운드트립)
+  // event_id 가 바뀌었는데 customQuestions 가 비어있는 fallback 만 처리
   useEffect(() => {
     if (!registration?.event_id) {
       setCustomQuestions([]);
-      return;
     }
-    fetch(`/api/events/${registration.event_id}/questions`)
-      .then((r) => r.json())
-      .then((d) => {
-        const list: CustomQuestion[] = Array.isArray(d) ? d : [];
-        setCustomQuestions(list);
-      })
-      .catch(() => setCustomQuestions([]));
   }, [registration?.event_id]);
 
   const startEdit = () => {
@@ -322,6 +316,7 @@ export default function MyDashboard() {
       const lookupData = await lookupRes.json();
       if (lookupRes.ok) {
         setRegistration(lookupData.registration);
+        setCustomQuestions(Array.isArray(lookupData.custom_questions) ? lookupData.custom_questions : []);
         setEditable(lookupData.editable);
       }
       setEditMode(false);
@@ -378,6 +373,7 @@ export default function MyDashboard() {
       }
 
       setRegistration(data.registration);
+      setCustomQuestions(Array.isArray(data.custom_questions) ? data.custom_questions : []);
       setEditable(data.editable);
       setAuthenticated(true);
       trackPortalLogin();
@@ -565,6 +561,7 @@ export default function MyDashboard() {
         const data = await res.json();
         if (!res.ok) { alert(data.error || '조회에 실패했습니다.'); return; }
         setRegistration(data.registration);
+        setCustomQuestions(Array.isArray(data.custom_questions) ? data.custom_questions : []);
         setEditable(data.editable);
         setShowEventSelect(false);
         // FAQ는 이미 프리페치됨 → 비어있을 때만 재시도

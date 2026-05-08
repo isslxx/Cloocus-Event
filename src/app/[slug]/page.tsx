@@ -558,6 +558,20 @@ export default function EventRegistrationPage({ params }: { params: Promise<{ sl
                 정원 {event.capacity}명
               </span>
             )}
+            {event.category === '프로모션' && event.promo_url && (
+              <a
+                href={event.promo_url}
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => trackClick('promo-detail-link', { event_id: event.id })}
+                className="ml-auto inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-white border border-blue-200 text-blue-700 hover:border-blue-400 hover:shadow-sm transition"
+              >
+                프로모션 상세보기
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M14 3h7v7M21 3l-9 9M5 5h6v2H7v10h10v-4h2v6H5z" />
+                </svg>
+              </a>
+            )}
           </div>
         </div>
 

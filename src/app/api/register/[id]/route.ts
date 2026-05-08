@@ -55,6 +55,18 @@ export async function GET(
       survey_feedback = survey.q6_feedback;
     }
 
+    // 추가 문항도 같은 응답에 포함 (별도 호출 제거 → 로딩 속도 개선)
+    let custom_questions: unknown[] = [];
+    if (data.event_id) {
+      const { data: qData } = await supabase
+        .from('event_custom_questions')
+        .select('id, question_type, label, description, options, required, allow_etc, sort_order')
+        .eq('event_id', data.event_id)
+        .eq('active', true)
+        .order('sort_order', { ascending: true });
+      custom_questions = qData || [];
+    }
+
     return NextResponse.json({
       registration: {
         id: data.id,
@@ -84,6 +96,7 @@ export async function GET(
         survey_enabled: data.survey_enabled || false,
         survey_completed: data.survey_completed || false,
       },
+      custom_questions,
       editable: eventStatus === 'open',
     });
   } catch {

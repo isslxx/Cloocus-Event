@@ -56,10 +56,31 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // 등록자에 연결된 이벤트들의 활성 추가 문항을 한 번에 fetch (eventId → 문항 배열)
+    // 클라이언트가 별도로 /api/events/{id}/questions 를 호출하지 않아도 되도록 응답에 포함.
+    const eventIdsForQuestions = Array.from(new Set(
+      data.map((r) => (r as Record<string, unknown>).event_id).filter((id): id is string => typeof id === 'string')
+    ));
+    const customQuestionsByEvent: Record<string, unknown[]> = {};
+    if (eventIdsForQuestions.length > 0) {
+      const { data: qData } = await supabase
+        .from('event_custom_questions')
+        .select('id, event_id, question_type, label, description, options, required, allow_etc, sort_order')
+        .in('event_id', eventIdsForQuestions)
+        .eq('active', true)
+        .order('sort_order', { ascending: true });
+      for (const q of (qData || []) as { event_id: string }[]) {
+        const eid = q.event_id;
+        if (!customQuestionsByEvent[eid]) customQuestionsByEvent[eid] = [];
+        customQuestionsByEvent[eid].push(q);
+      }
+    }
+
     function mapRecord(r: Record<string, unknown>) {
       const eventsRaw = r.events;
       const evt = Array.isArray(eventsRaw) ? eventsRaw[0] : eventsRaw;
       const eventStatus = (evt as Record<string, unknown>)?.status || 'closed';
+      const eid = r.event_id as string | null;
       return {
         registration: {
           id: r.id,
@@ -89,6 +110,8 @@ export async function POST(req: NextRequest) {
           survey_enabled: r.survey_enabled || false,
           survey_completed: r.survey_completed || false,
         },
+        // 클라이언트가 추가 문항을 즉시 표시할 수 있도록 같은 응답에 포함
+        custom_questions: eid ? (customQuestionsByEvent[eid] || []) : [],
         editable: eventStatus === 'open',
       };
     }
