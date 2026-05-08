@@ -387,16 +387,16 @@ export default function RegistrationsPage() {
         <table className="w-full text-sm">
           <thead className="sticky top-0 z-20">
             <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="px-3 py-1.5 w-10 bg-gray-50 sticky left-0 z-30 border-r border-gray-200">
+              <th className="px-3 py-1.5 w-10 min-w-10 bg-gray-50 sticky left-0 z-30 border-r border-gray-200">
                 <input type="checkbox" checked={records.length > 0 && selected.size === records.length} onChange={toggleSelectAll} className="w-4 h-4 rounded accent-blue-600" />
               </th>
-              <th className={`px-3 py-1.5 text-left font-medium cursor-pointer whitespace-nowrap sticky left-[40px] z-30 border-r border-gray-200 transition ${sortKey === 'name' ? 'text-blue-700 bg-blue-50/40' : 'text-gray-600 bg-gray-50 hover:bg-gray-100'}`} onClick={() => handleSort('name' as SortKey)}>
+              <th className={`px-3 py-1.5 text-left font-medium cursor-pointer whitespace-nowrap sticky left-[40px] z-30 border-r border-gray-200 transition w-20 min-w-20 ${sortKey === 'name' ? 'text-blue-700 bg-blue-50' : 'text-gray-600 bg-gray-50 hover:bg-gray-100'}`} onClick={() => handleSort('name' as SortKey)}>
                 <span className="inline-flex items-center justify-between gap-2 w-full">
                   <span>성함</span>
                   <SortCaret active={sortKey === 'name'} asc={sortAsc} />
                 </span>
               </th>
-              <th className={`px-3 py-1.5 text-left font-medium cursor-pointer whitespace-nowrap sticky left-[120px] z-30 border-r border-gray-200 transition ${sortKey === 'company_name' ? 'text-blue-700 bg-blue-50/40' : 'text-gray-600 bg-gray-50 hover:bg-gray-100'}`} onClick={() => handleSort('company_name' as SortKey)}>
+              <th className={`px-3 py-1.5 text-left font-medium cursor-pointer whitespace-nowrap sticky left-[120px] z-30 border-r border-gray-200 transition min-w-[140px] ${sortKey === 'company_name' ? 'text-blue-700 bg-blue-50' : 'text-gray-600 bg-gray-50 hover:bg-gray-100'}`} onClick={() => handleSort('company_name' as SortKey)}>
                 <span className="inline-flex items-center justify-between gap-2 w-full">
                   <span>회사명</span>
                   <SortCaret active={sortKey === 'company_name'} asc={sortAsc} />
@@ -436,17 +436,23 @@ export default function RegistrationsPage() {
             </tr>
           </thead>
           <tbody>
-            {loading ? (
-              <tr><td colSpan={19} className="px-4 py-12 text-center text-gray-400">로딩 중...</td></tr>
-            ) : records.length === 0 ? (
-              <tr><td colSpan={19} className="px-4 py-12 text-center text-gray-400">등록 데이터가 없습니다.</td></tr>
+            {loading || records.length === 0 ? (
+              <tr>
+                {/* 헤더와 동일한 컬럼 구조를 유지해 로딩→데이터 전환 시 너비 재계산 방지 */}
+                <td className="px-3 py-1.5 w-10 min-w-10 sticky left-0 z-10 border-r border-gray-100 bg-white">&nbsp;</td>
+                <td className="px-3 py-1.5 sticky left-[40px] z-10 border-r border-gray-100 bg-white w-20 min-w-20 max-w-20">&nbsp;</td>
+                <td className="px-3 py-1.5 sticky left-[120px] z-10 border-r border-gray-100 bg-white min-w-[140px] max-w-[140px]">&nbsp;</td>
+                <td colSpan={(canEditRecord || canDeleteRecord) ? 16 : 15} className="px-4 py-12 text-center text-gray-400">
+                  {loading ? '로딩 중...' : '등록 데이터가 없습니다.'}
+                </td>
+              </tr>
             ) : records.map((r) => (
               <tr key={r.id} className={`border-b border-gray-100 hover:bg-gray-50 ${selected.has(r.id) ? 'bg-blue-50/50' : ''}`}>
-                <td className={`px-3 py-1.5 w-10 sticky left-0 z-10 border-r border-gray-100 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`}>
+                <td className={`px-3 py-1.5 w-10 min-w-10 sticky left-0 z-10 border-r border-gray-100 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`}>
                   <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleSelect(r.id)} className="w-4 h-4 rounded accent-blue-600" />
                 </td>
-                <td className={`px-3 py-1.5 whitespace-nowrap font-medium sticky left-[40px] z-10 border-r border-gray-100 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`}>{r.name}</td>
-                <td className={`px-3 py-1.5 whitespace-nowrap sticky left-[120px] z-10 border-r border-gray-100 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`}>{r.company_name}</td>
+                <td className={`px-3 py-1.5 whitespace-nowrap truncate font-medium sticky left-[40px] z-10 border-r border-gray-100 w-20 min-w-20 max-w-20 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`} title={r.name}>{r.name}</td>
+                <td className={`px-3 py-1.5 whitespace-nowrap truncate sticky left-[120px] z-10 border-r border-gray-100 min-w-[140px] max-w-[140px] ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`} title={r.company_name}>{r.company_name}</td>
                 <td className="px-3 py-1.5 whitespace-nowrap text-gray-500 border-r border-gray-100">{new Date(r.created_at).toLocaleDateString('ko-KR')}</td>
                 <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-500 max-w-[150px] truncate border-r border-gray-100">{r.event_id ? (events.find((e) => e.id === r.event_id)?.name || '-') : '-'}</td>
                 <td className="px-3 py-1.5 whitespace-nowrap text-gray-500 border-r border-gray-100">{r.department || '-'}</td>
