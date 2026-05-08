@@ -45,6 +45,8 @@ export type Registration = {
   created_at: string;
   updated_at: string;
   custom_answers?: Record<string, string | string[] | boolean>;
+  // PIN 은 admin 만 조회/수정. 일반적으로 노출되지 않음.
+  pin?: string;
 };
 
 export type AdminUser = {

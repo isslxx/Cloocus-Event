@@ -557,6 +557,29 @@ export default function RegistrationsPage() {
               <div className="field"><label>추천인</label><input type="text" value={String(editForm.referrer_name || '')} onChange={(e) => setEditForm({ ...editForm, referrer_name: e.target.value })} /></div>
               <div className="field"><label>문의사항</label><textarea rows={3} value={String(editForm.inquiry || '')} onChange={(e) => setEditForm({ ...editForm, inquiry: e.target.value })} /></div>
 
+              {/* 신청자가 PIN 분실 시 관리자가 직접 조회·재설정. admin 권한만 노출. */}
+              {admin?.role === 'admin' && (
+                <div className="field bg-amber-50/60 border border-amber-200 rounded-lg px-3 py-3 -mx-1">
+                  <label className="flex items-center gap-2 text-amber-800">
+                    🔐 확인 암호 (PIN)
+                    <span className="text-[10px] font-normal text-amber-600">관리자 전용</span>
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={String(editForm.pin || '')}
+                    onChange={(e) => setEditForm({ ...editForm, pin: e.target.value.replace(/\D/g, '').slice(0, 4) })}
+                    placeholder="0000"
+                    className="font-mono"
+                    style={{ letterSpacing: '0.3em', textAlign: 'center', maxWidth: 160 }}
+                  />
+                  <p className="text-[11px] text-amber-700 mt-1">
+                    신청자가 PIN 을 잊었을 때 안내·재설정 가능. 변경 시 즉시 적용됩니다.
+                  </p>
+                </div>
+              )}
+
               {editingQuestions.length > 0 && (
                 <div className="mt-2 pt-4 border-t border-gray-200">
                   <p className="text-xs font-semibold text-amber-700 mb-3">✨ 이벤트 전용 추가 문항 응답</p>

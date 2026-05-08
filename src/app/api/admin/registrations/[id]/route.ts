@@ -57,6 +57,15 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (key in updates) filtered[key] = updates[key];
   }
 
+  // PIN 은 admin 권한일 때만 변경 허용 (신청자가 PIN 분실 시 재설정 용도)
+  if ('pin' in updates && admin.role === 'admin') {
+    const pinValue = String(updates.pin || '').trim();
+    if (!/^\d{4}$/.test(pinValue)) {
+      return NextResponse.json({ error: 'PIN 은 숫자 4자리여야 합니다.' }, { status: 400 });
+    }
+    filtered.pin = pinValue;
+  }
+
   const { error } = await supabase
     .from('event_registrations')
     .update(filtered)
