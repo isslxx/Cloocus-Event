@@ -22,6 +22,7 @@ type CustomQuestion = {
   description: string | null;
   options: { label: string }[];
   required: boolean;
+  allow_etc: boolean;
   active: boolean;
   sort_order: number;
 };
@@ -262,6 +263,7 @@ export default function FormManagePage() {
       description: '',
       options: type === 'single_choice' || type === 'multi_choice' ? [{ label: '' }, { label: '' }] : [],
       required: false,
+      allow_etc: false,
     });
   };
 
@@ -820,6 +822,20 @@ function QuestionCard({
                   + 옵션 추가
                 </button>
               </div>
+              <label className="flex items-start gap-2 mt-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={!!draft.allow_etc}
+                  onChange={(e) => setDraft({ ...draft, allow_etc: e.target.checked })}
+                  className="mt-0.5 w-4 h-4 rounded accent-amber-600"
+                />
+                <span className="text-xs text-gray-700 leading-snug">
+                  &quot;기타&quot; 옵션 포함하기
+                  <span className="block text-[11px] text-gray-400 mt-0.5">
+                    켜두면 신청자 폼에 자동으로 &quot;기타&quot; 선택지가 추가되고, 선택 시 직접 입력란이 표시됩니다.
+                  </span>
+                </span>
+              </label>
             </div>
           )}
 
@@ -864,13 +880,18 @@ function QuestionCard({
           </div>
           <p className="text-sm font-medium text-gray-900">{question.label}</p>
           {question.description && <p className="text-xs text-gray-500 mt-0.5">{question.description}</p>}
-          {(question.question_type === 'single_choice' || question.question_type === 'multi_choice') && question.options.length > 0 && (
+          {(question.question_type === 'single_choice' || question.question_type === 'multi_choice') && (question.options.length > 0 || question.allow_etc) && (
             <div className="flex flex-wrap gap-1 mt-2">
               {question.options.map((o, i) => (
                 <span key={i} className="text-[11px] px-2 py-0.5 rounded-full bg-gray-50 border border-gray-200 text-gray-600">
                   {o.label}
                 </span>
               ))}
+              {question.allow_etc && (
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700">
+                  기타 (직접 입력)
+                </span>
+              )}
             </div>
           )}
         </div>

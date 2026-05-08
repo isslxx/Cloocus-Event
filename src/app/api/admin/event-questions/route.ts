@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
   if (!admin || admin.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const body = await req.json();
-  const { event_id, question_type, label, description, options, required } = body;
+  const { event_id, question_type, label, description, options, required, allow_etc } = body;
 
   if (!event_id) return NextResponse.json({ error: 'event_id 필요' }, { status: 400 });
   if (!VALID_TYPES.includes(question_type as QuestionType)) {
@@ -63,9 +63,8 @@ export async function POST(req: NextRequest) {
     .maybeSingle();
   const nextOrder = (maxRow?.sort_order ?? 0) + 1;
 
-  const cleanedOptions = (question_type === 'single_choice' || question_type === 'multi_choice')
-    ? sanitizeOptions(options)
-    : [];
+  const isChoice = question_type === 'single_choice' || question_type === 'multi_choice';
+  const cleanedOptions = isChoice ? sanitizeOptions(options) : [];
 
   const { data, error } = await supabase
     .from('event_custom_questions')
@@ -76,6 +75,7 @@ export async function POST(req: NextRequest) {
       description: description?.trim() || null,
       options: cleanedOptions,
       required: !!required,
+      allow_etc: isChoice ? !!allow_etc : false,
       active: true,
       sort_order: nextOrder,
     })
@@ -91,7 +91,7 @@ export async function PUT(req: NextRequest) {
   if (!admin || admin.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const body = await req.json();
-  const { id, label, description, options, required, active, sort_order, question_type } = body;
+  const { id, label, description, options, required, active, sort_order, question_type, allow_etc } = body;
   if (!id) return NextResponse.json({ error: 'id 필요' }, { status: 400 });
 
   const updates: Record<string, unknown> = {};
@@ -110,6 +110,7 @@ export async function PUT(req: NextRequest) {
     updates.question_type = question_type;
   }
   if (options !== undefined) updates.options = sanitizeOptions(options);
+  if (allow_etc !== undefined) updates.allow_etc = !!allow_etc;
 
   const supabase = getServiceSupabase();
   const { error } = await supabase.from('event_custom_questions').update(updates).eq('id', id);

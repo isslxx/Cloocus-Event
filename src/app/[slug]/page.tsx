@@ -36,8 +36,13 @@ type PublicCustomQuestion = {
   description: string | null;
   options: { label: string }[];
   required: boolean;
+  allow_etc: boolean;
 };
 type CustomAnswerValue = string | string[] | boolean;
+
+const ETC_LABEL = '기타';
+const ETC_PREFIX = '기타: ';
+const isEtcValue = (v: string) => v === ETC_LABEL || v.startsWith(ETC_PREFIX);
 
 function BrandFooter() {
   return (
@@ -74,6 +79,9 @@ export default function EventRegistrationPage({ params }: { params: Promise<{ sl
 
   const [customQuestions, setCustomQuestions] = useState<PublicCustomQuestion[]>([]);
   const [customAnswers, setCustomAnswers] = useState<Record<string, CustomAnswerValue>>({});
+  // 객관식에서 "기타" 선택 시 신청자가 입력한 자유 텍스트.
+  // 제출 시 customAnswers 값과 합쳐 "기타: <텍스트>" 로 변환됨 (산업군 기타 처리와 동일).
+  const [customEtcText, setCustomEtcText] = useState<Record<string, string>>({});
   const [customErrors, setCustomErrors] = useState<Record<string, string>>({});
 
   const [form, setForm] = useState(EMPTY_FORM);
@@ -169,8 +177,24 @@ export default function EventRegistrationPage({ params }: { params: Promise<{ sl
     const errs: Record<string, string> = {};
     const popup: string[] = [];
     for (const q of customQuestions) {
-      if (!q.required) continue;
       const v = customAnswers[q.id];
+      const etcText = (customEtcText[q.id] || '').trim();
+
+      // "기타" 선택 시 텍스트 미입력 검증 (필수든 아니든 적용 — 기타를 골랐는데 비워두면 의미 없음)
+      if (q.allow_etc) {
+        if (q.question_type === 'single_choice' && v === ETC_LABEL && !etcText) {
+          errs[q.id] = '기타 내용을 입력해주세요.';
+          popup.push(`[추가 문항] ${q.label} (기타 내용)`);
+          continue;
+        }
+        if (q.question_type === 'multi_choice' && Array.isArray(v) && v.includes(ETC_LABEL) && !etcText) {
+          errs[q.id] = '기타 내용을 입력해주세요.';
+          popup.push(`[추가 문항] ${q.label} (기타 내용)`);
+          continue;
+        }
+      }
+
+      if (!q.required) continue;
       const empty =
         (q.question_type === 'multi_choice' && Array.isArray(v) && v.length === 0) ||
         (q.question_type === 'agreement' && v !== true) ||
@@ -182,6 +206,25 @@ export default function EventRegistrationPage({ params }: { params: Promise<{ sl
     }
     setCustomErrors(errs);
     return popup;
+  };
+
+  // 제출 시점에 "기타" 선택 + etc 텍스트를 "기타: <텍스트>" 로 합쳐 서버에 전송하는 페이로드 생성
+  const buildCustomAnswersForSubmit = (): Record<string, CustomAnswerValue> => {
+    const out: Record<string, CustomAnswerValue> = {};
+    for (const q of customQuestions) {
+      const v = customAnswers[q.id];
+      const etcText = (customEtcText[q.id] || '').trim();
+      if (q.allow_etc && q.question_type === 'single_choice' && v === ETC_LABEL && etcText) {
+        out[q.id] = `${ETC_PREFIX}${etcText}`;
+        continue;
+      }
+      if (q.allow_etc && q.question_type === 'multi_choice' && Array.isArray(v) && v.includes(ETC_LABEL)) {
+        out[q.id] = v.map((item) => (item === ETC_LABEL && etcText ? `${ETC_PREFIX}${etcText}` : item));
+        continue;
+      }
+      out[q.id] = v;
+    }
+    return out;
   };
 
   useEffect(() => {
@@ -286,7 +329,7 @@ export default function EventRegistrationPage({ params }: { params: Promise<{ sl
           ...form,
           event_id: event?.id,
           user_id,
-          custom_answers: customAnswers,
+          custom_answers: buildCustomAnswersForSubmit(),
           ...(attribution || {}),
         }),
       });
@@ -791,6 +834,7 @@ export default function EventRegistrationPage({ params }: { params: Promise<{ sl
                   );
                 }
                 if (q.question_type === 'single_choice') {
+                  const isEtcSelected = customAnswers[q.id] === ETC_LABEL;
                   return (
                     <div key={q.id} className="field">
                       <label>{numberPrefix}{q.label} {q.required && <span className="required">*</span>}</label>
@@ -809,13 +853,42 @@ export default function EventRegistrationPage({ params }: { params: Promise<{ sl
                             <span className="text-sm">{opt.label}</span>
                           </label>
                         ))}
+                        {q.allow_etc && (
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name={`custom-${q.id}`}
+                              value={ETC_LABEL}
+                              checked={isEtcSelected}
+                              onChange={() => setCustomAnswer(q.id, ETC_LABEL)}
+                              className="w-4 h-4 accent-blue-600"
+                            />
+                            <span className="text-sm">기타 (직접 입력)</span>
+                          </label>
+                        )}
                       </div>
+                      {q.allow_etc && isEtcSelected && (
+                        <input
+                          type="text"
+                          value={customEtcText[q.id] || ''}
+                          onChange={(e) => {
+                            setCustomEtcText((prev) => ({ ...prev, [q.id]: e.target.value }));
+                            if (customErrors[q.id]) {
+                              setCustomErrors((prev) => { const n = { ...prev }; delete n[q.id]; return n; });
+                            }
+                          }}
+                          placeholder="기타 내용을 입력해주세요"
+                          className={`mt-2 ${err ? 'error' : ''}`}
+                          style={{ padding: '10px 12px', border: `1px solid ${err ? '#ef4444' : '#e0e0e0'}`, borderRadius: 8, fontSize: 14, width: '100%' }}
+                        />
+                      )}
                       {err && <span className="error-msg">{err}</span>}
                     </div>
                   );
                 }
                 if (q.question_type === 'multi_choice') {
                   const arr = Array.isArray(customAnswers[q.id]) ? (customAnswers[q.id] as string[]) : [];
+                  const isEtcChecked = arr.includes(ETC_LABEL);
                   return (
                     <div key={q.id} className="field">
                       <label>{numberPrefix}{q.label} {q.required && <span className="required">*</span>}</label>
@@ -840,7 +913,38 @@ export default function EventRegistrationPage({ params }: { params: Promise<{ sl
                             </label>
                           );
                         })}
+                        {q.allow_etc && (
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={isEtcChecked}
+                              onChange={(e) => {
+                                const next = e.target.checked
+                                  ? [...arr, ETC_LABEL]
+                                  : arr.filter((v) => v !== ETC_LABEL);
+                                setCustomAnswer(q.id, next);
+                              }}
+                              className="w-4 h-4 rounded accent-blue-600"
+                            />
+                            <span className="text-sm">기타 (직접 입력)</span>
+                          </label>
+                        )}
                       </div>
+                      {q.allow_etc && isEtcChecked && (
+                        <input
+                          type="text"
+                          value={customEtcText[q.id] || ''}
+                          onChange={(e) => {
+                            setCustomEtcText((prev) => ({ ...prev, [q.id]: e.target.value }));
+                            if (customErrors[q.id]) {
+                              setCustomErrors((prev) => { const n = { ...prev }; delete n[q.id]; return n; });
+                            }
+                          }}
+                          placeholder="기타 내용을 입력해주세요"
+                          className={`mt-2 ${err ? 'error' : ''}`}
+                          style={{ padding: '10px 12px', border: `1px solid ${err ? '#ef4444' : '#e0e0e0'}`, borderRadius: 8, fontSize: 14, width: '100%' }}
+                        />
+                      )}
                       {err && <span className="error-msg">{err}</span>}
                     </div>
                   );

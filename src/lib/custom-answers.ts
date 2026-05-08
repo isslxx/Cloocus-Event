@@ -8,8 +8,23 @@ type QuestionRow = {
   label: string;
   options: { label: string }[];
   required: boolean;
+  allow_etc: boolean;
   active: boolean;
 };
+
+const ETC_LABEL = '기타';
+const ETC_PREFIX = '기타: ';
+const ETC_TEXT_MAX = 500;
+
+// "기타" 또는 "기타: <텍스트>" 인지 판별. 후자면 텍스트 길이 제한 적용.
+function normalizeEtc(s: string): string | null {
+  if (s === ETC_LABEL) return ETC_LABEL;
+  if (s.startsWith(ETC_PREFIX)) {
+    const text = s.slice(ETC_PREFIX.length).trim().slice(0, ETC_TEXT_MAX);
+    return text ? `${ETC_PREFIX}${text}` : ETC_LABEL;
+  }
+  return null;
+}
 
 export type CustomAnswerValue = string | string[] | boolean;
 
@@ -31,7 +46,7 @@ export async function validateAndPrepareCustomAnswers(
 
   const { data } = await supabase
     .from('event_custom_questions')
-    .select('id, question_type, label, options, required, active')
+    .select('id, question_type, label, options, required, allow_etc, active')
     .eq('event_id', eventId)
     .eq('active', true);
 
@@ -51,14 +66,36 @@ export async function validateAndPrepareCustomAnswers(
 
     if (q.question_type === 'single_choice') {
       const s = typeof v === 'string' ? v.trim() : '';
-      const valid = optionLabels.includes(s) ? s : '';
+      let valid = '';
+      if (optionLabels.includes(s)) {
+        valid = s;
+      } else if (q.allow_etc) {
+        const etc = normalizeEtc(s);
+        if (etc) {
+          // 기타를 골랐는데 본문이 비어있으면 거부 (기타: 만 있어도 의미 없음)
+          if (etc === ETC_LABEL) return { ok: false, error: `[추가 문항] ${q.label}: 기타 내용을 입력해주세요.` };
+          valid = etc;
+        }
+      }
       if (q.required && !valid) return { ok: false, error: `[추가 문항] ${q.label}: 선택해주세요.` };
       out[q.id] = valid;
       continue;
     }
 
     if (q.question_type === 'multi_choice') {
-      const arr = Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && optionLabels.includes(x)) : [];
+      const rawArr = Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+      const arr: string[] = [];
+      let etcEmpty = false;
+      for (const item of rawArr) {
+        if (optionLabels.includes(item)) { arr.push(item); continue; }
+        if (q.allow_etc) {
+          const etc = normalizeEtc(item);
+          if (etc === ETC_LABEL) { etcEmpty = true; continue; }
+          if (etc) { arr.push(etc); continue; }
+        }
+        // 그 외 값은 silently 폐기 (정의되지 않은 옵션)
+      }
+      if (etcEmpty) return { ok: false, error: `[추가 문항] ${q.label}: 기타 내용을 입력해주세요.` };
       if (q.required && arr.length === 0) return { ok: false, error: `[추가 문항] ${q.label}: 1개 이상 선택해주세요.` };
       out[q.id] = arr;
       continue;

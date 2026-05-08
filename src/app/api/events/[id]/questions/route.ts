@@ -12,7 +12,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const supabase = getServiceSupabase();
   const { data, error } = await supabase
     .from('event_custom_questions')
-    .select('id, question_type, label, description, options, required, sort_order')
+    .select('id, question_type, label, description, options, required, allow_etc, sort_order')
     .eq('event_id', id)
     .eq('active', true)
     .order('sort_order', { ascending: true });
