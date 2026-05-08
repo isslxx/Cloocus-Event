@@ -252,14 +252,10 @@ export default function MyDashboard() {
     if (!hasSession) setSessionRestoring(false);
   }, []);
 
-  // 추가 문항은 lookup·GET 응답에 함께 포함되므로 setRegistration 시점에 같이 set.
-  // (이전엔 별도 fetch 로 인한 지연이 있었음 — 지금은 단일 라운드트립)
-  // event_id 가 바뀌었는데 customQuestions 가 비어있는 fallback 만 처리
-  useEffect(() => {
-    if (!registration?.event_id) {
-      setCustomQuestions([]);
-    }
-  }, [registration?.event_id]);
+  // (이전에 customQuestions 를 자동 정리하는 useEffect 가 있었으나, 마운트 시점에
+  // registration 의 새 값을 못 봐서 캐시 복원 직후 customQuestions 를 [] 로 덮어쓰던
+  // 버그가 있어 제거함. 모든 lookup/cache/load 경로에서 명시적으로 setCustomQuestions
+  // 를 호출하므로 별도 정리 effect 는 불필요.)
 
   const startEdit = () => {
     if (!registration) return;
