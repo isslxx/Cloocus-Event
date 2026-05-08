@@ -115,7 +115,7 @@ export default function Home() {
                             ? 'border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed'
                             : selectedEvent?.id === event.id
                               ? 'border-blue-500 bg-blue-50'
-                              : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                              : 'border-gray-200 hover:bg-gray-50 event-card-shimmer'
                         }`}
                       >
                         <div className="flex items-center justify-between">

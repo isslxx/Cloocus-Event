@@ -284,3 +284,67 @@ table td .flex {
     transform: translate(var(--dx), var(--dy)) rotate(540deg) scale(0);
   }
 }
+
+/* ==============================================================
+   이벤트 카드 호버 효과 — 블루 그라디언트 보더 흐름 + 1px lift
+   - 평소엔 정적, 호버 시에만 발동
+   - 보더 두께 변화 없음 (기존 2px 위에 conic-gradient 오버레이)
+   - 카드가 살짝 떠오르며 부드러운 그림자 생김
+============================================================== */
+@property --event-card-ang {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+@keyframes event-card-shimmer-rotate {
+  to { --event-card-ang: 360deg; }
+}
+
+.event-card-shimmer {
+  position: relative;
+  isolation: isolate;
+}
+
+.event-card-shimmer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px; /* border-2 와 동일 두께 */
+  background: conic-gradient(
+    from var(--event-card-ang, 0deg),
+    transparent 0deg,
+    transparent 90deg,
+    rgba(96, 165, 250, 0.5) 160deg,
+    rgba(129, 140, 248, 0.95) 200deg,
+    rgba(56, 189, 248, 0.95) 220deg,
+    rgba(96, 165, 250, 0.5) 260deg,
+    transparent 330deg,
+    transparent 360deg
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.event-card-shimmer:hover:not(:disabled)::before {
+  opacity: 1;
+  animation: event-card-shimmer-rotate 3s linear infinite;
+}
+
+/* 모바일에서는 hover 가 의미 없고 스크롤 시 의도치 않게 발동될 수 있어 비활성 */
+@media (hover: none) {
+  .event-card-shimmer::before { opacity: 0 !important; animation: none !important; }
+}
+
+/* 접근성 */
+@media (prefers-reduced-motion: reduce) {
+  .event-card-shimmer::before {
+    transition: none !important;
+    animation: none !important;
+  }
+}
