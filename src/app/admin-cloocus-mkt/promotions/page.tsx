@@ -31,9 +31,16 @@ export default function PromotionsListPage() {
   const [sortKey, setSortKey] = useState<SortKey>('created_at');
   const [sortAsc, setSortAsc] = useState(false);
 
+  // 선택
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
   // 상세 drawer
   const [detail, setDetail] = useState<Registration | null>(null);
   const [detailQuestions, setDetailQuestions] = useState<CustomQuestion[]>([]);
+
+  // 이벤트별 커스텀 문항 캐시 (drawer 클릭 시 즉시 사용)
+  const questionsCache = useRef<Map<string, CustomQuestion[]>>(new Map());
+  const inflightFetch = useRef<Map<string, Promise<CustomQuestion[]>>>(new Map());
 
   // 추출
   const [exporting, setExporting] = useState(false);
@@ -91,6 +98,35 @@ export default function PromotionsListPage() {
     if (accessToken) fetchRecords();
   }, [accessToken, fetchRecords]);
 
+  // 현재 페이지에 등장하는 이벤트들의 커스텀 문항을 미리 로드해서 캐시.
+  // → drawer 클릭 시 네트워크 호출 없이 즉시 표시.
+  useEffect(() => {
+    if (!accessToken || records.length === 0) return;
+    const eventIdsOnPage = Array.from(new Set(records.map((r) => r.event_id).filter((id): id is string => !!id)));
+    for (const eid of eventIdsOnPage) {
+      if (questionsCache.current.has(eid)) continue;
+      if (inflightFetch.current.has(eid)) continue;
+      const p = fetch(`/api/admin/event-questions?event_id=${eid}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+        .then((r) => r.json())
+        .then((d) => {
+          const list: CustomQuestion[] = Array.isArray(d) ? d : [];
+          list.sort((a, b) => a.sort_order - b.sort_order);
+          questionsCache.current.set(eid, list);
+          return list;
+        })
+        .catch(() => {
+          questionsCache.current.set(eid, []);
+          return [];
+        })
+        .finally(() => {
+          inflightFetch.current.delete(eid);
+        });
+      inflightFetch.current.set(eid, p);
+    }
+  }, [accessToken, records]);
+
   // 검색 디바운스
   useEffect(() => {
     clearTimeout(searchDebounce.current);
@@ -103,18 +139,62 @@ export default function PromotionsListPage() {
 
   const openDetail = (record: Registration) => {
     setDetail(record);
-    setDetailQuestions([]);
-    if (record.event_id) {
-      fetch(`/api/admin/event-questions?event_id=${record.event_id}`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      })
-        .then((r) => r.json())
-        .then((d) => {
-          const list = Array.isArray(d) ? (d as CustomQuestion[]) : [];
-          setDetailQuestions(list.sort((a, b) => a.sort_order - b.sort_order));
-        })
-        .catch(() => {});
+    if (!record.event_id) {
+      setDetailQuestions([]);
+      return;
     }
+    // 캐시에 있으면 즉시 사용
+    const cached = questionsCache.current.get(record.event_id);
+    if (cached) {
+      setDetailQuestions(cached);
+      return;
+    }
+    // 캐시 미스 — fetch 진행 중인 게 있으면 기다리고, 없으면 새 요청
+    setDetailQuestions([]);
+    const eid = record.event_id;
+    const inflight = inflightFetch.current.get(eid);
+    const p = inflight || fetch(`/api/admin/event-questions?event_id=${eid}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        const list: CustomQuestion[] = Array.isArray(d) ? d : [];
+        list.sort((a, b) => a.sort_order - b.sort_order);
+        questionsCache.current.set(eid, list);
+        return list;
+      })
+      .catch(() => [] as CustomQuestion[]);
+    p.then((list) => {
+      // drawer 가 같은 record 에 머물러 있을 때만 반영 (다른 행으로 옮겼으면 무시)
+      setDetail((cur) => {
+        if (cur && cur.id === record.id) setDetailQuestions(list);
+        return cur;
+      });
+    });
+  };
+
+  // 선택 토글
+  const toggleSelect = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (records.length === 0) return;
+    const allSelected = records.every((r) => selected.has(r.id));
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allSelected) {
+        for (const r of records) next.delete(r.id);
+      } else {
+        for (const r of records) next.add(r.id);
+      }
+      return next;
+    });
   };
 
   const jumpToRegistrations = (id: string) => {
@@ -125,7 +205,12 @@ export default function PromotionsListPage() {
     setExporting(true);
     try {
       const params = new URLSearchParams({ format });
-      if (filterEvent) params.set('event_id', filterEvent);
+      // 선택된 행이 있으면 선택분만, 아니면 현재 필터 기준 전체
+      if (selected.size > 0) {
+        params.set('ids', Array.from(selected).join(','));
+      } else if (filterEvent) {
+        params.set('event_id', filterEvent);
+      }
       const res = await fetch(`/api/admin/promotions-export?${params}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
@@ -149,8 +234,14 @@ export default function PromotionsListPage() {
   const totalPages = Math.ceil(total / PAGE_LIMIT);
   const sortIcon = (key: SortKey) => sortKey === key ? (sortAsc ? ' ↑' : ' ↓') : ' ↕';
 
+  // 연도 필터: 현재 연도까지만 노출. 해가 바뀌면 자동으로 새 연도가 추가됨.
+  // 과거 연도가 필요해지면 startYear 를 조정.
   const currentYear = new Date().getFullYear();
-  const yearOptions = Array.from({ length: 5 }, (_, i) => String(currentYear - i));
+  const startYear = 2026;
+  const yearOptions = Array.from({ length: Math.max(1, currentYear - startYear + 1) }, (_, i) => String(currentYear - i));
+
+  const allOnPageSelected = records.length > 0 && records.every((r) => selected.has(r.id));
+  const someOnPageSelected = records.some((r) => selected.has(r.id));
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortAsc((v) => !v);
@@ -164,7 +255,12 @@ export default function PromotionsListPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold">프로모션 리스트 ({total}건)</h1>
-          <p className="text-xs text-gray-500 mt-1">프로모션 카테고리 신청자만 모아보고, 추가 문항 응답까지 포함해 추출 가능합니다.</p>
+          <p className="text-xs text-gray-500 mt-1">
+            프로모션 카테고리 신청자만 모아보고, 추가 문항 응답까지 포함해 추출 가능합니다.
+            {selected.size > 0 && (
+              <span className="ml-2 text-blue-600 font-medium">{selected.size}건 선택됨</span>
+            )}
+          </p>
         </div>
         <div className="flex gap-2 flex-wrap">
           <button
@@ -172,7 +268,7 @@ export default function PromotionsListPage() {
             disabled={exporting || total === 0}
             className="text-sm px-3 py-2 rounded-lg font-medium border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-40"
           >
-            {exporting ? '추출 중...' : '⬇ XLSX 추출 (전체 응답 포함)'}
+            {exporting ? '추출 중...' : selected.size > 0 ? `⬇ XLSX 추출 (${selected.size}건)` : '⬇ XLSX 추출 (전체 응답 포함)'}
           </button>
           <button
             onClick={() => handleExport('csv')}
@@ -223,6 +319,16 @@ export default function PromotionsListPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
+                <th className="px-3 py-3 w-10">
+                  <input
+                    type="checkbox"
+                    checked={allOnPageSelected}
+                    ref={(el) => { if (el) el.indeterminate = !allOnPageSelected && someOnPageSelected; }}
+                    onChange={toggleSelectAll}
+                    className="w-4 h-4 rounded accent-blue-600"
+                    aria-label="현재 페이지 전체 선택"
+                  />
+                </th>
                 <th className="px-4 py-3 text-left font-medium text-gray-600 cursor-pointer" onClick={() => handleSort('name')}>성함{sortIcon('name')}</th>
                 <th className="px-4 py-3 text-left font-medium text-gray-600 cursor-pointer" onClick={() => handleSort('company_name')}>회사명{sortIcon('company_name')}</th>
                 <th className="px-4 py-3 text-left font-medium text-gray-600">프로모션</th>
@@ -234,11 +340,20 @@ export default function PromotionsListPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} className="px-4 py-12 text-center text-gray-400">로딩 중...</td></tr>
+                <tr><td colSpan={8} className="px-4 py-12 text-center text-gray-400">로딩 중...</td></tr>
               ) : records.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-12 text-center text-gray-400">검색 결과가 없습니다.</td></tr>
+                <tr><td colSpan={8} className="px-4 py-12 text-center text-gray-400">검색 결과가 없습니다.</td></tr>
               ) : records.map((r) => (
-                <tr key={r.id} className="border-b border-gray-100 hover:bg-gray-50">
+                <tr key={r.id} className={`border-b border-gray-100 hover:bg-gray-50 ${selected.has(r.id) ? 'bg-blue-50/50' : ''}`}>
+                  <td className="px-3 py-3">
+                    <input
+                      type="checkbox"
+                      checked={selected.has(r.id)}
+                      onChange={() => toggleSelect(r.id)}
+                      className="w-4 h-4 rounded accent-blue-600"
+                      aria-label="행 선택"
+                    />
+                  </td>
                   <td className="px-4 py-3 font-medium">{r.name}</td>
                   <td className="px-4 py-3">{r.company_name}</td>
                   <td className="px-4 py-3 text-gray-600 text-xs">{eventName(r.event_id)}</td>
