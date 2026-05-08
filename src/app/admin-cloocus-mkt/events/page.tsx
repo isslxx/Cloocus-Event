@@ -386,8 +386,11 @@ export default function EventsPage() {
       {/* 추가/수정 모달 */}
       {(isNew || editing) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-xl w-full max-w-md p-6">
-            <h2 className="text-lg font-bold mb-4">{isNew ? '이벤트 추가' : '이벤트 수정'}</h2>
+          <div className="bg-white rounded-xl w-full max-w-md flex flex-col" style={{ maxHeight: 'min(90dvh, calc(100vh - 32px))' }}>
+            {/* 고정 헤더 */}
+            <h2 className="text-lg font-bold px-6 pt-6 pb-3 shrink-0">{isNew ? '이벤트 추가' : '이벤트 수정'}</h2>
+            {/* 스크롤 영역 */}
+            <div className="overflow-y-auto px-6 flex-1">
             <div className="space-y-4">
               <div className="field">
                 <label>이벤트명</label>
@@ -528,16 +531,20 @@ export default function EventsPage() {
                 </p>
               )}
             </div>
-            {saveError && (
-              <p className="text-sm text-red-500 mt-3">{saveError}</p>
-            )}
-            <div className="flex gap-2 mt-6">
-              <button onClick={handleSave} disabled={saving} className="btn-primary flex-1">
-                {saving ? '저장 중...' : '저장'}
-              </button>
-              <button onClick={() => { setEditing(null); setIsNew(false); setSaveError(''); }} className="btn-secondary flex-1">
-                취소
-              </button>
+            </div>
+            {/* 고정 푸터: 에러 + 저장/취소 버튼 — 항상 보임 */}
+            <div className="px-6 pt-4 pb-6 shrink-0 border-t border-gray-100 bg-white rounded-b-xl">
+              {saveError && (
+                <p className="text-sm text-red-500 mb-3">{saveError}</p>
+              )}
+              <div className="flex gap-2">
+                <button onClick={handleSave} disabled={saving} className="btn-primary flex-1">
+                  {saving ? '저장 중...' : '저장'}
+                </button>
+                <button onClick={() => { setEditing(null); setIsNew(false); setSaveError(''); }} className="btn-secondary flex-1">
+                  취소
+                </button>
+              </div>
             </div>
           </div>
         </div>
