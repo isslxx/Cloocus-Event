@@ -72,6 +72,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     checkAuth();
   }, [checkAuth]);
 
+  // Supabase 가 백그라운드에서 access token 을 자동 갱신할 때마다
+  // React state 도 새 토큰으로 동기화 (안 하면 1시간 후 API 호출이 401 로 떨어짐)
+  useEffect(() => {
+    const supabase = getSupabase();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.access_token) {
+        setAccessToken(session.access_token);
+      }
+      if (event === 'SIGNED_OUT' || !session) {
+        setAdmin(null);
+        setAccessToken('');
+        authChecked.current = false;
+        if (!isLoginPage) router.push('/admin-cloocus-mkt/login');
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [isLoginPage, router]);
+
   // 라우트 변경 시 모바일 사이드바 자동 닫기
   useEffect(() => {
     setSidebarOpen(false);
