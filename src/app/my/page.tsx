@@ -29,6 +29,7 @@ type RegistrationData = {
   event_type: string;
   event_category: string;
   event_location: string;
+  event_promo_url?: string | null;
   event_time: string;
   survey_enabled: boolean;
   survey_completed: boolean;
@@ -761,6 +762,20 @@ export default function MyDashboard() {
             }`}>
               {registration.event_type === 'online' ? 'Online' : 'Offline'}
             </span>
+            {registration.event_category === '프로모션' && registration.event_promo_url && (
+              <a
+                href={registration.event_promo_url}
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => trackClick('promo-detail-link', { event_id: registration.event_id })}
+                className="ml-auto inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-white border border-blue-200 text-blue-700 hover:border-blue-400 hover:shadow-sm transition"
+              >
+                프로모션 상세보기
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M14 3h7v7M21 3l-9 9M5 5h6v2H7v10h10v-4h2v6H5z" />
+                </svg>
+              </a>
+            )}
           </div>
           <p className="text-lg font-bold text-gray-900 mt-1">{registration.event_name}</p>
           <div className="flex flex-wrap gap-3 mt-2 text-sm text-gray-600">
