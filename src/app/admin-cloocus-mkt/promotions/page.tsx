@@ -232,7 +232,18 @@ export default function PromotionsListPage() {
   };
 
   const totalPages = Math.ceil(total / PAGE_LIMIT);
-  const sortIcon = (key: SortKey) => sortKey === key ? (sortAsc ? ' ↑' : ' ↓') : ' ↕';
+  // Excel 스타일 정렬 캐럿 — 등록 리스트와 동일한 디자인 (시안 D)
+  const SortCaret = ({ active, asc }: { active: boolean; asc: boolean }) => (
+    <span
+      className={`inline-flex items-center justify-center w-4 h-4 rounded text-[9px] leading-none border transition shrink-0
+        ${active
+          ? 'border-blue-300 bg-white text-blue-600'
+          : 'border-gray-300 bg-white text-gray-400'}`}
+      aria-hidden="true"
+    >
+      {active ? (asc ? '▲' : '▼') : '▼'}
+    </span>
+  );
 
   // 연도 필터: 현재 연도까지만 노출. 해가 바뀌면 자동으로 새 연도가 추가됨.
   // 과거 연도가 필요해지면 startYear 를 조정.
@@ -319,7 +330,7 @@ export default function PromotionsListPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="px-3 py-3 w-10">
+                <th className="px-3 py-3 w-10 border-r border-gray-200">
                   <input
                     type="checkbox"
                     checked={allOnPageSelected}
@@ -329,12 +340,30 @@ export default function PromotionsListPage() {
                     aria-label="현재 페이지 전체 선택"
                   />
                 </th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600 cursor-pointer" onClick={() => handleSort('name')}>성함{sortIcon('name')}</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600 cursor-pointer" onClick={() => handleSort('company_name')}>회사명{sortIcon('company_name')}</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">프로모션</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600 cursor-pointer" onClick={() => handleSort('email')}>이메일{sortIcon('email')}</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">연락처</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600 cursor-pointer" onClick={() => handleSort('created_at')}>등록일{sortIcon('created_at')}</th>
+                {([
+                  { key: 'name', label: '성함', sortable: true },
+                  { key: 'company_name', label: '회사명', sortable: true },
+                  { key: 'event_id', label: '프로모션', sortable: false },
+                  { key: 'email', label: '이메일', sortable: true },
+                  { key: 'phone', label: '연락처', sortable: false },
+                  { key: 'created_at', label: '등록일', sortable: true },
+                ] as { key: SortKey; label: string; sortable: boolean }[]).map((col) => {
+                  const isSorted = col.sortable && sortKey === col.key;
+                  return (
+                    <th
+                      key={col.key}
+                      onClick={col.sortable ? () => handleSort(col.key) : undefined}
+                      className={`px-4 py-3 text-left font-medium whitespace-nowrap border-r border-gray-200 transition
+                        ${col.sortable ? 'cursor-pointer' : ''}
+                        ${isSorted ? 'text-blue-700 bg-blue-50/40' : `text-gray-600 ${col.sortable ? 'hover:bg-gray-100' : ''}`}`}
+                    >
+                      <span className="inline-flex items-center justify-between gap-2 w-full">
+                        <span>{col.label}</span>
+                        {col.sortable && <SortCaret active={isSorted} asc={sortAsc} />}
+                      </span>
+                    </th>
+                  );
+                })}
                 <th className="px-4 py-3 text-left font-medium text-gray-600 w-24">상세</th>
               </tr>
             </thead>
@@ -345,7 +374,7 @@ export default function PromotionsListPage() {
                 <tr><td colSpan={8} className="px-4 py-12 text-center text-gray-400">검색 결과가 없습니다.</td></tr>
               ) : records.map((r) => (
                 <tr key={r.id} className={`border-b border-gray-100 hover:bg-gray-50 ${selected.has(r.id) ? 'bg-blue-50/50' : ''}`}>
-                  <td className="px-3 py-3">
+                  <td className="px-3 py-3 border-r border-gray-100">
                     <input
                       type="checkbox"
                       checked={selected.has(r.id)}
@@ -354,12 +383,12 @@ export default function PromotionsListPage() {
                       aria-label="행 선택"
                     />
                   </td>
-                  <td className="px-4 py-3 font-medium">{r.name}</td>
-                  <td className="px-4 py-3">{r.company_name}</td>
-                  <td className="px-4 py-3 text-gray-600 text-xs">{eventName(r.event_id)}</td>
-                  <td className="px-4 py-3 text-gray-600 text-xs">{r.email}</td>
-                  <td className="px-4 py-3 text-gray-600 text-xs">{r.phone}</td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{new Date(r.created_at).toLocaleString('ko-KR')}</td>
+                  <td className="px-4 py-3 font-medium border-r border-gray-100">{r.name}</td>
+                  <td className="px-4 py-3 border-r border-gray-100">{r.company_name}</td>
+                  <td className="px-4 py-3 text-gray-600 text-xs border-r border-gray-100">{eventName(r.event_id)}</td>
+                  <td className="px-4 py-3 text-gray-600 text-xs border-r border-gray-100">{r.email}</td>
+                  <td className="px-4 py-3 text-gray-600 text-xs border-r border-gray-100">{r.phone}</td>
+                  <td className="px-4 py-3 text-gray-500 text-xs border-r border-gray-100">{new Date(r.created_at).toLocaleString('ko-KR')}</td>
                   <td className="px-4 py-3">
                     <button onClick={() => openDetail(r)} className="text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100">
                       보기

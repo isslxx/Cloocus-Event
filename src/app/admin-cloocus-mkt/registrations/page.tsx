@@ -269,7 +269,19 @@ export default function RegistrationsPage() {
   const totalPages = Math.ceil(total / limit);
   const canEditRecord = admin?.role === 'admin' || admin?.role === 'editor';
   const canDeleteRecord = admin?.role === 'admin';
-  const sortIcon = (key: SortKey) => sortKey === key ? (sortAsc ? ' ↑' : ' ↓') : ' ↕';
+  // Excel 스타일 정렬 캐럿: 모든 헤더 우측에 사각 박스 안의 ▼.
+  // 활성 컬럼은 ▲/▼이 파란색으로 강조됨. 비활성은 옅은 회색.
+  const SortCaret = ({ active, asc }: { active: boolean; asc: boolean }) => (
+    <span
+      className={`inline-flex items-center justify-center w-4 h-4 rounded text-[9px] leading-none border transition shrink-0
+        ${active
+          ? 'border-blue-300 bg-white text-blue-600'
+          : 'border-gray-300 bg-white text-gray-400'}`}
+      aria-hidden="true"
+    >
+      {active ? (asc ? '▲' : '▼') : '▼'}
+    </span>
+  );
 
   // 등록년도 옵션 생성
   const currentYear = new Date().getFullYear();
@@ -375,14 +387,20 @@ export default function RegistrationsPage() {
         <table className="w-full text-sm">
           <thead className="sticky top-0 z-20">
             <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="px-3 py-3 w-10 bg-gray-50 sticky left-0 z-30">
+              <th className="px-3 py-3 w-10 bg-gray-50 sticky left-0 z-30 border-r border-gray-200">
                 <input type="checkbox" checked={records.length > 0 && selected.size === records.length} onChange={toggleSelectAll} className="w-4 h-4 rounded accent-blue-600" />
               </th>
-              <th className={`px-4 py-3 text-left font-medium cursor-pointer hover:bg-gray-100 whitespace-nowrap bg-gray-50 sticky left-[40px] z-30 ${sortKey === 'name' ? 'text-blue-700' : 'text-gray-600'}`} onClick={() => handleSort('name' as SortKey)}>
-                성함{sortIcon('name' as SortKey)}
+              <th className={`px-4 py-3 text-left font-medium cursor-pointer whitespace-nowrap sticky left-[40px] z-30 border-r border-gray-200 transition ${sortKey === 'name' ? 'text-blue-700 bg-blue-50/40' : 'text-gray-600 bg-gray-50 hover:bg-gray-100'}`} onClick={() => handleSort('name' as SortKey)}>
+                <span className="inline-flex items-center justify-between gap-2 w-full">
+                  <span>성함</span>
+                  <SortCaret active={sortKey === 'name'} asc={sortAsc} />
+                </span>
               </th>
-              <th className={`px-4 py-3 text-left font-medium cursor-pointer hover:bg-gray-100 whitespace-nowrap bg-gray-50 sticky left-[120px] z-30 border-r border-gray-200 ${sortKey === 'company_name' ? 'text-blue-700' : 'text-gray-600'}`} onClick={() => handleSort('company_name' as SortKey)}>
-                회사명{sortIcon('company_name' as SortKey)}
+              <th className={`px-4 py-3 text-left font-medium cursor-pointer whitespace-nowrap sticky left-[120px] z-30 border-r border-gray-200 transition ${sortKey === 'company_name' ? 'text-blue-700 bg-blue-50/40' : 'text-gray-600 bg-gray-50 hover:bg-gray-100'}`} onClick={() => handleSort('company_name' as SortKey)}>
+                <span className="inline-flex items-center justify-between gap-2 w-full">
+                  <span>회사명</span>
+                  <SortCaret active={sortKey === 'company_name'} asc={sortAsc} />
+                </span>
               </th>
               {[
                 { key: 'created_at' as SortKey, label: '등록일' },
@@ -400,11 +418,14 @@ export default function RegistrationsPage() {
                 { key: 'registration_status' as SortKey, label: '등록 상태' },
                 { key: 'survey_enabled' as SortKey, label: '설문조사' },
               ].map((col) => (
-                <th key={col.key} className={`px-4 py-3 text-left font-medium cursor-pointer hover:bg-gray-100 whitespace-nowrap bg-gray-50 ${sortKey === col.key ? 'text-blue-700 bg-blue-50/50' : 'text-gray-600'}`} onClick={() => handleSort(col.key)}>
-                  {col.label}{sortIcon(col.key)}
+                <th key={col.key} className={`px-4 py-3 text-left font-medium cursor-pointer whitespace-nowrap border-r border-gray-200 transition ${sortKey === col.key ? 'text-blue-700 bg-blue-50/40' : 'text-gray-600 bg-gray-50 hover:bg-gray-100'}`} onClick={() => handleSort(col.key)}>
+                  <span className="inline-flex items-center justify-between gap-2 w-full">
+                    <span>{col.label}</span>
+                    <SortCaret active={sortKey === col.key} asc={sortAsc} />
+                  </span>
                 </th>
               ))}
-              <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap bg-gray-50">이메일 상태</th>
+              <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap bg-gray-50 border-r border-gray-200">이메일 상태</th>
               {(canEditRecord || canDeleteRecord) && (
                 <th className="px-4 py-3 text-left font-medium text-gray-600 w-24 bg-gray-50">작업</th>
               )}
@@ -417,23 +438,23 @@ export default function RegistrationsPage() {
               <tr><td colSpan={19} className="px-4 py-12 text-center text-gray-400">등록 데이터가 없습니다.</td></tr>
             ) : records.map((r) => (
               <tr key={r.id} className={`border-b border-gray-100 hover:bg-gray-50 ${selected.has(r.id) ? 'bg-blue-50/50' : ''}`}>
-                <td className={`px-3 py-3 w-10 sticky left-0 z-10 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`}>
+                <td className={`px-3 py-3 w-10 sticky left-0 z-10 border-r border-gray-100 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`}>
                   <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleSelect(r.id)} className="w-4 h-4 rounded accent-blue-600" />
                 </td>
-                <td className={`px-4 py-3 whitespace-nowrap font-medium sticky left-[40px] z-10 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`}>{r.name}</td>
+                <td className={`px-4 py-3 whitespace-nowrap font-medium sticky left-[40px] z-10 border-r border-gray-100 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`}>{r.name}</td>
                 <td className={`px-4 py-3 whitespace-nowrap sticky left-[120px] z-10 border-r border-gray-100 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`}>{r.company_name}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-gray-500">{new Date(r.created_at).toLocaleDateString('ko-KR')}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-500 max-w-[150px] truncate">{r.event_id ? (events.find((e) => e.id === r.event_id)?.name || '-') : '-'}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.department || '-'}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.job_title || '-'}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.email}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.phone}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.industry || '-'}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.company_size || '-'}</td>
-                <td className="px-4 py-3 whitespace-nowrap">{r.referral_source || '-'}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.referrer_name || '-'}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-gray-500 max-w-[200px] truncate">{r.inquiry || '-'}</td>
-                <td className="px-4 py-3 whitespace-nowrap">
+                <td className="px-4 py-3 whitespace-nowrap text-gray-500 border-r border-gray-100">{new Date(r.created_at).toLocaleDateString('ko-KR')}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-500 max-w-[150px] truncate border-r border-gray-100">{r.event_id ? (events.find((e) => e.id === r.event_id)?.name || '-') : '-'}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-gray-500 border-r border-gray-100">{r.department || '-'}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-gray-500 border-r border-gray-100">{r.job_title || '-'}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-gray-500 border-r border-gray-100">{r.email}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-gray-500 border-r border-gray-100">{r.phone}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-gray-500 border-r border-gray-100">{r.industry || '-'}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-gray-500 border-r border-gray-100">{r.company_size || '-'}</td>
+                <td className="px-4 py-3 whitespace-nowrap border-r border-gray-100">{r.referral_source || '-'}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-gray-500 border-r border-gray-100">{r.referrer_name || '-'}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-gray-500 max-w-[200px] truncate border-r border-gray-100">{r.inquiry || '-'}</td>
+                <td className="px-4 py-3 whitespace-nowrap border-r border-gray-100">
                   {r.cancelled_at ? (
                     <span className="text-xs px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 font-medium" title={`${new Date(r.cancelled_at).toLocaleString('ko-KR')} 신청자 직접 취소`}>
                       취소
@@ -442,7 +463,7 @@ export default function RegistrationsPage() {
                     <span className="text-xs text-gray-300">-</span>
                   )}
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap">
+                <td className="px-4 py-3 whitespace-nowrap border-r border-gray-100">
                   {canEditRecord ? (
                     <select
                       value={r.registration_status || 'pending'}
@@ -465,7 +486,7 @@ export default function RegistrationsPage() {
                     registrationStatusLabel(r.registration_status)
                   )}
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap">
+                <td className="px-4 py-3 whitespace-nowrap border-r border-gray-100">
                   {r.registration_status === 'confirmed' ? (
                     <button
                       onClick={async () => {
@@ -485,7 +506,7 @@ export default function RegistrationsPage() {
                     <span className="text-xs text-gray-300">-</span>
                   )}
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap">{emailStatusLabel(r.email_status)}</td>
+                <td className="px-4 py-3 whitespace-nowrap border-r border-gray-100">{emailStatusLabel(r.email_status)}</td>
                 {(canEditRecord || canDeleteRecord) && (
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex gap-1">
