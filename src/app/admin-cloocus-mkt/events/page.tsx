@@ -24,6 +24,7 @@ export default function EventsPage() {
   const [formPrivacy, setFormPrivacy] = useState('기타');
   const [formCategory, setFormCategory] = useState('이벤트');
   const [formSlug, setFormSlug] = useState('');
+  const [formPromoUrl, setFormPromoUrl] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
 
@@ -65,6 +66,7 @@ export default function EventsPage() {
     setFormPrivacy('기타');
     setFormCategory('이벤트');
     setFormSlug('');
+    setFormPromoUrl('');
     setSaveError('');
   };
 
@@ -82,6 +84,7 @@ export default function EventsPage() {
     setFormPrivacy(event.privacy_category || '기타');
     setFormCategory(event.category || '이벤트');
     setFormSlug(event.slug || '');
+    setFormPromoUrl(event.promo_url || '');
     setSaveError('');
   };
 
@@ -105,6 +108,8 @@ export default function EventsPage() {
         privacy_category: formPrivacy,
         category: formCategory,
         ended_at: formStatus === 'ended' ? new Date().toISOString() : null,
+        // 프로모션 카테고리에서만 입력값 저장. 다른 카테고리에선 비워서 저장 (덮어쓰기)
+        promo_url: formCategory === '프로모션' ? (formPromoUrl.trim() || null) : null,
       };
       if (!isNew) body.slug = trimmedSlug; // 수정 시: 명시적으로 보냄(빈 값 → 자동 재생성)
       let res: Response;
@@ -444,6 +449,22 @@ export default function EventsPage() {
                   </select>
                 </div>
               </div>
+              {formCategory === '프로모션' && (
+                <div className="field">
+                  <label>
+                    상세 페이지 URL <span className="text-xs text-gray-400 font-normal">(선택)</span>
+                  </label>
+                  <input
+                    type="url"
+                    value={formPromoUrl}
+                    onChange={(e) => setFormPromoUrl(e.target.value)}
+                    placeholder="https://example.com/promotion-landing"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    입력하면 신청자 등록 페이지의 이벤트 정보에 &quot;프로모션 상세보기&quot; 링크로 노출됩니다 (홈에는 노출 안 됨).
+                  </p>
+                </div>
+              )}
               <div className="field">
                 <label>개인정보 동의</label>
                 <select value={formPrivacy} onChange={(e) => setFormPrivacy(e.target.value)}>

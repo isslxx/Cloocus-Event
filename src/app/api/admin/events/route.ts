@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (admin.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const { name, event_date, event_type, status, location, event_time, visible, capacity, privacy_category, category, ended_at } = await req.json();
+  const { name, event_date, event_type, status, location, event_time, visible, capacity, privacy_category, category, ended_at, promo_url } = await req.json();
 
   if (!name?.trim() || !event_date || !event_type) {
     return NextResponse.json({ error: '필수 항목을 입력해주세요.' }, { status: 400 });
@@ -54,6 +54,8 @@ export async function POST(req: NextRequest) {
     privacy_category: privacy_category || '기타',
     category: category || '이벤트',
     ended_at: ended_at || null,
+    // 프로모션 카테고리에서만 URL 의미가 있지만, 다른 카테고리도 미리 저장해두는 건 무해.
+    promo_url: typeof promo_url === 'string' ? (promo_url.trim() || null) : null,
   });
 
   if (error) {

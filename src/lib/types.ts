@@ -13,6 +13,7 @@ export type Event = {
   location: string;
   event_time: string;
   custom_questions_section_title: string | null;
+  promo_url: string | null;
   created_at: string;
 };
 

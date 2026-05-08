@@ -11,10 +11,14 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const updates = await req.json();
   const supabase = getServiceSupabase();
 
-  const allowed = ['name', 'slug', 'event_date', 'event_type', 'status', 'location', 'event_time', 'visible', 'capacity', 'privacy_category', 'category', 'ended_at', 'custom_questions_section_title'];
+  const allowed = ['name', 'slug', 'event_date', 'event_type', 'status', 'location', 'event_time', 'visible', 'capacity', 'privacy_category', 'category', 'ended_at', 'custom_questions_section_title', 'promo_url'];
   const filtered: Record<string, unknown> = {};
   for (const key of allowed) {
     if (key in updates) filtered[key] = updates[key];
+  }
+  // promo_url 빈 문자열은 null 로 정규화
+  if ('promo_url' in filtered && typeof filtered.promo_url === 'string') {
+    filtered.promo_url = filtered.promo_url.trim() || null;
   }
 
   // slug 처리:

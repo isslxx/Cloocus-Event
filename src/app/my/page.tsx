@@ -20,6 +20,7 @@ type RegistrationData = {
   referral_source: string;
   referrer_name: string;
   inquiry: string;
+  custom_answers?: Record<string, string | string[] | boolean> | null;
   survey_feedback?: string | null;
   event_id: string;
   registration_status: string;
@@ -132,6 +133,25 @@ export default function MyDashboard() {
   // 폼 옵션
   const [formOptions, setFormOptions] = useState<Record<string, string[]>>({});
 
+  // 이벤트 전용 추가 문항 (조회·수정 시 사용)
+  type CustomQuestion = {
+    id: string;
+    question_type: 'short_text' | 'long_text' | 'single_choice' | 'multi_choice' | 'agreement';
+    label: string;
+    description: string | null;
+    options: { label: string }[];
+    required: boolean;
+    allow_etc: boolean;
+  };
+  type CustomAnswerValue = string | string[] | boolean;
+  const [customQuestions, setCustomQuestions] = useState<CustomQuestion[]>([]);
+  const [editCustomAnswers, setEditCustomAnswers] = useState<Record<string, CustomAnswerValue>>({});
+  const [editCustomEtc, setEditCustomEtc] = useState<Record<string, string>>({});
+  const [editCustomErrors, setEditCustomErrors] = useState<Record<string, string>>({});
+
+  const ETC_LABEL = '기타';
+  const ETC_PREFIX = '기타: ';
+
   useEffect(() => {
     captureAttribution();
     trackView('/my');
@@ -143,6 +163,21 @@ export default function MyDashboard() {
       setFaqCategories(Array.isArray(d?.categories) ? d.categories : []);
     }).catch(() => {});
   }, []);
+
+  // 등록 정보 로드 시 해당 이벤트의 추가 문항 정의 가져오기
+  useEffect(() => {
+    if (!registration?.event_id) {
+      setCustomQuestions([]);
+      return;
+    }
+    fetch(`/api/events/${registration.event_id}/questions`)
+      .then((r) => r.json())
+      .then((d) => {
+        const list: CustomQuestion[] = Array.isArray(d) ? d : [];
+        setCustomQuestions(list);
+      })
+      .catch(() => setCustomQuestions([]));
+  }, [registration?.event_id]);
 
   const startEdit = () => {
     if (!registration) return;
@@ -169,6 +204,37 @@ export default function MyDashboard() {
       referrer_name: registration.referrer_name || '',
       inquiry: registration.inquiry || '',
     });
+    // 커스텀 문항 응답 초기화 — "기타: <텍스트>" 형태는 분리해서 표시/편집
+    const ans = (registration.custom_answers || {}) as Record<string, CustomAnswerValue>;
+    const initAnswers: Record<string, CustomAnswerValue> = {};
+    const initEtc: Record<string, string> = {};
+    for (const q of customQuestions) {
+      const v = ans[q.id];
+      if (q.question_type === 'single_choice' && typeof v === 'string' && v.startsWith(ETC_PREFIX)) {
+        initAnswers[q.id] = ETC_LABEL;
+        initEtc[q.id] = v.slice(ETC_PREFIX.length);
+      } else if (q.question_type === 'multi_choice' && Array.isArray(v)) {
+        const out: string[] = [];
+        for (const item of v) {
+          if (typeof item === 'string' && item.startsWith(ETC_PREFIX)) {
+            out.push(ETC_LABEL);
+            initEtc[q.id] = item.slice(ETC_PREFIX.length);
+          } else if (typeof item === 'string') {
+            out.push(item);
+          }
+        }
+        initAnswers[q.id] = out;
+      } else if (v !== undefined) {
+        initAnswers[q.id] = v;
+      } else {
+        if (q.question_type === 'multi_choice') initAnswers[q.id] = [];
+        else if (q.question_type === 'agreement') initAnswers[q.id] = false;
+        else initAnswers[q.id] = '';
+      }
+    }
+    setEditCustomAnswers(initAnswers);
+    setEditCustomEtc(initEtc);
+    setEditCustomErrors({});
     setEditErrors({});
     setEditServerError('');
     setEditMode(true);
@@ -188,8 +254,51 @@ export default function MyDashboard() {
     if (!editForm.referral_source) errs.referral_source = '신청 경로를 선택해주세요.';
     if (editForm.industry === '기타' && !editForm.industry_etc?.trim()) errs.industry_etc = '산업군을 입력해주세요.';
     if (editForm.referral_source === '기타' && !editForm.referral_source_etc?.trim()) errs.referral_source_etc = '신청 경로를 입력해주세요.';
+
+    // 커스텀 문항 검증
+    const cErrs: Record<string, string> = {};
+    for (const q of customQuestions) {
+      const v = editCustomAnswers[q.id];
+      const etcText = (editCustomEtc[q.id] || '').trim();
+      if (q.allow_etc) {
+        if (q.question_type === 'single_choice' && v === ETC_LABEL && !etcText) {
+          cErrs[q.id] = '기타 내용을 입력해주세요.';
+          continue;
+        }
+        if (q.question_type === 'multi_choice' && Array.isArray(v) && v.includes(ETC_LABEL) && !etcText) {
+          cErrs[q.id] = '기타 내용을 입력해주세요.';
+          continue;
+        }
+      }
+      if (!q.required) continue;
+      const empty =
+        (q.question_type === 'multi_choice' && Array.isArray(v) && v.length === 0) ||
+        (q.question_type === 'agreement' && v !== true) ||
+        ((q.question_type === 'short_text' || q.question_type === 'long_text' || q.question_type === 'single_choice') && (typeof v !== 'string' || !v.trim()));
+      if (empty) {
+        cErrs[q.id] = q.question_type === 'agreement' ? '동의가 필요합니다.' : '필수 항목입니다.';
+      }
+    }
+    setEditCustomErrors(cErrs);
+
     setEditErrors(errs);
-    if (Object.keys(errs).length > 0) return;
+    if (Object.keys(errs).length > 0 || Object.keys(cErrs).length > 0) return;
+
+    // 제출용 custom_answers — "기타" 선택 + etc 텍스트를 "기타: <텍스트>" 로 합침
+    const submitCustomAnswers: Record<string, CustomAnswerValue> = {};
+    for (const q of customQuestions) {
+      const v = editCustomAnswers[q.id];
+      const etcText = (editCustomEtc[q.id] || '').trim();
+      if (q.allow_etc && q.question_type === 'single_choice' && v === ETC_LABEL && etcText) {
+        submitCustomAnswers[q.id] = `${ETC_PREFIX}${etcText}`;
+        continue;
+      }
+      if (q.allow_etc && q.question_type === 'multi_choice' && Array.isArray(v) && v.includes(ETC_LABEL)) {
+        submitCustomAnswers[q.id] = v.map((item) => (item === ETC_LABEL && etcText ? `${ETC_PREFIX}${etcText}` : item));
+        continue;
+      }
+      submitCustomAnswers[q.id] = v;
+    }
 
     setEditSubmitting(true);
     setEditServerError('');
@@ -197,7 +306,7 @@ export default function MyDashboard() {
       const res = await fetch(`/api/register/${registration!.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...editForm, pin }),
+        body: JSON.stringify({ ...editForm, pin, custom_answers: submitCustomAnswers }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -1191,6 +1300,29 @@ export default function MyDashboard() {
                 </div>
               ))}
             </div>
+
+            {/* 이벤트 전용 추가 문항 응답 */}
+            {customQuestions.length > 0 && (
+              <div className="mt-5 pt-4 border-t border-gray-100">
+                <h3 className="text-xs font-semibold text-amber-700 mb-3 uppercase tracking-wide">✨ 추가 문항 응답</h3>
+                <div className="space-y-3">
+                  {customQuestions.map((q) => {
+                    const a = (registration.custom_answers || {})[q.id];
+                    let display: string;
+                    if (Array.isArray(a)) display = a.length > 0 ? a.join(', ') : '(응답 없음)';
+                    else if (typeof a === 'boolean') display = a ? '동의함' : '미동의';
+                    else if (typeof a === 'string') display = a || '(응답 없음)';
+                    else display = '(응답 없음)';
+                    return (
+                      <div key={q.id} className="border-l-2 border-amber-200 pl-3">
+                        <p className="text-xs text-gray-500 mb-0.5">{q.label}</p>
+                        <p className="text-sm text-gray-900 whitespace-pre-wrap">{display}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 우측: FAQ */}
@@ -1408,6 +1540,123 @@ export default function MyDashboard() {
                 <label className="text-sm font-medium text-gray-700">문의사항</label>
                 <textarea rows={3} value={editForm.inquiry || ''} onChange={(e) => setEditForm({ ...editForm, inquiry: e.target.value })} placeholder="문의사항 (선택)" />
               </div>
+
+              {/* 이벤트 전용 추가 문항 — /[slug] 의 폼과 동일한 입력 UX */}
+              {customQuestions.length > 0 && (
+                <div className="mt-2 pt-4 border-t border-amber-200">
+                  <h3 className="text-sm font-semibold text-amber-700 mb-3">✨ 추가 문항 수정</h3>
+                  <div className="space-y-4">
+                    {customQuestions.map((q) => {
+                      const err = editCustomErrors[q.id];
+                      const setAns = (val: CustomAnswerValue) => {
+                        setEditCustomAnswers((p) => ({ ...p, [q.id]: val }));
+                        if (editCustomErrors[q.id]) {
+                          setEditCustomErrors((p) => { const n = { ...p }; delete n[q.id]; return n; });
+                        }
+                      };
+                      const setEtc = (val: string) => {
+                        setEditCustomEtc((p) => ({ ...p, [q.id]: val }));
+                        if (editCustomErrors[q.id]) {
+                          setEditCustomErrors((p) => { const n = { ...p }; delete n[q.id]; return n; });
+                        }
+                      };
+                      const v = editCustomAnswers[q.id];
+
+                      if (q.question_type === 'short_text') {
+                        return (
+                          <div key={q.id} className="field">
+                            <label className="text-sm font-medium text-gray-700">{q.label} {q.required && <span className="text-red-500">*</span>}</label>
+                            {q.description && <p className="text-xs text-gray-500 mb-1.5">{q.description}</p>}
+                            <input type="text" value={typeof v === 'string' ? v : ''} onChange={(e) => setAns(e.target.value)} className={err ? 'error' : ''} />
+                            {err && <span className="error-msg">{err}</span>}
+                          </div>
+                        );
+                      }
+                      if (q.question_type === 'long_text') {
+                        return (
+                          <div key={q.id} className="field">
+                            <label className="text-sm font-medium text-gray-700">{q.label} {q.required && <span className="text-red-500">*</span>}</label>
+                            {q.description && <p className="text-xs text-gray-500 mb-1.5">{q.description}</p>}
+                            <textarea rows={3} value={typeof v === 'string' ? v : ''} onChange={(e) => setAns(e.target.value)} className={err ? 'error' : ''} />
+                            {err && <span className="error-msg">{err}</span>}
+                          </div>
+                        );
+                      }
+                      if (q.question_type === 'single_choice') {
+                        const isEtc = v === ETC_LABEL;
+                        return (
+                          <div key={q.id} className="field">
+                            <label className="text-sm font-medium text-gray-700">{q.label} {q.required && <span className="text-red-500">*</span>}</label>
+                            {q.description && <p className="text-xs text-gray-500 mb-1.5">{q.description}</p>}
+                            <div className="space-y-1.5">
+                              {q.options.map((opt, i) => (
+                                <label key={i} className="flex items-center gap-2 cursor-pointer">
+                                  <input type="radio" name={`my-cust-${q.id}`} checked={v === opt.label} onChange={() => setAns(opt.label)} className="w-4 h-4 accent-blue-600" />
+                                  <span className="text-sm">{opt.label}</span>
+                                </label>
+                              ))}
+                              {q.allow_etc && (
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <input type="radio" name={`my-cust-${q.id}`} checked={isEtc} onChange={() => setAns(ETC_LABEL)} className="w-4 h-4 accent-blue-600" />
+                                  <span className="text-sm">기타 (직접 입력)</span>
+                                </label>
+                              )}
+                            </div>
+                            {q.allow_etc && isEtc && (
+                              <input type="text" value={editCustomEtc[q.id] || ''} onChange={(e) => setEtc(e.target.value)} placeholder="기타 내용을 입력해주세요" className={`mt-2 ${err ? 'error' : ''}`} style={{ padding: '10px 12px', border: `1px solid ${err ? '#ef4444' : '#e0e0e0'}`, borderRadius: 8, fontSize: 14, width: '100%' }} />
+                            )}
+                            {err && <span className="error-msg">{err}</span>}
+                          </div>
+                        );
+                      }
+                      if (q.question_type === 'multi_choice') {
+                        const arr = Array.isArray(v) ? v : [];
+                        const isEtc = arr.includes(ETC_LABEL);
+                        return (
+                          <div key={q.id} className="field">
+                            <label className="text-sm font-medium text-gray-700">{q.label} {q.required && <span className="text-red-500">*</span>}</label>
+                            {q.description && <p className="text-xs text-gray-500 mb-1.5">{q.description}</p>}
+                            <div className="space-y-1.5">
+                              {q.options.map((opt, i) => {
+                                const checked = arr.includes(opt.label);
+                                return (
+                                  <label key={i} className="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" checked={checked} onChange={(e) => setAns(e.target.checked ? [...arr, opt.label] : arr.filter((x) => x !== opt.label))} className="w-4 h-4 rounded accent-blue-600" />
+                                    <span className="text-sm">{opt.label}</span>
+                                  </label>
+                                );
+                              })}
+                              {q.allow_etc && (
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <input type="checkbox" checked={isEtc} onChange={(e) => setAns(e.target.checked ? [...arr, ETC_LABEL] : arr.filter((x) => x !== ETC_LABEL))} className="w-4 h-4 rounded accent-blue-600" />
+                                  <span className="text-sm">기타 (직접 입력)</span>
+                                </label>
+                              )}
+                            </div>
+                            {q.allow_etc && isEtc && (
+                              <input type="text" value={editCustomEtc[q.id] || ''} onChange={(e) => setEtc(e.target.value)} placeholder="기타 내용을 입력해주세요" className={`mt-2 ${err ? 'error' : ''}`} style={{ padding: '10px 12px', border: `1px solid ${err ? '#ef4444' : '#e0e0e0'}`, borderRadius: 8, fontSize: 14, width: '100%' }} />
+                            )}
+                            {err && <span className="error-msg">{err}</span>}
+                          </div>
+                        );
+                      }
+                      if (q.question_type === 'agreement') {
+                        const checked = v === true;
+                        return (
+                          <div key={q.id} className="field">
+                            <label className="flex items-start gap-2 cursor-pointer">
+                              <input type="checkbox" checked={checked} onChange={(e) => setAns(e.target.checked)} className="mt-0.5 w-4 h-4 rounded accent-blue-600" />
+                              <span className="text-sm">{q.label} {q.required && <span className="text-red-500">*</span>}</span>
+                            </label>
+                            {err && <span className="error-msg mt-1 block">{err}</span>}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
             {!surveyWithEdit && (
               <div className="flex gap-3 mt-6">
