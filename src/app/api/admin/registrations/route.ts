@@ -13,6 +13,7 @@ export async function GET(req: NextRequest) {
   const limit = parseInt(url.searchParams.get('limit') || '50');
   const search = url.searchParams.get('search') || '';
   const event_id = url.searchParams.get('event_id') || '';
+  const category = url.searchParams.get('category') || '';
   const industry = url.searchParams.get('industry') || '';
   const company_size = url.searchParams.get('company_size') || '';
   const referral_source = url.searchParams.get('referral_source') || '';
@@ -37,6 +38,16 @@ export async function GET(req: NextRequest) {
     query = query.or(`name.ilike.%${search}%,company_name.ilike.%${search}%,email.ilike.%${search}%`);
   }
   if (event_id) query = query.eq('event_id', event_id);
+
+  // category 필터: 해당 카테고리의 이벤트 ID 만 모아서 IN 절로 변환
+  if (category) {
+    const { data: catEvents } = await supabase.from('events').select('id').eq('category', category);
+    const ids = (catEvents || []).map((e) => e.id as string);
+    if (ids.length === 0) {
+      return NextResponse.json({ data: [], total: 0, page, limit });
+    }
+    query = query.in('event_id', ids);
+  }
   if (industry) query = query.eq('industry', industry);
   if (company_size) query = query.eq('company_size', company_size);
   if (referral_source) query = query.eq('referral_source', referral_source);

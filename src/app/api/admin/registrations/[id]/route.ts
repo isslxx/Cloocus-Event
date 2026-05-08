@@ -1,6 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFromToken, canEdit, getServiceSupabase } from '@/lib/supabase-auth';
 
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const admin = await getAdminFromToken(req.headers.get('authorization'));
+  if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const { id } = await params;
+  const supabase = getServiceSupabase();
+  const { data, error } = await supabase
+    .from('event_registrations')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (!data) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  return NextResponse.json(data);
+}
+
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const admin = await getAdminFromToken(req.headers.get('authorization'));
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

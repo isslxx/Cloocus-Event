@@ -295,8 +295,24 @@ async function fetchVisitUtm(
 
 async function resolveEventIds(
   supabase: ReturnType<typeof getServiceSupabase>,
-  filter: string
+  filter: string,
+  category: string
 ): Promise<string[] | null | 'empty'> {
+  // category 필터가 명시되면 해당 카테고리의 이벤트 ID 로 한정
+  if (category) {
+    const { data } = await supabase.from('events').select('id').eq('category', category);
+    const ids = (data || []).map((e) => e.id);
+    if (ids.length === 0) return 'empty';
+    if (filter === 'all') return ids;
+    if (filter === 'online' || filter === 'offline') {
+      const { data: typed } = await supabase.from('events').select('id').eq('category', category).eq('event_type', filter);
+      const intersected = (typed || []).map((e) => e.id);
+      return intersected.length === 0 ? 'empty' : intersected;
+    }
+    // 특정 이벤트 ID 가 들어왔는데 카테고리에 속하지 않으면 empty
+    return ids.includes(filter) ? [filter] : 'empty';
+  }
+
   if (filter === 'all') return null;
   if (filter === 'online' || filter === 'offline') {
     const { data } = await supabase.from('events').select('id').eq('event_type', filter);
@@ -312,6 +328,7 @@ export async function GET(req: NextRequest) {
 
   const supabase = getServiceSupabase();
   const filter = req.nextUrl.searchParams.get('filter') || 'all';
+  const category = req.nextUrl.searchParams.get('category') || '';
   const rangeParam = req.nextUrl.searchParams.get('range') || '30';
   const startParam = req.nextUrl.searchParams.get('start');
   const endParam = req.nextUrl.searchParams.get('end');
@@ -327,7 +344,7 @@ export async function GET(req: NextRequest) {
   const primaryWin: Window = { start: primaryStart, end: primaryEnd };
 
   // Primary 이벤트 필터
-  const eventIds = await resolveEventIds(supabase, filter);
+  const eventIds = await resolveEventIds(supabase, filter, category);
   if (eventIds === 'empty') return NextResponse.json(emptyResponse());
 
   // Records fetch (primary) + page_events UTM (방문 기준)

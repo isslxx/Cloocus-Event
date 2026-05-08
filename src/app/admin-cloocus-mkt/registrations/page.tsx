@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useAdmin } from '../layout';
 import { INDUSTRIES, COMPANY_SIZES, REFERRAL_SOURCES } from '@/lib/constants';
 import { formatPhone } from '@/lib/validation';
@@ -10,6 +11,7 @@ type SortKey = keyof Registration;
 
 export default function RegistrationsPage() {
   const { user: admin, accessToken } = useAdmin();
+  const searchParams = useSearchParams();
   const [records, setRecords] = useState<Registration[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -111,6 +113,31 @@ export default function RegistrationsPage() {
   useEffect(() => {
     if (accessToken) fetchRecords();
   }, [accessToken, fetchRecords]);
+
+  // ?open=<id> 로 진입 시 해당 등록을 검색해서 수정 모달 자동 오픈
+  // (프로모션 리스트의 "등록 리스트에서 편집하기 →" 점프 버튼이 사용)
+  const openParam = searchParams?.get('open');
+  const autoOpenedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!openParam || autoOpenedRef.current === openParam) return;
+    if (records.length === 0) return;
+    const found = records.find((r) => r.id === openParam);
+    if (found) {
+      autoOpenedRef.current = openParam;
+      handleEdit(found);
+      return;
+    }
+    // 검색 결과에 없으면 직접 fetch
+    if (!accessToken) return;
+    autoOpenedRef.current = openParam;
+    fetch(`/api/admin/registrations/${openParam}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+      .then((r) => r.json())
+      .then((d) => { if (d && d.id) handleEdit(d as Registration); })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openParam, records, accessToken]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortAsc(!sortAsc);

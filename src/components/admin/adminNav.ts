@@ -36,9 +36,10 @@ export const ADMIN_NAV: AdminNavEntry[] = [
     label: '대시보드',
     icon: '📊',
     children: [
-      { type: 'item', href: '/admin-cloocus-mkt',                   label: '통합 대시보드', icon: '📈' },
-      { type: 'item', href: '/admin-cloocus-mkt/survey-responses',  label: '설문 대시보드', icon: '📊' },
-      { type: 'item', href: '/admin-cloocus-mkt/certificates',      label: '수료증 대시보드', icon: '🎓' },
+      { type: 'item', href: '/admin-cloocus-mkt',                       label: '통합 대시보드',   icon: '📈' },
+      { type: 'item', href: '/admin-cloocus-mkt/dashboard-promotions',  label: '프로모션 대시보드', icon: '🎁' },
+      { type: 'item', href: '/admin-cloocus-mkt/survey-responses',      label: '설문 대시보드',   icon: '📊' },
+      { type: 'item', href: '/admin-cloocus-mkt/certificates',          label: '수료증 대시보드', icon: '🎓' },
     ],
   },
   {
@@ -47,10 +48,11 @@ export const ADMIN_NAV: AdminNavEntry[] = [
     label: '고객 관리',
     icon: '👥',
     children: [
-      { type: 'item', href: '/admin-cloocus-mkt/registrations', label: '등록 리스트',  icon: '📋' },
-      { type: 'item', href: '/admin-cloocus-mkt/survey-list',   label: '설문 리스트',  icon: '📑' },
-      { type: 'item', href: '/admin-cloocus-mkt/emails',        label: '이메일 발송',  icon: '✉️' },
-      { type: 'item', href: '/admin-cloocus-mkt/inquiries',     label: 'Q&A',         icon: '💬' },
+      { type: 'item', href: '/admin-cloocus-mkt/registrations', label: '등록 리스트',    icon: '📋' },
+      { type: 'item', href: '/admin-cloocus-mkt/promotions',    label: '프로모션 리스트', icon: '🎁' },
+      { type: 'item', href: '/admin-cloocus-mkt/survey-list',   label: '설문 리스트',    icon: '📑' },
+      { type: 'item', href: '/admin-cloocus-mkt/emails',        label: '이메일 발송',    icon: '✉️' },
+      { type: 'item', href: '/admin-cloocus-mkt/inquiries',     label: 'Q&A',           icon: '💬' },
     ],
   },
   {
