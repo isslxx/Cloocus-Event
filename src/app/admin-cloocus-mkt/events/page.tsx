@@ -23,7 +23,9 @@ export default function EventsPage() {
   const [formCapacity, setFormCapacity] = useState('');
   const [formPrivacy, setFormPrivacy] = useState('기타');
   const [formCategory, setFormCategory] = useState('이벤트');
+  const [formSlug, setFormSlug] = useState('');
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   const [deleting, setDeleting] = useState<string | null>(null);
   const [showCloseAll, setShowCloseAll] = useState(false);
@@ -62,6 +64,8 @@ export default function EventsPage() {
     setFormCapacity('');
     setFormPrivacy('기타');
     setFormCategory('이벤트');
+    setFormSlug('');
+    setSaveError('');
   };
 
   const openEdit = (event: Event) => {
@@ -77,31 +81,58 @@ export default function EventsPage() {
     setFormCapacity(event.capacity ? String(event.capacity) : '');
     setFormPrivacy(event.privacy_category || '기타');
     setFormCategory(event.category || '이벤트');
+    setFormSlug(event.slug || '');
+    setSaveError('');
   };
 
   const handleSave = async () => {
     if (!formName.trim() || !formDate) return;
     setSaving(true);
+    setSaveError('');
     try {
-      const body = { name: formName.trim(), event_date: formDate, event_type: formType, status: formStatus, location: formLocation.trim(), event_time: formTime.trim(), visible: formVisible, capacity: formCapacity ? parseInt(formCapacity) : null, privacy_category: formPrivacy, category: formCategory, ended_at: formStatus === 'ended' ? new Date().toISOString() : null };
+      // slug 는 신규일 때 서버에서 자동 생성 → 빈 값이면 보내지 않음.
+      // 수정일 때 사용자가 슬러그를 비웠다면 NULL 처리(서버에서 빈 문자열을 NULL 로 변환).
+      const trimmedSlug = formSlug.trim();
+      const body: Record<string, unknown> = {
+        name: formName.trim(),
+        event_date: formDate,
+        event_type: formType,
+        status: formStatus,
+        location: formLocation.trim(),
+        event_time: formTime.trim(),
+        visible: formVisible,
+        capacity: formCapacity ? parseInt(formCapacity) : null,
+        privacy_category: formPrivacy,
+        category: formCategory,
+        ended_at: formStatus === 'ended' ? new Date().toISOString() : null,
+      };
+      if (!isNew) body.slug = trimmedSlug; // 수정 시: 명시적으로 보냄(빈 값 → 자동 재생성)
+      let res: Response;
       if (isNew) {
-        await fetch('/api/admin/events', {
+        res = await fetch('/api/admin/events', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
           body: JSON.stringify(body),
         });
       } else if (editing) {
-        await fetch(`/api/admin/events/${editing.id}`, {
+        res = await fetch(`/api/admin/events/${editing.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
           body: JSON.stringify(body),
         });
+      } else {
+        return;
+      }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setSaveError(data.error || '저장 중 오류가 발생했습니다.');
+        return;
       }
       setEditing(null);
       setIsNew(false);
       fetchEvents();
     } catch {
-      // ignore
+      setSaveError('네트워크 오류가 발생했습니다.');
     } finally {
       setSaving(false);
     }
@@ -422,12 +453,34 @@ export default function EventsPage() {
                   <option value="기타">기타</option>
                 </select>
               </div>
+              {!isNew && (
+                <div className="field">
+                  <label>URL slug</label>
+                  <input
+                    type="text"
+                    value={formSlug}
+                    onChange={(e) => setFormSlug(e.target.value.replace(/[^a-zA-Z0-9-_]/g, '').toLowerCase())}
+                    placeholder="예: 20260522 (비우면 날짜 기준 자동 재생성)"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    신청 페이지 주소: <span className="text-gray-600">/{formSlug || '(자동)'}</span>
+                  </p>
+                </div>
+              )}
+              {isNew && (
+                <p className="text-xs text-gray-400 -mt-2">
+                  URL slug 는 저장 시 이벤트 날짜 기준 <span className="text-gray-600">YYYYMMDD</span> 형식으로 자동 생성됩니다.
+                </p>
+              )}
             </div>
+            {saveError && (
+              <p className="text-sm text-red-500 mt-3">{saveError}</p>
+            )}
             <div className="flex gap-2 mt-6">
               <button onClick={handleSave} disabled={saving} className="btn-primary flex-1">
                 {saving ? '저장 중...' : '저장'}
               </button>
-              <button onClick={() => { setEditing(null); setIsNew(false); }} className="btn-secondary flex-1">
+              <button onClick={() => { setEditing(null); setIsNew(false); setSaveError(''); }} className="btn-secondary flex-1">
                 취소
               </button>
             </div>

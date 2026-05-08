@@ -382,16 +382,20 @@ export default function FormManagePage() {
               <option key={evt.id} value={evt.id}>{evt.name}</option>
             ))}
           </select>
-          {selectedEventId && (
-            <a
-              href={`/?preview_event=${selectedEventId}`}
-              target="_blank"
-              rel="noreferrer"
-              className="text-xs px-3 py-2 border border-gray-200 rounded-lg bg-white hover:bg-gray-50 inline-flex items-center gap-1"
-            >
-              👁 미리보기
-            </a>
-          )}
+          {selectedEventId && (() => {
+            const evt = events.find((e) => e.id === selectedEventId);
+            const previewHref = evt?.slug ? `/${evt.slug}` : `/?preview_event=${selectedEventId}`;
+            return (
+              <a
+                href={previewHref}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs px-3 py-2 border border-gray-200 rounded-lg bg-white hover:bg-gray-50 inline-flex items-center gap-1"
+              >
+                👁 미리보기
+              </a>
+            );
+          })()}
         </div>
       </div>
 

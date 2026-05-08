@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFromToken, getServiceSupabase } from '@/lib/supabase-auth';
+import { baseSlugFromDate, pickAvailableSlug } from '@/lib/slug';
 
 export async function GET(req: NextRequest) {
   const admin = await getAdminFromToken(req.headers.get('authorization'));
@@ -30,8 +31,19 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = getServiceSupabase();
+
+  // event_date 기준 YYYYMMDD slug 자동 생성. 동일 base 가 있으면 -2, -3 …
+  const base = baseSlugFromDate(event_date);
+  const { data: collisions } = await supabase
+    .from('events')
+    .select('slug')
+    .or(`slug.eq.${base},slug.like.${base}-%`);
+  const taken = new Set<string>((collisions || []).map((r) => r.slug).filter(Boolean) as string[]);
+  const slug = pickAvailableSlug(base, taken);
+
   const { error } = await supabase.from('events').insert({
     name: name.trim(),
+    slug,
     event_date,
     event_type,
     status: status || 'open',
@@ -48,5 +60,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true, slug });
 }

@@ -1,6 +1,7 @@
 export type Event = {
   id: string;
   name: string;
+  slug: string | null;
   event_date: string;
   event_type: 'online' | 'offline' | 'none';
   status: 'open' | 'closed' | 'ended';
