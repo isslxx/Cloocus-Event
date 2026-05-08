@@ -102,13 +102,15 @@ function CalendarIcon() {
 function NeuralFlow() {
   return (
     <svg viewBox="0 0 64 64" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
-      <path d="M0 22 Q 16 14, 32 22 T 64 22" stroke="var(--tint-line)" strokeOpacity="0.28" strokeWidth="0.7" fill="none" />
-      <path d="M0 32 Q 20 38, 32 32 T 64 32" stroke="var(--tint-line)" strokeOpacity="0.45" strokeWidth="0.7" fill="none" />
-      <path d="M0 42 Q 18 50, 32 42 T 64 42" stroke="var(--tint-line)" strokeOpacity="0.28" strokeWidth="0.7" fill="none" />
-      <circle r="1.6" cx="0" cy="32" className="nf-pulse">
+      {/* 더 비비드한 라인 — opacity 와 굵기를 늘려 가시성 강화 */}
+      <path d="M0 22 Q 16 14, 32 22 T 64 22" stroke="var(--tint-fg)" strokeOpacity="0.55" strokeWidth="1" fill="none" strokeLinecap="round" />
+      <path d="M0 32 Q 20 38, 32 32 T 64 32" stroke="var(--tint-fg)" strokeOpacity="0.85" strokeWidth="1.1" fill="none" strokeLinecap="round" />
+      <path d="M0 42 Q 18 50, 32 42 T 64 42" stroke="var(--tint-fg)" strokeOpacity="0.55" strokeWidth="1" fill="none" strokeLinecap="round" />
+      {/* 펄스 도트 — 더 크고 진한 글로우 */}
+      <circle r="2.2" cx="0" cy="32" className="nf-pulse">
         <animateMotion dur="4.5s" repeatCount="indefinite" path="M0 0 Q 20 6, 32 0 T 64 0" />
       </circle>
-      <circle r="1.2" cx="0" cy="22" className="nf-pulse">
+      <circle r="1.6" cx="0" cy="22" className="nf-pulse">
         <animateMotion dur="5.5s" repeatCount="indefinite" begin="-1.5s" path="M0 0 Q 16 -8, 32 0 T 64 0" />
       </circle>
     </svg>
@@ -139,7 +141,7 @@ function PremiumEventCard({ event, isSelected, onSelect }: {
     >
       <span className="premium-card-border" aria-hidden="true" />
 
-      <div className="relative z-[2] flex items-stretch gap-3.5 p-4">
+      <div className="relative z-[2] flex items-stretch gap-3 sm:gap-3.5 px-3 sm:px-4 py-3.5 sm:py-4">
         {/* 좌측 아이콘 */}
         <div className="shrink-0 flex items-start pt-0.5">
           <div className="premium-icon">
@@ -149,7 +151,7 @@ function PremiumEventCard({ event, isSelected, onSelect }: {
 
         {/* 중앙 콘텐츠 */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-0.5">
+          <div className="flex items-center gap-2 mb-0.5 flex-wrap">
             {event.category && <span className="premium-category">{event.category}</span>}
             {isEnded && <span className="premium-status-end">종료</span>}
             {isClosed && <span className="premium-status-closed">마감</span>}
@@ -177,7 +179,7 @@ function PremiumEventCard({ event, isSelected, onSelect }: {
         </div>
 
         {/* 우측 ambient + arrow */}
-        <div className="shrink-0 flex items-stretch gap-2.5 self-stretch">
+        <div className="shrink-0 flex items-stretch gap-2 sm:gap-2.5 self-stretch">
           <div className="premium-ambient" aria-hidden="true">
             <NeuralFlow />
           </div>

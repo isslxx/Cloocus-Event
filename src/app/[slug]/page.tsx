@@ -531,7 +531,10 @@ export default function EventRegistrationPage({ params }: { params: Promise<{ sl
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-8">
+      <main
+        className="max-w-2xl mx-auto px-4 py-8"
+        style={{ paddingBottom: 'max(48px, env(safe-area-inset-bottom, 32px))' }}
+      >
         <div className="mb-6 border border-gray-200 rounded-xl px-5 py-4" style={{ backgroundColor: '#e0f2fe' }}>
           <p className="text-base font-semibold text-gray-900">{event.name}</p>
           <div className="flex items-center gap-3 mt-1.5 flex-wrap">
@@ -1034,7 +1037,7 @@ export default function EventRegistrationPage({ params }: { params: Promise<{ sl
             </div>
           </div>
 
-          <div className="mt-8 mb-12">
+          <div className="mt-8 pb-12 sm:pb-8">
             <button
               type="submit"
               disabled={submitting}

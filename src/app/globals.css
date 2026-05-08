@@ -439,12 +439,12 @@ table td .flex {
 .premium-ambient {
   width: 48px;
   height: 48px;
-  opacity: 0.6;
+  opacity: 0.85;
   transition: opacity 360ms;
   align-self: center;
 }
 .premium-card:hover:not(:disabled):not(.is-ended) .premium-ambient { opacity: 1; }
-.is-ended .premium-ambient { opacity: 0.25; }
+.is-ended .premium-ambient { opacity: 0.3; }
 
 .premium-arrow {
   width: 30px;
@@ -473,7 +473,7 @@ table td .flex {
 
 .nf-pulse {
   fill: var(--tint-fg);
-  filter: drop-shadow(0 0 3px var(--tint-glow));
+  filter: drop-shadow(0 0 4px var(--tint-fg)) drop-shadow(0 0 6px var(--tint-glow));
 }
 
 /* 모바일 감쇠 + 접근성 */
@@ -481,11 +481,41 @@ table td .flex {
   .premium-card-border { opacity: 0 !important; animation: none !important; }
   .premium-card:hover { transform: none; }
 }
+
+/* ============== 모바일 (~640px): ambient 숨기고 콘텐츠 영역 확보 ============== */
 @media (max-width: 640px) {
+  .premium-card { border-radius: 14px; }
+  .premium-card .premium-ambient { display: none; }
   .premium-icon { width: 32px; height: 32px; }
-  .premium-ambient { width: 40px; height: 40px; }
-  .premium-summary { font-size: 12px; }
-  .premium-title { font-size: 14px; }
+  .premium-arrow { width: 28px; height: 28px; }
+
+  /* 타이틀: 영문/한글 혼합·긴 단어도 깨져서 표시 */
+  .premium-title {
+    font-size: 14px;
+    line-height: 1.4;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+  /* 요약: 모바일에선 3줄까지 노출 + 깨짐 방지 */
+  .premium-summary {
+    font-size: 12px;
+    -webkit-line-clamp: 3;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+  /* 메타: wrap 보장. 항목별 nowrap 으로 날짜/숫자가 중간에 잘리지 않게 */
+  .premium-meta {
+    font-size: 11px;
+    gap: 4px 7px;
+    word-break: keep-all;
+  }
+  .premium-meta-item { white-space: nowrap; }
+}
+
+/* 아주 좁은 화면 (360px 이하 — 갤럭시 폴드 외부 디스플레이 등) — arrow 숨김 */
+@media (max-width: 360px) {
+  .premium-card .premium-arrow { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .premium-card,
