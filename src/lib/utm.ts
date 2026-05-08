@@ -9,12 +9,13 @@ export type UtmAttribution = {
   utm_campaign: string | null;
   utm_content: string | null;
   utm_term: string | null;
+  utm_id: string | null;
   landing_page: string | null;
   referrer_url: string | null;
 };
 
 const STORAGE_KEY = 'cloocus_utm_attribution';
-const UTM_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'] as const;
+const UTM_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'utm_id'] as const;
 
 export function captureAttribution(): void {
   if (typeof window === 'undefined') return;
@@ -35,6 +36,7 @@ export function captureAttribution(): void {
       utm_campaign: params.get('utm_campaign'),
       utm_content: params.get('utm_content'),
       utm_term: params.get('utm_term'),
+      utm_id: params.get('utm_id'),
       landing_page: window.location.pathname + window.location.search,
       referrer_url: sameOrigin ? null : referrer,
     };

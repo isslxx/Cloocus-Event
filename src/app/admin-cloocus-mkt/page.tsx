@@ -14,6 +14,7 @@ type UtmBreakdown = {
   bySource: { name: string; value: number }[];
   byMedium: { name: string; value: number }[];
   byCampaign: { name: string; value: number }[];
+  byId: { name: string; value: number }[];
 };
 
 type DashData = {
@@ -47,6 +48,7 @@ type DashData = {
     bySource: { name: string; value: number }[];
     byMedium: { name: string; value: number }[];
     byCampaign: { name: string; value: number }[];
+    byId: { name: string; value: number }[];
   };
   compare: null | {
     mode: 'prev' | 'event';
@@ -82,8 +84,8 @@ export default function AdminDashboard() {
   const [customStart, setCustomStart] = useState<string>('');
   const [customEnd, setCustomEnd] = useState<string>('');
   const [industryGroupFilter, setIndustryGroupFilter] = useState<string>('all');
-  const [utmTab, setUtmTab] = useState<'source' | 'medium' | 'campaign'>('source');
-  const [visitUtmTab, setVisitUtmTab] = useState<'source' | 'medium' | 'campaign'>('source');
+  const [utmTab, setUtmTab] = useState<'source' | 'medium' | 'campaign' | 'id'>('source');
+  const [visitUtmTab, setVisitUtmTab] = useState<'source' | 'medium' | 'campaign' | 'id'>('source');
   const [compareMode, setCompareMode] = useState<CompareMode>('off');
   const [compareEventId, setCompareEventId] = useState<string>('');
   const exportMenuRef = useRef<HTMLDivElement>(null);
@@ -502,11 +504,12 @@ export default function AdminDashboard() {
         XLSX.utils.book_append_sheet(wb, wsR, 'Top 추천인');
       }
 
-      if (data.byUtm.bySource.length + data.byUtm.byMedium.length + data.byUtm.byCampaign.length > 0) {
+      if (data.byUtm.bySource.length + data.byUtm.byMedium.length + data.byUtm.byCampaign.length + (data.byUtm.byId?.length || 0) > 0) {
         const wsU = XLSX.utils.json_to_sheet([
           ...data.byUtm.bySource.map((d) => ({ '구분': 'source', '값': d.name, '등록수': d.value })),
           ...data.byUtm.byMedium.map((d) => ({ '구분': 'medium', '값': d.name, '등록수': d.value })),
           ...data.byUtm.byCampaign.map((d) => ({ '구분': 'campaign', '값': d.name, '등록수': d.value })),
+          ...(data.byUtm.byId || []).map((d) => ({ '구분': 'id', '값': d.name, '등록수': d.value })),
         ]);
         wsU['!cols'] = [{ wch: 10 }, { wch: 26 }, { wch: 10 }];
         XLSX.utils.book_append_sheet(wb, wsU, 'UTM');
@@ -595,9 +598,9 @@ export default function AdminDashboard() {
     return data.byIndustryDetail.filter((d) => d.chartLabel === industryGroupFilter);
   }, [data, industryGroupFilter]);
 
-  const utmKey = utmTab === 'source' ? 'bySource' : utmTab === 'medium' ? 'byMedium' : 'byCampaign';
+  const utmKey = utmTab === 'source' ? 'bySource' : utmTab === 'medium' ? 'byMedium' : utmTab === 'campaign' ? 'byCampaign' : 'byId';
   const utmEntries = useMemo(() => (data ? data.byUtm[utmKey] : []), [data, utmKey]);
-  const visitUtmKey = visitUtmTab === 'source' ? 'bySource' : visitUtmTab === 'medium' ? 'byMedium' : 'byCampaign';
+  const visitUtmKey = visitUtmTab === 'source' ? 'bySource' : visitUtmTab === 'medium' ? 'byMedium' : visitUtmTab === 'campaign' ? 'byCampaign' : 'byId';
 
   // 비교 모드용 — primary + compare merged by name (bar charts)
   const mergeForCompare = useCallback((primary: { name: string; value: number }[], compare?: { name: string; value: number }[]) => {
@@ -907,7 +910,7 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-between mb-1">
               <h3 className="font-semibold">등록 기준 유입 채널</h3>
               <div className="flex items-center border border-gray-200 rounded-md overflow-hidden text-xs">
-                {(['source', 'medium', 'campaign'] as const).map((t) => (
+                {(['source', 'medium', 'campaign', 'id'] as const).map((t) => (
                   <button key={t} onClick={() => setUtmTab(t)} className={`px-2.5 py-1 ${utmTab === t ? 'bg-gray-900 text-white' : 'hover:bg-gray-50'}`}>
                     {t}
                   </button>
@@ -949,7 +952,7 @@ export default function AdminDashboard() {
             ) : (
               <div className="text-sm h-[260px] flex flex-col items-center justify-center gap-2 text-gray-400">
                 <p>등록 데이터가 아직 없습니다</p>
-                <p className="text-xs text-gray-400">캠페인 효과 측정을 위해 링크에 <code className="px-1 bg-gray-100 rounded">?utm_source=...&utm_medium=...&utm_campaign=...</code> 파라미터를 붙여 배포하세요.</p>
+                <p className="text-xs text-gray-400">캠페인 효과 측정을 위해 링크에 <code className="px-1 bg-gray-100 rounded">?utm_source=...&utm_medium=...&utm_campaign=...&utm_id=...</code> 파라미터를 붙여 배포하세요.</p>
               </div>
             )}
           </div>
@@ -960,7 +963,7 @@ export default function AdminDashboard() {
           <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
             <h3 className="font-semibold">방문 기준 유입 채널</h3>
             <div className="flex items-center border border-gray-200 rounded-md overflow-hidden text-xs">
-              {(['source', 'medium', 'campaign'] as const).map((t) => (
+              {(['source', 'medium', 'campaign', 'id'] as const).map((t) => (
                 <button key={t} onClick={() => setVisitUtmTab(t)} className={`px-2.5 py-1 ${visitUtmTab === t ? 'bg-gray-900 text-white' : 'hover:bg-gray-50'}`}>
                   {t}
                 </button>

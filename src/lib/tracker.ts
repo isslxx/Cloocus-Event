@@ -94,6 +94,7 @@ function enrich(t: TrackPayload): Record<string, unknown> {
     utm_campaign: attr?.utm_campaign || null,
     utm_content: attr?.utm_content || null,
     utm_term: attr?.utm_term || null,
+    utm_id: attr?.utm_id || null,
     landing_page: attr?.landing_page || null,
     referrer_url: attr?.referrer_url || (typeof document !== 'undefined' && document.referrer ? document.referrer : null),
   };

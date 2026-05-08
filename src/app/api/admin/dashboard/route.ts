@@ -13,6 +13,7 @@ type Row = {
   utm_source: string | null;
   utm_medium: string | null;
   utm_campaign: string | null;
+  utm_id: string | null;
 };
 
 type CountEntry = { name: string; value: number };
@@ -77,7 +78,7 @@ type Aggregate = {
     name: string; total: number; surveyCompleted: number; certificateIssued: number; surveyRate: number;
   }[];
   topReferrers: CountEntry[];
-  byUtm: { bySource: CountEntry[]; byMedium: CountEntry[]; byCampaign: CountEntry[] };
+  byUtm: { bySource: CountEntry[]; byMedium: CountEntry[]; byCampaign: CountEntry[]; byId: CountEntry[] };
 };
 
 function aggregate(records: Row[], eventMap: Map<string, string>, win: Window): Aggregate {
@@ -99,6 +100,7 @@ function aggregate(records: Row[], eventMap: Map<string, string>, win: Window): 
   const utmSourceMap: Record<string, number> = {};
   const utmMediumMap: Record<string, number> = {};
   const utmCampaignMap: Record<string, number> = {};
+  const utmIdMap: Record<string, number> = {};
 
   for (const r of records) {
     const dateKST = toKSTDateStr(r.created_at);
@@ -136,9 +138,11 @@ function aggregate(records: Row[], eventMap: Map<string, string>, win: Window): 
       const usrc = r.utm_source   || DIRECT_BUCKET;
       const umed = r.utm_medium   || DIRECT_BUCKET;
       const ucmp = r.utm_campaign || DIRECT_BUCKET;
+      const uid  = r.utm_id       || DIRECT_BUCKET;
       utmSourceMap[usrc]   = (utmSourceMap[usrc]   || 0) + 1;
       utmMediumMap[umed]   = (utmMediumMap[umed]   || 0) + 1;
       utmCampaignMap[ucmp] = (utmCampaignMap[ucmp] || 0) + 1;
+      utmIdMap[uid]        = (utmIdMap[uid]        || 0) + 1;
     }
   }
 
@@ -187,6 +191,7 @@ function aggregate(records: Row[], eventMap: Map<string, string>, win: Window): 
   const byUtmSource   = sortTopN(Object.entries(utmSourceMap).map(([name, value]) => ({ name, value })), 10);
   const byUtmMedium   = sortTopN(Object.entries(utmMediumMap).map(([name, value]) => ({ name, value })), 10);
   const byUtmCampaign = sortTopN(Object.entries(utmCampaignMap).map(([name, value]) => ({ name, value })), 10);
+  const byUtmId       = sortTopN(Object.entries(utmIdMap).map(([name, value])       => ({ name, value })), 10);
 
   const todayDeltaPct = yesterdayCount > 0
     ? ((todayCount - yesterdayCount) / yesterdayCount) * 100
@@ -212,7 +217,7 @@ function aggregate(records: Row[], eventMap: Map<string, string>, win: Window): 
     bySource,
     byEvent,
     topReferrers,
-    byUtm: { bySource: byUtmSource, byMedium: byUtmMedium, byCampaign: byUtmCampaign },
+    byUtm: { bySource: byUtmSource, byMedium: byUtmMedium, byCampaign: byUtmCampaign, byId: byUtmId },
   };
 }
 
@@ -222,7 +227,7 @@ async function fetchRecords(
 ): Promise<Row[]> {
   let q = supabase
     .from('event_registrations')
-    .select('created_at, industry, referral_source, referrer_name, event_id, survey_completed, certificate_issued, utm_source, utm_medium, utm_campaign')
+    .select('created_at, industry, referral_source, referrer_name, event_id, survey_completed, certificate_issued, utm_source, utm_medium, utm_campaign, utm_id')
     .is('deleted_at', null);
   if (eventIds) q = q.in('event_id', eventIds);
   const { data } = await q;
@@ -235,6 +240,7 @@ type VisitUtmAggregate = {
   bySource:   CountEntry[];
   byMedium:   CountEntry[];
   byCampaign: CountEntry[];
+  byId:       CountEntry[];
 };
 
 // 방문 기준 — page_events 전체 트래픽을 UTM별로 집계 (UTM 없는 방문은 '(직접/내부)' 버킷)
@@ -245,7 +251,7 @@ async function fetchVisitUtm(
 ): Promise<VisitUtmAggregate> {
   let q = supabase
     .from('page_events')
-    .select('session_id, utm_source, utm_medium, utm_campaign, created_at, event_id, action_type');
+    .select('session_id, utm_source, utm_medium, utm_campaign, utm_id, created_at, event_id, action_type');
 
   // 방문(view)만 카운트 — click 이벤트 중복 집계 방지
   q = q.eq('action_type', 'view');
@@ -257,11 +263,12 @@ async function fetchVisitUtm(
   }
 
   const { data } = await q.range(0, 49999);
-  const rows = (data as { session_id: string; utm_source: string | null; utm_medium: string | null; utm_campaign: string | null }[]) || [];
+  const rows = (data as { session_id: string; utm_source: string | null; utm_medium: string | null; utm_campaign: string | null; utm_id: string | null }[]) || [];
 
   const sourceMap: Record<string, number> = {};
   const mediumMap: Record<string, number> = {};
   const campaignMap: Record<string, number> = {};
+  const idMap: Record<string, number> = {};
   const sessions = new Set<string>();
 
   for (const r of rows) {
@@ -269,9 +276,11 @@ async function fetchVisitUtm(
     const src = r.utm_source   || DIRECT_BUCKET;
     const med = r.utm_medium   || DIRECT_BUCKET;
     const cmp = r.utm_campaign || DIRECT_BUCKET;
+    const uid = r.utm_id       || DIRECT_BUCKET;
     sourceMap[src]   = (sourceMap[src]   || 0) + 1;
     mediumMap[med]   = (mediumMap[med]   || 0) + 1;
     campaignMap[cmp] = (campaignMap[cmp] || 0) + 1;
+    idMap[uid]       = (idMap[uid]       || 0) + 1;
   }
 
   return {
@@ -280,6 +289,7 @@ async function fetchVisitUtm(
     bySource:   sortTopN(Object.entries(sourceMap).map(([name, value])   => ({ name, value })), 10),
     byMedium:   sortTopN(Object.entries(mediumMap).map(([name, value])   => ({ name, value })), 10),
     byCampaign: sortTopN(Object.entries(campaignMap).map(([name, value]) => ({ name, value })), 10),
+    byId:       sortTopN(Object.entries(idMap).map(([name, value])       => ({ name, value })), 10),
   };
 }
 

@@ -65,6 +65,7 @@ export async function POST(req: NextRequest) {
       utm_campaign: s(body.utm_campaign),
       utm_content:  s(body.utm_content),
       utm_term:     s(body.utm_term),
+      utm_id:       s(body.utm_id),
       referrer_url: s(body.referrer_url),
       landing_page: s(body.landing_page),
       device_type,
