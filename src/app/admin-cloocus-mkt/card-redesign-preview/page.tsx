@@ -10,20 +10,21 @@ type SampleEvent = {
   category: '세미나' | '프로모션' | '워크샵' | '스프린트';
   name: string;
   summary: string;
-  date: string;
+  date_start: string;        // ISO date (YYYY-MM-DD)
+  date_end?: string;         // 2일 이상 연속 이벤트일 때만
   type: 'online' | 'offline';
   capacity?: number;
   status: 'open' | 'closed' | 'ended';
 };
 
-// 실제 운영 데이터에 가까운 샘플
+// 실제 운영 데이터에 가까운 샘플 (각 날짜 포맷 케이스 모두 포함)
 const SAMPLES: SampleEvent[] = [
   {
     id: '1',
     category: '세미나',
     name: 'Copilot Hands-on Labs',
     summary: '현업 개발자와 함께 실무 코드베이스에 GitHub Copilot 을 적용해보는 체험 워크숍',
-    date: '2026.05.22',
+    date_start: '2026-05-22',
     type: 'offline',
     capacity: 20,
     status: 'open',
@@ -33,7 +34,7 @@ const SAMPLES: SampleEvent[] = [
     category: '프로모션',
     name: 'Gemini Enterprise 맞춤 견적 문의',
     summary: '조직 규모와 사용 시나리오에 맞춰 1:1 컨설팅과 견적을 제공합니다',
-    date: '~2026.06.30',
+    date_start: '2026-06-30',
     type: 'online',
     status: 'open',
   },
@@ -42,7 +43,8 @@ const SAMPLES: SampleEvent[] = [
     category: '워크샵',
     name: 'Azure 클라우드 인프라 입문',
     summary: '클라우드 처음 도입하는 팀을 위한 핵심 개념과 베스트 프랙티스 워크숍',
-    date: '2026.07.15',
+    date_start: '2026-07-15',
+    date_end: '2026-07-16',  // 2일 연속 — 다중일 포맷 시연
     type: 'offline',
     capacity: 30,
     status: 'open',
@@ -52,12 +54,42 @@ const SAMPLES: SampleEvent[] = [
     category: '스프린트',
     name: 'AI 기반 데이터 파이프라인 설계 스프린트',
     summary: '데이터 인프라 팀과 함께 진행하는 4주 집중 스프린트 프로그램',
-    date: '2026.04.28',
+    date_start: '2026-04-28',
     type: 'offline',
     capacity: 10,
     status: 'ended',
   },
 ];
+
+// ============================================================
+// 날짜 포맷
+// ============================================================
+const DOW = ['일', '월', '화', '수', '목', '금', '토'];
+
+function formatFullDate(iso: string): string {
+  const d = new Date(iso + 'T00:00:00');
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}.${m}.${day}(${DOW[d.getDay()]})`;
+}
+
+function formatShortDate(iso: string): string {
+  const d = new Date(iso + 'T00:00:00');
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${m}.${day}(${DOW[d.getDay()]})`;
+}
+
+function formatEventDate(event: SampleEvent): string {
+  if (event.category === '프로모션') {
+    return `${formatFullDate(event.date_start)}까지`;
+  }
+  if (event.date_end && event.date_end !== event.date_start) {
+    return `${formatShortDate(event.date_start)}-${formatShortDate(event.date_end)}`;
+  }
+  return formatFullDate(event.date_start);
+}
 
 export default function HomeCardPreview() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -176,7 +208,10 @@ function PremiumCard({ event, isSelected, onSelect }: {
           <h3 className="premium-title">{event.name}</h3>
           <p className="premium-summary">{event.summary}</p>
           <div className="premium-meta">
-            <span>{event.date}</span>
+            <span className="premium-meta-item">
+              <CalendarIcon />
+              <span>{formatEventDate(event)}</span>
+            </span>
             <span className="premium-meta-dot">·</span>
             <span>{event.type === 'online' ? 'Online' : 'Offline'}</span>
             {event.capacity && (
@@ -246,14 +281,16 @@ const CATEGORY_TINTS: Record<string, { fg: string; bg: string; line: string; glo
 function CategoryIcon({ category }: { category: string }) {
   const common = { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none' as const, stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
   if (category === '세미나') {
+    // 학사모 (graduation cap)
     return (
       <svg {...common}>
-        <rect x="3" y="4" width="18" height="12" rx="2" />
-        <path d="M8 20h8M12 16v4" />
+        <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+        <path d="M6 12v5c3 3 9 3 12 0v-5" />
       </svg>
     );
   }
   if (category === '프로모션') {
+    // 별
     return (
       <svg {...common}>
         <path d="M12 2l2.5 5 5.5.8-4 3.9 1 5.5L12 14.6 6 17.2l1-5.5-4-3.9 5.5-.8z" />
@@ -261,13 +298,16 @@ function CategoryIcon({ category }: { category: string }) {
     );
   }
   if (category === '워크샵') {
+    // 노트북 (이전 세미나 아이콘 사용)
     return (
       <svg {...common}>
-        <path d="M14.7 6.3a1 1 0 010 1.4l-1.4 1.4 4.2 4.2a2 2 0 010 2.8l-1.4 1.4a2 2 0 01-2.8 0l-4.2-4.2-1.4 1.4a1 1 0 01-1.4-1.4L11 7.7l1.4-1.4a1 1 0 011.4 0l.9.9z" />
+        <rect x="3" y="4" width="18" height="12" rx="2" />
+        <path d="M8 20h8M12 16v4" />
       </svg>
     );
   }
   if (category === '스프린트') {
+    // 번개
     return (
       <svg {...common}>
         <polyline points="13 2 4 14 12 14 11 22 20 10 12 10 13 2" />
@@ -277,6 +317,18 @@ function CategoryIcon({ category }: { category: string }) {
   return (
     <svg {...common}>
       <circle cx="12" cy="12" r="9" />
+    </svg>
+  );
+}
+
+// 메타 정보 앞에 붙는 작은 캘린더 아이콘
+function CalendarIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
     </svg>
   );
 }
@@ -441,8 +493,24 @@ function PremiumStyles() {
         font-size: 11.5px;
         color: #9ca3af;
         font-variant-numeric: tabular-nums;
+        transition: color 280ms;
       }
-      .premium-meta-dot { color: #d1d5db; }
+      .premium-meta-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+      }
+      .premium-meta-dot { color: #d1d5db; transition: color 280ms; }
+
+      /* 선택된 카드: meta 정보가 카테고리 톤 컬러로 변하며 강조됨 */
+      .premium-card.is-selected .premium-meta {
+        color: var(--tint-fg);
+        font-weight: 500;
+      }
+      .premium-card.is-selected .premium-meta-dot {
+        color: var(--tint-fg);
+        opacity: 0.45;
+      }
 
       .premium-ambient {
         width: 48px;
