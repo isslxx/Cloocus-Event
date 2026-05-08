@@ -91,16 +91,31 @@ function formatEventDate(event: SampleEvent): string {
   return formatFullDate(event.date_start);
 }
 
+type ButtonVariant = 'A' | 'B';
+
 export default function HomeCardPreview() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [btnVariant, setBtnVariant] = useState<ButtonVariant>('A');
   const selected = SAMPLES.find((e) => e.id === selectedId) || null;
 
   return (
     <div className="min-h-screen bg-[#fafafa] -mx-4 lg:-mx-8 -my-6 lg:-my-8">
       {/* 안내 바 */}
-      <div className="bg-blue-600 text-white px-6 py-2 text-xs flex items-center gap-2 sticky top-0 z-50">
+      <div className="bg-blue-600 text-white px-6 py-2.5 text-xs flex items-center gap-3 sticky top-0 z-50 flex-wrap">
         <span className="font-medium">미리보기:</span>
-        <span className="opacity-90">신청자 포탈 홈 화면 ─ 시안 2 (Neural Flow) 카드 적용 모습. 카드에 마우스 올려서 인터랙션 확인.</span>
+        <span className="opacity-90">홈 화면 ─ Neural Flow 카드 + 등록 버튼 시안</span>
+        <span className="ml-auto flex items-center gap-1.5">
+          <span className="opacity-80">버튼 시안:</span>
+          {(['A', 'B'] as const).map((v) => (
+            <button
+              key={v}
+              onClick={() => setBtnVariant(v)}
+              className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium transition ${btnVariant === v ? 'bg-white text-blue-700' : 'bg-blue-500/40 text-white hover:bg-blue-500/60'}`}
+            >
+              시안 {v}
+            </button>
+          ))}
+        </span>
       </div>
 
       {/* 실제 홈과 동일한 레이아웃 */}
@@ -127,12 +142,7 @@ export default function HomeCardPreview() {
                 ))}
               </div>
 
-              <button
-                disabled={!selected}
-                className="btn-primary w-full mt-6 disabled:opacity-40"
-              >
-                등록하기
-              </button>
+              <RegisterButton disabled={!selected} variant={btnVariant} />
               <a className="w-full mt-3 text-sm text-gray-400 hover:text-gray-600 hover:underline block text-center">
                 등록 정보 조회ㅣ신청자 포털
               </a>
@@ -330,6 +340,24 @@ function CalendarIcon() {
       <line x1="8" y1="2" x2="8" y2="6" />
       <line x1="3" y1="10" x2="21" y2="10" />
     </svg>
+  );
+}
+
+// ============================================================
+// 등록하기 버튼 — 두 가지 모던 시안
+// ============================================================
+function RegisterButton({ disabled, variant }: { disabled: boolean; variant: ButtonVariant }) {
+  const cls = variant === 'A' ? 'register-btn register-btn-a' : 'register-btn register-btn-b';
+  return (
+    <button type="button" disabled={disabled} className={`${cls} w-full mt-6`}>
+      <span className="register-btn-label">이벤트 등록하기</span>
+      <span className="register-btn-arrow" aria-hidden="true">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="5" y1="12" x2="19" y2="12" />
+          <polyline points="12 5 19 12 12 19" />
+        </svg>
+      </span>
+    </button>
   );
 }
 
@@ -552,18 +580,90 @@ function PremiumStyles() {
         filter: drop-shadow(0 0 3px var(--tint-glow));
       }
 
-      /* 등록하기 / 푸터 등 실제 홈 스타일 일부 */
-      .btn-primary {
-        background: #2563eb;
-        color: white;
-        padding: 12px 16px;
-        border-radius: 10px;
+      /* ============== 등록하기 버튼 — 모던 시안 공통 ============== */
+      .register-btn {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 14px 20px;
+        border-radius: 14px;
         font-weight: 600;
         font-size: 14px;
-        transition: background 200ms;
+        letter-spacing: -0.01em;
+        cursor: pointer;
+        overflow: hidden;
+        transition:
+          transform 240ms cubic-bezier(0.4, 0, 0.2, 1),
+          box-shadow 240ms cubic-bezier(0.4, 0, 0.2, 1),
+          background 240ms,
+          color 240ms,
+          border-color 240ms;
       }
-      .btn-primary:hover { background: #1d4ed8; }
-      .btn-primary:disabled { cursor: not-allowed; }
+      .register-btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.45;
+        pointer-events: none;
+      }
+      .register-btn-arrow {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 280ms cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .register-btn:not(:disabled):hover .register-btn-arrow {
+        transform: translateX(4px);
+      }
+
+      /* ============== 시안 A — Solid dark CTA ============== */
+      /* 검정 솔리드 + 호버 시 lift 와 미세한 shimmer */
+      .register-btn-a {
+        background: #0f172a;          /* slate-900 */
+        color: #ffffff;
+        border: 1px solid #0f172a;
+        box-shadow:
+          0 1px 2px rgba(15, 23, 42, 0.1),
+          inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      }
+      .register-btn-a:not(:disabled):hover {
+        transform: translateY(-1px);
+        background: #1e293b;
+        box-shadow:
+          0 8px 20px rgba(15, 23, 42, 0.18),
+          inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      }
+      .register-btn-a::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          115deg,
+          transparent 30%,
+          rgba(255, 255, 255, 0.12) 50%,
+          transparent 70%
+        );
+        transform: translateX(-100%);
+        transition: transform 800ms cubic-bezier(0.4, 0, 0.2, 1);
+        pointer-events: none;
+      }
+      .register-btn-a:not(:disabled):hover::before {
+        transform: translateX(100%);
+      }
+
+      /* ============== 시안 B — Outlined to filled CTA ============== */
+      /* 평소엔 투명+검은 보더, 호버 시 검정으로 채워짐 */
+      .register-btn-b {
+        background: transparent;
+        color: #0f172a;
+        border: 1.5px solid #0f172a;
+      }
+      .register-btn-b:not(:disabled):hover {
+        background: #0f172a;
+        color: #ffffff;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(15, 23, 42, 0.18);
+      }
 
       @media (hover: none) {
         .premium-card-border { opacity: 0 !important; animation: none !important; }
