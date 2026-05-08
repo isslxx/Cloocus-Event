@@ -269,8 +269,8 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <div className="flex-1 flex items-center justify-center p-4">
-        <div className="w-full max-w-lg">
-          <div className="bg-white rounded-xl border border-gray-200 p-8">
+        <div className="w-full max-w-2xl">
+          <div className="bg-white rounded-xl border border-gray-200 p-6 sm:p-8">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/cloocus-logo.png" alt="Cloocus" className="h-7 mx-auto mb-5" />
             <h1 className="text-2xl font-bold text-center mb-2">클루커스 이벤트</h1>
