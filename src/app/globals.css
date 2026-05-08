@@ -286,65 +286,291 @@ table td .flex {
 }
 
 /* ==============================================================
-   이벤트 카드 호버 효과 — 블루 그라디언트 보더 흐름 + 1px lift
-   - 평소엔 정적, 호버 시에만 발동
-   - 보더 두께 변화 없음 (기존 2px 위에 conic-gradient 오버레이)
-   - 카드가 살짝 떠오르며 부드러운 그림자 생김
+   홈 이벤트 카드 — Premium AI Experience
+   - 좌측 카테고리 아이콘 / 중앙 콘텐츠 / 우측 ambient + arrow
+   - 호버: 2px lift, 보더 conic-gradient shimmer (5.5s),
+     아이콘 ring expand, 타이틀 darken, ambient opacity ↑,
+     arrow 우측 슬라이드 + 검정 반전
+   - 카테고리 톤은 인라인 CSS 변수(--tint-fg/-bg/-line/-glow) 로 주입
 ============================================================== */
 @property --event-card-ang {
   syntax: '<angle>';
   initial-value: 0deg;
   inherits: false;
 }
-@keyframes event-card-shimmer-rotate {
-  to { --event-card-ang: 360deg; }
-}
+@keyframes event-card-shimmer-rotate { to { --event-card-ang: 360deg; } }
 
-.event-card-shimmer {
+.premium-card {
   position: relative;
   isolation: isolate;
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid rgba(229, 231, 235, 0.95);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.025);
+  cursor: pointer;
+  transition:
+    transform 320ms cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 320ms cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 320ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.premium-card:hover:not(:disabled):not(.is-ended) {
+  transform: translateY(-2px);
+  border-color: rgba(209, 213, 219, 1);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+.premium-card.is-selected {
+  border-color: var(--tint-fg);
+  box-shadow: 0 0 0 3px var(--tint-bg);
+  background: var(--tint-bg);
+}
+.premium-card.is-ended {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: #fafafa;
 }
 
-.event-card-shimmer::before {
-  content: '';
+.premium-card-border {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  padding: 2px; /* border-2 와 동일 두께 */
+  padding: 1px;
   background: conic-gradient(
     from var(--event-card-ang, 0deg),
     transparent 0deg,
-    transparent 90deg,
-    rgba(96, 165, 250, 0.5) 160deg,
-    rgba(129, 140, 248, 0.95) 200deg,
-    rgba(56, 189, 248, 0.95) 220deg,
-    rgba(96, 165, 250, 0.5) 260deg,
-    transparent 330deg,
+    transparent 220deg,
+    var(--tint-line) 290deg,
+    rgba(255, 255, 255, 0.95) 320deg,
+    var(--tint-line) 350deg,
     transparent 360deg
   );
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
           mask-composite: exclude;
   opacity: 0;
-  transition: opacity 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: opacity 360ms cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: none;
-  z-index: 1;
 }
-
-.event-card-shimmer:hover:not(:disabled)::before {
+.premium-card:hover:not(:disabled):not(.is-ended) .premium-card-border {
   opacity: 1;
-  animation: event-card-shimmer-rotate 3s linear infinite;
+  animation: event-card-shimmer-rotate 5.5s linear infinite;
 }
 
-/* 모바일에서는 hover 가 의미 없고 스크롤 시 의도치 않게 발동될 수 있어 비활성 */
+.premium-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--tint-bg);
+  color: var(--tint-fg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: box-shadow 320ms;
+}
+.premium-card:hover:not(:disabled):not(.is-ended) .premium-icon {
+  box-shadow: 0 0 0 4px var(--tint-bg);
+}
+
+.premium-category {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tint-fg);
+  opacity: 0.85;
+}
+.premium-status-end,
+.premium-status-closed {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(254, 226, 226, 0.9);
+  color: #dc2626;
+}
+.premium-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.4;
+  margin-top: 2px;
+  margin-bottom: 4px;
+  transition: color 280ms;
+  word-break: keep-all;
+}
+.is-ended .premium-title { color: #9ca3af; }
+.premium-card:hover:not(:disabled):not(.is-ended) .premium-title { color: #000; }
+.premium-summary {
+  font-size: 12.5px;
+  color: #6b7280;
+  line-height: 1.5;
+  margin-bottom: 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.premium-meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11.5px;
+  color: #9ca3af;
+  font-variant-numeric: tabular-nums;
+  transition: color 280ms;
+  flex-wrap: wrap;
+}
+.premium-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.premium-meta-dot { color: #d1d5db; transition: color 280ms; }
+
+/* 선택된 카드: meta 가 카테고리 톤으로 강조 */
+.premium-card.is-selected .premium-meta {
+  color: var(--tint-fg);
+  font-weight: 500;
+}
+.premium-card.is-selected .premium-meta-dot {
+  color: var(--tint-fg);
+  opacity: 0.45;
+}
+
+.premium-ambient {
+  width: 48px;
+  height: 48px;
+  opacity: 0.6;
+  transition: opacity 360ms;
+  align-self: center;
+}
+.premium-card:hover:not(:disabled):not(.is-ended) .premium-ambient { opacity: 1; }
+.is-ended .premium-ambient { opacity: 0.25; }
+
+.premium-arrow {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: #f9fafb;
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #f3f4f6;
+  transition:
+    transform 320ms cubic-bezier(0.4, 0, 0.2, 1),
+    background 280ms,
+    color 280ms;
+}
+.premium-card:hover:not(:disabled):not(.is-ended) .premium-arrow {
+  background: #111827;
+  color: #ffffff;
+  transform: translateX(3px);
+}
+.premium-card.is-selected .premium-arrow {
+  background: var(--tint-fg);
+  color: #ffffff;
+}
+
+.nf-pulse {
+  fill: var(--tint-fg);
+  filter: drop-shadow(0 0 3px var(--tint-glow));
+}
+
+/* 모바일 감쇠 + 접근성 */
 @media (hover: none) {
-  .event-card-shimmer::before { opacity: 0 !important; animation: none !important; }
+  .premium-card-border { opacity: 0 !important; animation: none !important; }
+  .premium-card:hover { transform: none; }
+}
+@media (max-width: 640px) {
+  .premium-icon { width: 32px; height: 32px; }
+  .premium-ambient { width: 40px; height: 40px; }
+  .premium-summary { font-size: 12px; }
+  .premium-title { font-size: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .premium-card,
+  .premium-card-border,
+  .premium-ambient,
+  .premium-arrow,
+  .premium-icon,
+  .premium-title {
+    animation: none !important;
+    transition: none !important;
+  }
+  .premium-card:hover { transform: none; }
+  .nf-pulse { display: none; }
 }
 
-/* 접근성 */
+/* ==============================================================
+   "이벤트 등록하기" CTA 버튼 (시안 A — Solid Dark)
+============================================================== */
+.register-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 20px;
+  border-radius: 14px;
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  overflow: hidden;
+  background: #0f172a;        /* slate-900 */
+  color: #ffffff;
+  border: 1px solid #0f172a;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition:
+    transform 240ms cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 240ms cubic-bezier(0.4, 0, 0.2, 1),
+    background 240ms;
+}
+.register-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  pointer-events: none;
+}
+.register-btn:not(:disabled):hover {
+  transform: translateY(-1px);
+  background: #1e293b;
+  box-shadow:
+    0 8px 20px rgba(15, 23, 42, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+.register-btn-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 280ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.register-btn:not(:disabled):hover .register-btn-arrow {
+  transform: translateX(4px);
+}
+.register-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    115deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.12) 50%,
+    transparent 70%
+  );
+  transform: translateX(-100%);
+  transition: transform 800ms cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+.register-btn:not(:disabled):hover::before {
+  transform: translateX(100%);
+}
 @media (prefers-reduced-motion: reduce) {
-  .event-card-shimmer::before {
+  .register-btn,
+  .register-btn::before,
+  .register-btn-arrow {
     transition: none !important;
-    animation: none !important;
+    transform: none !important;
   }
 }

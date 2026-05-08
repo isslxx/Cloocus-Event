@@ -11,7 +11,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const updates = await req.json();
   const supabase = getServiceSupabase();
 
-  const allowed = ['name', 'slug', 'event_date', 'event_type', 'status', 'location', 'event_time', 'visible', 'capacity', 'privacy_category', 'category', 'ended_at', 'custom_questions_section_title', 'promo_url'];
+  const allowed = ['name', 'slug', 'event_date', 'event_type', 'status', 'location', 'event_time', 'visible', 'capacity', 'privacy_category', 'category', 'ended_at', 'custom_questions_section_title', 'promo_url', 'summary', 'event_date_end'];
   const filtered: Record<string, unknown> = {};
   for (const key of allowed) {
     if (key in updates) filtered[key] = updates[key];
@@ -19,6 +19,14 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   // promo_url 빈 문자열은 null 로 정규화
   if ('promo_url' in filtered && typeof filtered.promo_url === 'string') {
     filtered.promo_url = filtered.promo_url.trim() || null;
+  }
+  // summary 빈 문자열은 null. 280자 제한.
+  if ('summary' in filtered && typeof filtered.summary === 'string') {
+    filtered.summary = filtered.summary.trim().slice(0, 280) || null;
+  }
+  // event_date_end 빈 문자열은 null
+  if ('event_date_end' in filtered && (filtered.event_date_end === '' || filtered.event_date_end === undefined)) {
+    filtered.event_date_end = null;
   }
 
   // slug 처리:

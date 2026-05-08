@@ -7,6 +7,194 @@ import { captureAttribution } from '@/lib/utm';
 import { trackView, trackClick } from '@/lib/tracker';
 import type { Event } from '@/lib/types';
 
+// ============================================================
+// 홈 이벤트 카드 (Premium AI Experience)
+// ============================================================
+type CategoryKey = '세미나' | '프로모션' | '워크샵' | '스프린트' | 'default';
+
+const CATEGORY_TINTS: Record<CategoryKey, { fg: string; bg: string; line: string; glow: string }> = {
+  세미나:   { fg: '#7c3aed', bg: 'rgba(167, 139, 250, 0.1)', line: 'rgba(139, 92, 246, 0.4)',  glow: 'rgba(139, 92, 246, 0.18)' },
+  프로모션: { fg: '#059669', bg: 'rgba(52, 211, 153, 0.1)',  line: 'rgba(16, 185, 129, 0.45)', glow: 'rgba(16, 185, 129, 0.18)' },
+  워크샵:   { fg: '#0891b2', bg: 'rgba(34, 211, 238, 0.1)',  line: 'rgba(6, 182, 212, 0.45)',  glow: 'rgba(6, 182, 212, 0.18)' },
+  스프린트: { fg: '#ea580c', bg: 'rgba(251, 146, 60, 0.1)',  line: 'rgba(249, 115, 22, 0.45)', glow: 'rgba(249, 115, 22, 0.18)' },
+  default:  { fg: '#3b82f6', bg: 'rgba(96, 165, 250, 0.1)',  line: 'rgba(59, 130, 246, 0.45)', glow: 'rgba(59, 130, 246, 0.18)' },
+};
+
+const DOW = ['일', '월', '화', '수', '목', '금', '토'];
+
+function formatFullDate(iso: string): string {
+  const d = new Date(iso + 'T00:00:00');
+  if (Number.isNaN(d.getTime())) return iso;
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}.${m}.${day}(${DOW[d.getDay()]})`;
+}
+
+function formatShortDate(iso: string): string {
+  const d = new Date(iso + 'T00:00:00');
+  if (Number.isNaN(d.getTime())) return iso;
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${m}.${day}(${DOW[d.getDay()]})`;
+}
+
+function formatEventDate(event: Event): string {
+  if (event.category === '프로모션') {
+    return `${formatFullDate(event.event_date)}까지`;
+  }
+  if (event.event_date_end && event.event_date_end !== event.event_date) {
+    return `${formatShortDate(event.event_date)}-${formatShortDate(event.event_date_end)}`;
+  }
+  return formatFullDate(event.event_date);
+}
+
+function CategoryIcon({ category }: { category: string }) {
+  const common = { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none' as const, stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+  if (category === '세미나') {
+    return (
+      <svg {...common}>
+        <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+        <path d="M6 12v5c3 3 9 3 12 0v-5" />
+      </svg>
+    );
+  }
+  if (category === '프로모션') {
+    return (
+      <svg {...common}>
+        <path d="M12 2l2.5 5 5.5.8-4 3.9 1 5.5L12 14.6 6 17.2l1-5.5-4-3.9 5.5-.8z" />
+      </svg>
+    );
+  }
+  if (category === '워크샵') {
+    return (
+      <svg {...common}>
+        <rect x="3" y="4" width="18" height="12" rx="2" />
+        <path d="M8 20h8M12 16v4" />
+      </svg>
+    );
+  }
+  if (category === '스프린트') {
+    return (
+      <svg {...common}>
+        <polyline points="13 2 4 14 12 14 11 22 20 10 12 10 13 2" />
+      </svg>
+    );
+  }
+  return (
+    <svg {...common}>
+      <circle cx="12" cy="12" r="9" />
+    </svg>
+  );
+}
+
+function CalendarIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  );
+}
+
+function NeuralFlow() {
+  return (
+    <svg viewBox="0 0 64 64" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
+      <path d="M0 22 Q 16 14, 32 22 T 64 22" stroke="var(--tint-line)" strokeOpacity="0.28" strokeWidth="0.7" fill="none" />
+      <path d="M0 32 Q 20 38, 32 32 T 64 32" stroke="var(--tint-line)" strokeOpacity="0.45" strokeWidth="0.7" fill="none" />
+      <path d="M0 42 Q 18 50, 32 42 T 64 42" stroke="var(--tint-line)" strokeOpacity="0.28" strokeWidth="0.7" fill="none" />
+      <circle r="1.6" cx="0" cy="32" className="nf-pulse">
+        <animateMotion dur="4.5s" repeatCount="indefinite" path="M0 0 Q 20 6, 32 0 T 64 0" />
+      </circle>
+      <circle r="1.2" cx="0" cy="22" className="nf-pulse">
+        <animateMotion dur="5.5s" repeatCount="indefinite" begin="-1.5s" path="M0 0 Q 16 -8, 32 0 T 64 0" />
+      </circle>
+    </svg>
+  );
+}
+
+function PremiumEventCard({ event, isSelected, onSelect }: {
+  event: Event;
+  isSelected: boolean;
+  onSelect: () => void;
+}) {
+  const isEnded = event.status === 'ended';
+  const isClosed = event.status === 'closed';
+  const tint = CATEGORY_TINTS[(event.category as CategoryKey)] || CATEGORY_TINTS.default;
+
+  return (
+    <button
+      type="button"
+      disabled={isEnded}
+      onClick={onSelect}
+      className={`premium-card group relative w-full text-left ${isSelected ? 'is-selected' : ''} ${isEnded ? 'is-ended' : ''}`}
+      style={{
+        '--tint-fg': tint.fg,
+        '--tint-bg': tint.bg,
+        '--tint-line': tint.line,
+        '--tint-glow': tint.glow,
+      } as React.CSSProperties}
+    >
+      <span className="premium-card-border" aria-hidden="true" />
+
+      <div className="relative z-[2] flex items-stretch gap-3.5 p-4">
+        {/* 좌측 아이콘 */}
+        <div className="shrink-0 flex items-start pt-0.5">
+          <div className="premium-icon">
+            <CategoryIcon category={event.category} />
+          </div>
+        </div>
+
+        {/* 중앙 콘텐츠 */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-0.5">
+            {event.category && <span className="premium-category">{event.category}</span>}
+            {isEnded && <span className="premium-status-end">종료</span>}
+            {isClosed && <span className="premium-status-closed">마감</span>}
+          </div>
+          <h3 className="premium-title">{event.name}</h3>
+          {event.summary && <p className="premium-summary">{event.summary}</p>}
+          <div className="premium-meta">
+            <span className="premium-meta-item">
+              <CalendarIcon />
+              <span>{formatEventDate(event)}</span>
+            </span>
+            {event.event_type && event.event_type !== 'none' && (
+              <>
+                <span className="premium-meta-dot">·</span>
+                <span>{event.event_type === 'online' ? 'Online' : 'Offline'}</span>
+              </>
+            )}
+            {event.capacity && (
+              <>
+                <span className="premium-meta-dot">·</span>
+                <span>정원 {event.capacity}명</span>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* 우측 ambient + arrow */}
+        <div className="shrink-0 flex items-stretch gap-2.5 self-stretch">
+          <div className="premium-ambient" aria-hidden="true">
+            <NeuralFlow />
+          </div>
+          <div className="self-center">
+            <span className="premium-arrow" aria-hidden="true">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
+            </span>
+          </div>
+        </div>
+      </div>
+    </button>
+  );
+}
+
 function BrandFooter() {
   return (
     <footer className="py-4 sm:py-5 px-4 border-t border-gray-200" style={{ backgroundColor: '#eef0f4' }}>
@@ -95,73 +283,21 @@ export default function Home() {
             ) : (
               <>
                 <div className="space-y-3">
-                  {events.map((event) => {
-                    const isEnded = event.status === 'ended';
-                    const isClosed = event.status === 'closed';
-                    return (
-                      <button
-                        key={event.id}
-                        onClick={() => {
-                          if (isEnded) return;
-                          if (isClosed) {
-                            setClosedEventPopup(event);
-                            return;
-                          }
-                          setSelectedEvent(event);
-                        }}
-                        disabled={isEnded}
-                        className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
-                          isEnded
-                            ? 'border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed'
-                            : selectedEvent?.id === event.id
-                              ? 'border-blue-500 bg-blue-50'
-                              : 'border-gray-200 hover:bg-gray-50 event-card-shimmer'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            {event.category && (
-                              <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-blue-50 text-blue-600 shrink-0">
-                                {event.category}
-                              </span>
-                            )}
-                            <p className={`font-semibold text-base ${isEnded ? 'text-gray-400' : ''}`}>{event.name}</p>
-                          </div>
-                          {isEnded && (
-                            <span className="text-xs px-2.5 py-1 rounded-full font-bold bg-red-100 text-red-600 shrink-0">종료</span>
-                          )}
-                          {isClosed && (
-                            <span className="text-xs px-2.5 py-1 rounded-full font-bold bg-red-100 text-red-600 shrink-0">마감</span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                          {event.category === '프로모션' ? (
-                            <span className="text-sm text-gray-500">
-                              기한: {(() => { const d = new Date(event.event_date); const day = ['일','월','화','수','목','금','토'][d.getDay()]; return `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${day})`; })()}
-                            </span>
-                          ) : (
-                            <span className="text-sm text-gray-500">
-                              {(() => { const d = new Date(event.event_date); const day = ['일','월','화','수','목','금','토'][d.getDay()]; return `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${day})`; })()}
-                            </span>
-                          )}
-                          {event.event_type && event.event_type !== 'none' && (
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                              event.event_type === 'online'
-                                ? 'bg-green-100 text-green-700'
-                                : 'bg-purple-100 text-purple-700'
-                            }`}>
-                              {event.event_type === 'online' ? 'Online' : 'Offline'}
-                            </span>
-                          )}
-                          {event.capacity && (
-                            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700">
-                              정원 {event.capacity}명
-                            </span>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
+                  {events.map((event) => (
+                    <PremiumEventCard
+                      key={event.id}
+                      event={event}
+                      isSelected={selectedEvent?.id === event.id}
+                      onSelect={() => {
+                        if (event.status === 'ended') return;
+                        if (event.status === 'closed') {
+                          setClosedEventPopup(event);
+                          return;
+                        }
+                        setSelectedEvent(event);
+                      }}
+                    />
+                  ))}
                 </div>
 
                 {events.every((e) => e.status === 'closed' || e.status === 'ended') && (
@@ -214,9 +350,15 @@ export default function Home() {
             <button
               onClick={() => { if (selectedEvent) goToEvent(selectedEvent); }}
               disabled={!selectedEvent || selectedEvent.status === 'ended'}
-              className="btn-primary w-full mt-6"
+              className="register-btn w-full mt-6"
             >
-              등록하기
+              <span>이벤트 등록하기</span>
+              <span className="register-btn-arrow" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                  <polyline points="12 5 19 12 12 19" />
+                </svg>
+              </span>
             </button>
             <a
               href="/my"

@@ -25,6 +25,8 @@ export default function EventsPage() {
   const [formCategory, setFormCategory] = useState('이벤트');
   const [formSlug, setFormSlug] = useState('');
   const [formPromoUrl, setFormPromoUrl] = useState('');
+  const [formSummary, setFormSummary] = useState('');
+  const [formDateEnd, setFormDateEnd] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
 
@@ -67,6 +69,8 @@ export default function EventsPage() {
     setFormCategory('이벤트');
     setFormSlug('');
     setFormPromoUrl('');
+    setFormSummary('');
+    setFormDateEnd('');
     setSaveError('');
   };
 
@@ -85,6 +89,8 @@ export default function EventsPage() {
     setFormCategory(event.category || '이벤트');
     setFormSlug(event.slug || '');
     setFormPromoUrl(event.promo_url || '');
+    setFormSummary(event.summary || '');
+    setFormDateEnd(event.event_date_end || '');
     setSaveError('');
   };
 
@@ -110,6 +116,10 @@ export default function EventsPage() {
         ended_at: formStatus === 'ended' ? new Date().toISOString() : null,
         // 프로모션 카테고리에서만 입력값 저장. 다른 카테고리에선 비워서 저장 (덮어쓰기)
         promo_url: formCategory === '프로모션' ? (formPromoUrl.trim() || null) : null,
+        // 카드에 노출되는 짧은 소개 (선택)
+        summary: formSummary.trim() || null,
+        // 다중일 종료일 — 프로모션은 event_date 가 마감 기한이라 무시
+        event_date_end: formCategory !== '프로모션' && formDateEnd ? formDateEnd : null,
       };
       if (!isNew) body.slug = trimmedSlug; // 수정 시: 명시적으로 보냄(빈 값 → 자동 재생성)
       let res: Response;
@@ -405,6 +415,30 @@ export default function EventsPage() {
                 {formCategory === '프로모션' && formDate && (
                   <p className="text-xs text-gray-400 mt-1">{new Date(formDate).toLocaleDateString('ko-KR')}까지 진행</p>
                 )}
+              </div>
+              {formCategory !== '프로모션' && (
+                <div className="field">
+                  <label>종료일 <span className="text-xs text-gray-400 font-normal">(선택, 2일 이상 연속 이벤트)</span></label>
+                  <input
+                    type="date"
+                    value={formDateEnd}
+                    onChange={(e) => setFormDateEnd(e.target.value)}
+                    min={formDate || undefined}
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    비우면 단일일 이벤트. 입력하면 카드에 <span className="text-gray-600">MM.DD-MM.DD</span> 형식으로 노출됩니다.
+                  </p>
+                </div>
+              )}
+              <div className="field">
+                <label>한 줄 소개 <span className="text-xs text-gray-400 font-normal">(선택, 280자)</span></label>
+                <textarea
+                  rows={2}
+                  value={formSummary}
+                  onChange={(e) => setFormSummary(e.target.value.slice(0, 280))}
+                  placeholder="신청자 홈 카드에 노출될 1~2줄 짧은 소개"
+                />
+                <p className="text-xs text-gray-400 mt-1 text-right">{formSummary.length} / 280</p>
               </div>
               {formCategory !== '프로모션' && (
                 <>

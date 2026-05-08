@@ -14,6 +14,8 @@ export type Event = {
   event_time: string;
   custom_questions_section_title: string | null;
   promo_url: string | null;
+  summary: string | null;
+  event_date_end: string | null;
   created_at: string;
 };
 
