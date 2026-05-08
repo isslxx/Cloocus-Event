@@ -102,15 +102,13 @@ function CalendarIcon() {
 function NeuralFlow() {
   return (
     <svg viewBox="0 0 64 64" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
-      {/* 더 비비드한 라인 — opacity 와 굵기를 늘려 가시성 강화 */}
-      <path d="M0 22 Q 16 14, 32 22 T 64 22" stroke="var(--tint-fg)" strokeOpacity="0.55" strokeWidth="1" fill="none" strokeLinecap="round" />
-      <path d="M0 32 Q 20 38, 32 32 T 64 32" stroke="var(--tint-fg)" strokeOpacity="0.85" strokeWidth="1.1" fill="none" strokeLinecap="round" />
-      <path d="M0 42 Q 18 50, 32 42 T 64 42" stroke="var(--tint-fg)" strokeOpacity="0.55" strokeWidth="1" fill="none" strokeLinecap="round" />
-      {/* 펄스 도트 — 더 크고 진한 글로우 */}
-      <circle r="2.2" cx="0" cy="32" className="nf-pulse">
+      <path d="M0 22 Q 16 14, 32 22 T 64 22" stroke="var(--tint-line)" strokeOpacity="0.28" strokeWidth="0.7" fill="none" />
+      <path d="M0 32 Q 20 38, 32 32 T 64 32" stroke="var(--tint-line)" strokeOpacity="0.45" strokeWidth="0.7" fill="none" />
+      <path d="M0 42 Q 18 50, 32 42 T 64 42" stroke="var(--tint-line)" strokeOpacity="0.28" strokeWidth="0.7" fill="none" />
+      <circle r="1.6" cx="0" cy="32" className="nf-pulse">
         <animateMotion dur="4.5s" repeatCount="indefinite" path="M0 0 Q 20 6, 32 0 T 64 0" />
       </circle>
-      <circle r="1.6" cx="0" cy="22" className="nf-pulse">
+      <circle r="1.2" cx="0" cy="22" className="nf-pulse">
         <animateMotion dur="5.5s" repeatCount="indefinite" begin="-1.5s" path="M0 0 Q 16 -8, 32 0 T 64 0" />
       </circle>
     </svg>
