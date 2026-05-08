@@ -1,9 +1,10 @@
 'use client';
 
-// 임시 시안 비교 페이지 — 사용자가 shimmer 디자인을 선택하면 삭제 예정.
-// 신청자 포탈 홈 화면의 이벤트 카드 UI 에 적용할 효과 5종을 완전히 다른 컨셉으로 비교.
+// 임시 시안 비교 페이지 — 사용자가 선택하면 삭제 예정.
+// 컨셉: 평소엔 정적, 호버 시에만 블루 그라디언트 보더가 흐르고 내부 조명이 은은하게 퍼짐.
+// 5가지는 "내부 조명" 처리 방식만 다름. 보더 두께 변화 없음.
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
 type Variant = 'A' | 'B' | 'C' | 'D' | 'E';
 
@@ -20,20 +21,20 @@ export default function ShimmerPreviewPage() {
   return (
     <div>
       <header className="mb-6">
-        <h1 className="text-2xl font-bold">이벤트 카드 모션 디자인 시안 (재구성)</h1>
+        <h1 className="text-2xl font-bold">이벤트 카드 호버 모션 시안 (재구성)</h1>
         <p className="text-sm text-gray-500 mt-1">
-          5가지를 완전히 다른 컨셉으로 재설계. 강도도 인지 가능한 수준으로 올림. 마음에 드는 시안을 채팅으로 알려주면 적용 + 페이지 정리.
+          평소엔 정적, 호버할 때만 블루 그라디언트 보더가 흐르고 내부에 은은한 조명이 퍼짐. 5가지는 내부 조명 처리 방식이 달라.
         </p>
         <p className="text-xs text-gray-400 mt-2">
-          공통: prefers-reduced-motion 자동 비활성화 / 모바일 감쇠 / GPU 친화 (transform·opacity 위주) / 카드 본문 가독성 보존
+          보더 두께 변화 없음 / 카드 본문에 영향 없음 / 마우스 호버해서 직접 비교해보세요.
         </p>
       </header>
 
       <div className="space-y-6">
         <Card
           name="시안 A"
-          tag="네온 보더 회전 — 사이버 프리미엄"
-          description="얇은 시안색 빛 줄기가 카드 테두리를 4초 주기로 도는 형태. 어두운 테마/AI 플랫폼 (Vercel, Anthropic) 분위기. 가장 'tech' 한 느낌."
+          tag="중앙 조명 — 부드러운 광원"
+          description="호버 시 보더에 블루 그라디언트가 흐르고, 카드 중앙에서 옅은 푸른빛이 둥글게 퍼져나감. 안정적이고 깔끔한 느낌."
           picked={picked === 'A'}
           onPick={() => setPicked('A')}
         >
@@ -42,8 +43,8 @@ export default function ShimmerPreviewPage() {
 
         <Card
           name="시안 B"
-          tag="실버 미러 sweep — Apple 메탈 광택"
-          description="넓고 밝은 흰색-실버 빛이 카드를 비스듬히 가로지름. 약간의 푸른빛 블러로 메탈 표면 광택 느낌. 가장 '럭셔리' 한 인상."
+          tag="상단 조명 — 위에서 내려오는 빛"
+          description="호버 시 보더 흐름 + 카드 상단에서 푸른빛이 아래로 부드럽게 떨어짐. 'spotlight 가 위에서 비추는' 느낌. 약간 영화적."
           picked={picked === 'B'}
           onPick={() => setPicked('B')}
         >
@@ -52,8 +53,8 @@ export default function ShimmerPreviewPage() {
 
         <Card
           name="시안 C"
-          tag="블루 grad 보더 펄스 — Linear 풍"
-          description="카드 보더 자체가 푸른빛 그라데이션으로 회전·펄스. 보더 두께가 살짝 두꺼워지면서 색이 흐름. SaaS 프리미엄 보더 트렌드."
+          tag="커서 따라가는 조명 — 가장 인터랙티브"
+          description="호버 시 보더 흐름 + 카드 위에서 마우스 커서를 따라다니는 부드러운 푸른빛 spotlight. 카드와 직접 대화하는 느낌."
           picked={picked === 'C'}
           onPick={() => setPicked('C')}
         >
@@ -62,8 +63,8 @@ export default function ShimmerPreviewPage() {
 
         <Card
           name="시안 D"
-          tag="플로팅 orb — 빛 입자가 궤도를 돈다"
-          description="작은 푸른빛 입자 하나가 카드 테두리를 천천히 따라 돔. 입자 주변에 부드러운 후광. 가장 'magic' 한 인터랙티브 느낌."
+          tag="보더만 — 가장 미니멀"
+          description="호버 시 보더에 블루 그라디언트만 흐름. 내부 조명 없음. 아주 깔끔하고 절제된 느낌."
           picked={picked === 'D'}
           onPick={() => setPicked('D')}
         >
@@ -72,8 +73,8 @@ export default function ShimmerPreviewPage() {
 
         <Card
           name="시안 E"
-          tag="Hover 만 — 정적 카드, 호버 시 풀파워"
-          description="평소엔 완전 정적. 호버 시 카드가 살짝 떠오르며 그라데이션 보더 + sweep 빛 동시 발사. 가독성 100%, 인터랙션 시 만족감 극대화."
+          tag="모서리 + 떠오름 — 입체감"
+          description="호버 시 보더 흐름 + 우상단 모서리에서 푸른빛이 번지고 + 카드가 살짝 위로 떠오름 (1px). 입체감이 있고 클릭 유도성 강함."
           picked={picked === 'E'}
           onPick={() => setPicked('E')}
         >
@@ -83,196 +84,149 @@ export default function ShimmerPreviewPage() {
 
       <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-xl">
         <p className="text-sm text-blue-900">
-          <strong>선택 안내:</strong> &quot;시안 D 좋아&quot; 처럼 알려주면 홈 카드 UI 에 적용하고 이 미리보기 페이지는 정리할게.
+          <strong>선택 안내:</strong> &quot;시안 X 좋아&quot; 처럼 알려주면 홈 카드 UI 에 적용 + 미리보기 페이지 정리.
         </p>
         {picked && (
           <p className="text-sm font-semibold text-blue-700 mt-2">
-            현재 표시된 선호: <span className="px-2 py-0.5 bg-white rounded">시안 {picked}</span>
-            <span className="text-xs text-gray-500 ml-2">(이 화면에서 비교용으로만 — 실제 적용은 채팅으로)</span>
+            현재 선호: <span className="px-2 py-0.5 bg-white rounded">시안 {picked}</span>
           </p>
         )}
       </div>
 
       <style jsx global>{`
-        /* ============== 시안 A: 네온 보더 회전 ============== */
-        .shimmer-a {
+        /* @property 로 conic-gradient 의 angle 을 애니메이션 가능하게 만듦 */
+        @property --ang {
+          syntax: '<angle>';
+          initial-value: 0deg;
+          inherits: false;
+        }
+        @keyframes shimmer-rotate { to { --ang: 360deg; } }
+
+        /* ============== 공통: 호버 시 그라디언트 보더 ============== */
+        /* 모든 시안의 보더는 동일한 conic-gradient 흐름 사용 */
+        .shimmer-card {
           position: relative;
           isolation: isolate;
+          transition: transform 280ms cubic-bezier(0.4, 0, 0.2, 1),
+                      box-shadow 280ms cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .shimmer-a::before {
+        .shimmer-card::before {
           content: '';
           position: absolute;
           inset: 0;
           border-radius: inherit;
-          padding: 2px;
+          padding: 2px;  /* border-2 와 동일 */
           background: conic-gradient(
-            from 0deg,
+            from var(--ang, 0deg),
             transparent 0deg,
-            transparent 220deg,
-            rgba(56, 189, 248, 0.4) 280deg,
-            rgba(96, 165, 250, 0.95) 340deg,
-            rgba(255, 255, 255, 1) 355deg,
-            rgba(96, 165, 250, 0.95) 360deg,
+            transparent 90deg,
+            rgba(96, 165, 250, 0.5) 160deg,
+            rgba(129, 140, 248, 0.95) 200deg,
+            rgba(56, 189, 248, 0.95) 220deg,
+            rgba(96, 165, 250, 0.5) 260deg,
+            transparent 330deg,
             transparent 360deg
           );
           -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
           -webkit-mask-composite: xor;
                   mask-composite: exclude;
-          animation: shimmer-a-spin 4s linear infinite;
-          pointer-events: none;
-          filter: drop-shadow(0 0 2px rgba(96, 165, 250, 0.4));
-        }
-        @keyframes shimmer-a-spin { to { transform: rotate(360deg); } }
-
-        /* ============== 시안 B: 실버 미러 sweep ============== */
-        .shimmer-b {
-          position: relative;
-          overflow: hidden;
-          background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
-        }
-        .shimmer-b::before {
-          content: '';
-          position: absolute;
-          top: -50%; bottom: -50%;
-          left: -80%;
-          width: 80%;
-          background: linear-gradient(
-            115deg,
-            transparent 10%,
-            rgba(186, 207, 236, 0.4) 35%,
-            rgba(255, 255, 255, 1) 50%,
-            rgba(186, 207, 236, 0.4) 65%,
-            transparent 90%
-          );
-          filter: blur(4px);
-          transform: rotate(8deg);
-          animation: shimmer-b-sweep 3.5s ease-in-out infinite;
-          pointer-events: none;
-        }
-        .shimmer-b:hover::before { animation-duration: 2s; }
-        @keyframes shimmer-b-sweep {
-          0%   { left: -80%; }
-          60%  { left: 110%; }
-          100% { left: 110%; }
-        }
-
-        /* ============== 시안 C: 블루 grad 보더 펄스 ============== */
-        .shimmer-c {
-          position: relative;
-          isolation: isolate;
-        }
-        .shimmer-c::before {
-          content: '';
-          position: absolute;
-          inset: 0;
-          border-radius: inherit;
-          padding: 1.5px;
-          background: conic-gradient(
-            from var(--ang, 0deg),
-            #60a5fa,
-            #c084fc,
-            #38bdf8,
-            #818cf8,
-            #60a5fa
-          );
-          -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-          -webkit-mask-composite: xor;
-                  mask-composite: exclude;
-          animation: shimmer-c-rotate 6s linear infinite, shimmer-c-pulse 2.4s ease-in-out infinite;
-          pointer-events: none;
-        }
-        @property --ang { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
-        @keyframes shimmer-c-rotate { to { --ang: 360deg; } }
-        @keyframes shimmer-c-pulse  {
-          0%, 100% { opacity: 0.55; }
-          50%      { opacity: 1; }
-        }
-
-        /* ============== 시안 D: 플로팅 orb ============== */
-        .shimmer-d {
-          position: relative;
-          isolation: isolate;
-        }
-        .shimmer-d::before {
-          content: '';
-          position: absolute;
-          inset: 0;
-          border-radius: inherit;
-          /* offset-path 로 정확히 border 위를 따라 회전 */
-          background:
-            radial-gradient(circle at center, rgba(96, 165, 250, 1) 0%, rgba(96, 165, 250, 0.6) 30%, transparent 70%);
-          width: 14px;
-          height: 14px;
-          inset: auto;
-          top: 0;
-          left: 0;
-          offset-path: rect(0 100% 100% 0 round var(--orb-radius, 8px));
-          offset-distance: 0%;
-          offset-anchor: center;
-          animation: shimmer-d-orbit 5s linear infinite;
-          pointer-events: none;
-          filter: blur(1px);
-          box-shadow: 0 0 12px 2px rgba(96, 165, 250, 0.5);
-        }
-        @keyframes shimmer-d-orbit {
-          to { offset-distance: 100%; }
-        }
-
-        /* ============== 시안 E: hover-only 풀파워 ============== */
-        .shimmer-e {
-          position: relative;
-          overflow: hidden;
-          transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 250ms;
-        }
-        .shimmer-e::before {
-          content: '';
-          position: absolute;
-          inset: 0;
-          border-radius: inherit;
-          padding: 1.5px;
-          background: conic-gradient(from 0deg, transparent, #60a5fa, #c084fc, transparent, transparent);
-          -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-          -webkit-mask-composite: xor;
-                  mask-composite: exclude;
           opacity: 0;
-          transition: opacity 250ms;
+          transition: opacity 300ms cubic-bezier(0.4, 0, 0.2, 1);
           pointer-events: none;
+          z-index: 1;
         }
-        .shimmer-e::after {
-          content: '';
+        .shimmer-card:hover::before {
+          opacity: 1;
+          animation: shimmer-rotate 3s linear infinite;
+        }
+
+        /* ============== 시안 A: 중앙 조명 ============== */
+        .shimmer-a-glow {
           position: absolute;
-          top: 0; bottom: 0;
-          left: -60%;
-          width: 60%;
-          background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.85) 50%, transparent 70%);
-          filter: blur(2px);
-          transition: left 800ms cubic-bezier(0.4, 0, 0.2, 1);
+          inset: 0;
+          border-radius: inherit;
+          background: radial-gradient(
+            ellipse at center,
+            rgba(96, 165, 250, 0.18) 0%,
+            rgba(96, 165, 250, 0.08) 40%,
+            transparent 70%
+          );
+          opacity: 0;
+          transition: opacity 400ms cubic-bezier(0.4, 0, 0.2, 1);
           pointer-events: none;
         }
+        .shimmer-a:hover .shimmer-a-glow { opacity: 1; }
+
+        /* ============== 시안 B: 상단 조명 ============== */
+        .shimmer-b-glow {
+          position: absolute;
+          inset: 0;
+          border-radius: inherit;
+          background: radial-gradient(
+            ellipse 70% 50% at 50% 0%,
+            rgba(96, 165, 250, 0.25) 0%,
+            rgba(96, 165, 250, 0.1) 40%,
+            transparent 80%
+          );
+          opacity: 0;
+          transition: opacity 400ms cubic-bezier(0.4, 0, 0.2, 1);
+          pointer-events: none;
+        }
+        .shimmer-b:hover .shimmer-b-glow { opacity: 1; }
+
+        /* ============== 시안 C: 커서 따라가는 조명 ============== */
+        .shimmer-c-glow {
+          position: absolute;
+          inset: 0;
+          border-radius: inherit;
+          background: radial-gradient(
+            circle 200px at var(--mx, 50%) var(--my, 50%),
+            rgba(96, 165, 250, 0.22) 0%,
+            rgba(96, 165, 250, 0.08) 30%,
+            transparent 60%
+          );
+          opacity: 0;
+          transition: opacity 250ms cubic-bezier(0.4, 0, 0.2, 1);
+          pointer-events: none;
+        }
+        .shimmer-c:hover .shimmer-c-glow { opacity: 1; }
+
+        /* ============== 시안 D: 내부 조명 없음 (보더만) ============== */
+        /* 추가 스타일 없음 */
+
+        /* ============== 시안 E: 모서리 + 떠오름 ============== */
         .shimmer-e:hover {
           transform: translateY(-2px);
-          box-shadow: 0 8px 20px rgba(96, 165, 250, 0.18), 0 2px 6px rgba(0, 0, 0, 0.05);
+          box-shadow: 0 8px 20px rgba(96, 165, 250, 0.15), 0 2px 6px rgba(0, 0, 0, 0.04);
         }
-        .shimmer-e:hover::before { opacity: 1; animation: shimmer-e-rotate 2.5s linear infinite; }
-        .shimmer-e:hover::after  { left: 100%; }
-        @keyframes shimmer-e-rotate { to { transform: rotate(360deg); } }
-
-        /* 모바일 감쇠 */
-        @media (max-width: 640px) {
-          .shimmer-a::before { animation-duration: 6s; }
-          .shimmer-b::before { animation-duration: 5s; }
-          .shimmer-c::before { animation-duration: 9s, 3.5s; }
-          .shimmer-d::before { animation-duration: 7s; }
+        .shimmer-e-glow {
+          position: absolute;
+          inset: 0;
+          border-radius: inherit;
+          background: radial-gradient(
+            ellipse 60% 60% at 100% 0%,
+            rgba(129, 140, 248, 0.28) 0%,
+            rgba(96, 165, 250, 0.1) 40%,
+            transparent 75%
+          );
+          opacity: 0;
+          transition: opacity 400ms cubic-bezier(0.4, 0, 0.2, 1);
+          pointer-events: none;
         }
+        .shimmer-e:hover .shimmer-e-glow { opacity: 1; }
 
-        /* 접근성: prefers-reduced-motion */
+        /* 접근성 */
         @media (prefers-reduced-motion: reduce) {
-          .shimmer-a::before, .shimmer-b::before, .shimmer-c::before,
-          .shimmer-d::before, .shimmer-e::before, .shimmer-e::after {
+          .shimmer-card::before {
             animation: none !important;
             transition: none !important;
             opacity: 0 !important;
           }
+          .shimmer-a-glow, .shimmer-b-glow, .shimmer-c-glow, .shimmer-e-glow {
+            opacity: 0 !important;
+            transition: none !important;
+          }
+          .shimmer-e:hover { transform: none !important; box-shadow: none !important; }
         }
       `}</style>
     </div>
@@ -305,11 +259,9 @@ function Card({ name, tag, description, picked, onPick, children }: {
   );
 }
 
-function CardBody({ extraClass }: { extraClass: string }) {
+function CardContent({ children }: { children?: React.ReactNode }) {
   return (
-    <button
-      className={`w-full text-left p-4 rounded-lg border-2 border-gray-200 transition-all bg-white ${extraClass}`}
-    >
+    <>
       <div className="flex items-center justify-between" style={{ position: 'relative', zIndex: 2 }}>
         <div className="flex items-center gap-2">
           <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-blue-50 text-blue-600 shrink-0">
@@ -323,12 +275,58 @@ function CardBody({ extraClass }: { extraClass: string }) {
         <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700">Offline</span>
         <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700">정원 {SAMPLE_EVENT.capacity}명</span>
       </div>
-    </button>
+      {children}
+    </>
   );
 }
 
-function CardA() { return <CardBody extraClass="shimmer-a" />; }
-function CardB() { return <CardBody extraClass="shimmer-b" />; }
-function CardC() { return <CardBody extraClass="shimmer-c" />; }
-function CardD() { return <CardBody extraClass="shimmer-d" />; }
-function CardE() { return <CardBody extraClass="shimmer-e" />; }
+function CardA() {
+  return (
+    <button className="shimmer-card shimmer-a w-full text-left p-4 rounded-lg border-2 border-gray-200 bg-white">
+      <span className="shimmer-a-glow" aria-hidden="true" />
+      <CardContent />
+    </button>
+  );
+}
+function CardB() {
+  return (
+    <button className="shimmer-card shimmer-b w-full text-left p-4 rounded-lg border-2 border-gray-200 bg-white">
+      <span className="shimmer-b-glow" aria-hidden="true" />
+      <CardContent />
+    </button>
+  );
+}
+function CardC() {
+  const ref = useRef<HTMLButtonElement>(null);
+  return (
+    <button
+      ref={ref}
+      className="shimmer-card shimmer-c w-full text-left p-4 rounded-lg border-2 border-gray-200 bg-white"
+      onMouseMove={(e) => {
+        const el = ref.current;
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        el.style.setProperty('--mx', `${e.clientX - r.left}px`);
+        el.style.setProperty('--my', `${e.clientY - r.top}px`);
+      }}
+    >
+      <span className="shimmer-c-glow" aria-hidden="true" />
+      <CardContent />
+    </button>
+  );
+}
+function CardD() {
+  return (
+    <button className="shimmer-card shimmer-d w-full text-left p-4 rounded-lg border-2 border-gray-200 bg-white">
+      <CardContent />
+    </button>
+  );
+}
+function CardE() {
+  return (
+    <button className="shimmer-card shimmer-e w-full text-left p-4 rounded-lg border-2 border-gray-200 bg-white">
+      <span className="shimmer-e-glow" aria-hidden="true" />
+      <CardContent />
+    </button>
+  );
+}
