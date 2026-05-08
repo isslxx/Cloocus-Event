@@ -688,7 +688,7 @@ export default function EventRegistrationPage({ params }: { params: Promise<{ sl
               <input
                 type="email"
                 value={form.email}
-                onChange={(e) => { handleChange('email', e.target.value); checkEmailWarning(e.target.value); }}
+                onChange={(e) => { const v = e.target.value.toLowerCase(); handleChange('email', v); checkEmailWarning(v); }}
                 onBlur={() => checkEmailWarning(form.email)}
                 placeholder="name@company.com"
                 className={errors.email ? 'error' : ''}

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { normalizeCompanyName } from '@/lib/company-normalize';
-import { isValidEmail, isValidPhone } from '@/lib/validation';
+import { isValidEmail, isValidPhone, isFakePhone } from '@/lib/validation';
 import { validateAndPrepareCustomAnswers } from '@/lib/custom-answers';
 
 function getServiceSupabase() {
@@ -194,6 +194,9 @@ export async function PUT(
 
     if (!isValidPhone(phone)) {
       return NextResponse.json({ error: '올바른 연락처 형식(010-0000-0000)을 입력해주세요.' }, { status: 400 });
+    }
+    if (isFakePhone(phone)) {
+      return NextResponse.json({ error: '실제 사용 중인 연락처를 입력해주세요.' }, { status: 400 });
     }
 
     if (!industry || !company_size || !referral_source) {

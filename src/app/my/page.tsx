@@ -168,11 +168,12 @@ export default function MyDashboard() {
       setFaqCategories(Array.isArray(d?.categories) ? d.categories : []);
     }).catch(() => {});
 
-    // 새로고침 시 세션 복원 — 직전 로그인의 email + pin 을 sessionStorage 에 보관해뒀다가
-    // 페이지 재진입 시 lookup 을 자동 호출. 탭을 닫으면 사라짐.
+    // 새로고침 시 세션 복원 — 직전 로그인 자격증명 + lookup 응답 캐시를 sessionStorage 에 보관.
+    // 캐시가 있으면 즉시 렌더 (스피너 안 뜸) + 백그라운드 fetch 로 최신 데이터 갱신.
     let hasSession = false;
     try {
       const raw = sessionStorage.getItem('cloocus_my_session');
+      const cachedRaw = sessionStorage.getItem('cloocus_my_data');
       if (raw) {
         const sess = JSON.parse(raw) as { email?: string; pin?: string; event_id?: string };
         if (sess?.email && /^\d{4}$/.test(sess?.pin || '')) {
@@ -181,7 +182,35 @@ export default function MyDashboard() {
           setLookupPin(sess.pin!);
           if (sess.event_id) setLookupEventId(sess.event_id);
           setPin(sess.pin!);
-          // 자동 lookup
+
+          // 캐시된 응답이 있으면 즉시 렌더 → sessionRestoring 즉시 false
+          let cachedApplied = false;
+          if (cachedRaw) {
+            try {
+              const cached = JSON.parse(cachedRaw) as {
+                registration?: RegistrationData;
+                custom_questions?: CustomQuestion[];
+                editable?: boolean;
+                multiple?: boolean;
+                registrations?: { id: string; event_name: string; event_date: string; registration_status: string }[];
+              };
+              if (cached.multiple && Array.isArray(cached.registrations)) {
+                setMultipleEvents(cached.registrations);
+                setShowEventSelect(true);
+                setAuthenticated(true);
+                cachedApplied = true;
+              } else if (cached.registration) {
+                setRegistration(cached.registration);
+                setCustomQuestions(Array.isArray(cached.custom_questions) ? cached.custom_questions : []);
+                setEditable(!!cached.editable);
+                setAuthenticated(true);
+                cachedApplied = true;
+              }
+            } catch { /* 캐시 손상 — 무시 */ }
+          }
+          if (cachedApplied) setSessionRestoring(false);
+
+          // 백그라운드(또는 cachedApplied=false 면 포그라운드) 로 최신 데이터 갱신
           fetch('/api/register/lookup', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -191,8 +220,14 @@ export default function MyDashboard() {
             .then(({ ok, d }) => {
               if (!ok) {
                 sessionStorage.removeItem('cloocus_my_session');
+                sessionStorage.removeItem('cloocus_my_data');
+                if (!cachedApplied) {
+                  // 인증 실패 + 캐시도 없음 → 로그인 폼 노출
+                  setAuthenticated(false);
+                }
                 return;
               }
+              try { sessionStorage.setItem('cloocus_my_data', JSON.stringify(d)); } catch { /* ignore */ }
               if (d.multiple) {
                 setMultipleEvents(d.registrations);
                 setShowEventSelect(true);
@@ -205,9 +240,11 @@ export default function MyDashboard() {
               }
             })
             .catch(() => {
-              try { sessionStorage.removeItem('cloocus_my_session'); } catch { /* ignore */ }
+              if (!cachedApplied) {
+                try { sessionStorage.removeItem('cloocus_my_session'); sessionStorage.removeItem('cloocus_my_data'); } catch { /* ignore */ }
+              }
             })
-            .finally(() => setSessionRestoring(false));
+            .finally(() => { if (!cachedApplied) setSessionRestoring(false); });
         }
       }
     } catch { /* sessionStorage 미지원 환경 무시 */ }
@@ -369,6 +406,8 @@ export default function MyDashboard() {
         setRegistration(lookupData.registration);
         setCustomQuestions(Array.isArray(lookupData.custom_questions) ? lookupData.custom_questions : []);
         setEditable(lookupData.editable);
+        // 캐시 갱신
+        try { sessionStorage.setItem('cloocus_my_data', JSON.stringify(lookupData)); } catch { /* ignore */ }
       }
       setEditMode(false);
       // 설문 활성화 상태면 수정 후 바로 설문 폼 열기
@@ -415,13 +454,14 @@ export default function MyDashboard() {
       if (!res.ok) { setLookupError(data.error || '조회에 실패했습니다.'); return; }
       setPin(lookupPin);
 
-      // 새로고침 시 자동 복원되도록 세션 보관
+      // 새로고침 시 자동 복원되도록 세션 + 응답 캐시 보관
       try {
         sessionStorage.setItem('cloocus_my_session', JSON.stringify({
           email: lookupEmail,
           pin: lookupPin,
           event_id: lookupEventId || undefined,
         }));
+        sessionStorage.setItem('cloocus_my_data', JSON.stringify(data));
       } catch { /* ignore */ }
 
       // 여러 이벤트에 등록한 경우
@@ -587,7 +627,7 @@ export default function MyDashboard() {
                   <input
                     type="email"
                     value={lookupEmail}
-                    onChange={(e) => { setLookupEmail(e.target.value); setLookupError(''); }}
+                    onChange={(e) => { setLookupEmail(e.target.value.toLowerCase()); setLookupError(''); }}
                     placeholder="name@company.com"
                   />
                 </div>
@@ -636,6 +676,8 @@ export default function MyDashboard() {
         setCustomQuestions(Array.isArray(data.custom_questions) ? data.custom_questions : []);
         setEditable(data.editable);
         setShowEventSelect(false);
+        // 캐시 갱신 — 다음 새로고침 시 즉시 이 이벤트 화면으로 복원
+        try { sessionStorage.setItem('cloocus_my_data', JSON.stringify(data)); } catch { /* ignore */ }
         // FAQ는 이미 프리페치됨 → 비어있을 때만 재시도
         if (faqs.length === 0 && faqCategories.length === 0) {
           fetch('/api/faqs').then((r) => r.json()).then((d) => {
@@ -686,7 +728,7 @@ export default function MyDashboard() {
               </div>
 
               <button
-                onClick={() => { setAuthenticated(false); setShowEventSelect(false); setMultipleEvents([]); try { sessionStorage.removeItem('cloocus_my_session'); } catch { /* ignore */ } }}
+                onClick={() => { setAuthenticated(false); setShowEventSelect(false); setMultipleEvents([]); try { sessionStorage.removeItem('cloocus_my_session'); sessionStorage.removeItem('cloocus_my_data'); } catch { /* ignore */ } }}
                 className="w-full mt-4 text-sm text-gray-400 hover:text-gray-600 hover:underline"
               >
                 ← 뒤로가기
@@ -753,7 +795,7 @@ export default function MyDashboard() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/cloocus-logo.png" alt="Cloocus" className="h-5" />
             <button
-              onClick={() => { setAuthenticated(false); setRegistration(null); setLookupEmail(''); setLookupPin(''); try { sessionStorage.removeItem('cloocus_my_session'); } catch { /* ignore */ } }}
+              onClick={() => { setAuthenticated(false); setRegistration(null); setLookupEmail(''); setLookupPin(''); try { sessionStorage.removeItem('cloocus_my_session'); sessionStorage.removeItem('cloocus_my_data'); } catch { /* ignore */ } }}
               className="text-sm text-gray-400 hover:text-gray-600"
             >
               로그아웃
@@ -1559,7 +1601,12 @@ export default function MyDashboard() {
                   <input
                     type={type}
                     value={editForm[key] || ''}
-                    onChange={(e) => { setEditForm({ ...editForm, [key]: e.target.value }); setEditErrors({ ...editErrors, [key]: '' }); }}
+                    onChange={(e) => {
+                      // 이메일은 자동 소문자 변환
+                      const v = key === 'email' ? e.target.value.toLowerCase() : e.target.value;
+                      setEditForm({ ...editForm, [key]: v });
+                      setEditErrors({ ...editErrors, [key]: '' });
+                    }}
                     className={editErrors[key] ? 'error' : ''}
                   />
                   {editErrors[key] && <span className="error-msg">{editErrors[key]}</span>}

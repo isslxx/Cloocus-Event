@@ -21,6 +21,21 @@ export function isValidPhone(phone: string): boolean {
   return /^010-\d{4}-\d{4}$/.test(phone);
 }
 
+// 명백한 테스트용·가짜 번호 차단:
+//  - 8자리가 모두 동일한 숫자 (010-0000-0000, 010-1111-1111 등)
+//  - 8자리가 단순 오름차순/내림차순 (010-1234-5678, 010-8765-4321)
+// 정상 번호 (010-1234-0000, 010-1000-1234 등) 는 통과시킴
+export function isFakePhone(phone: string): boolean {
+  const m = /^010-(\d{4})-(\d{4})$/.exec(phone);
+  if (!m) return false;
+  const eight = m[1] + m[2];
+  // 모두 같은 숫자 8개
+  if (/^(\d)\1{7}$/.test(eight)) return true;
+  // 0~9 의 단순 오름·내림 시퀀스
+  if (eight === '12345678' || eight === '87654321' || eight === '01234567' || eight === '76543210') return true;
+  return false;
+}
+
 export type FormErrors = Record<string, string>;
 
 export function validateRegistrationForm(form: {
@@ -55,6 +70,8 @@ export function validateRegistrationForm(form: {
     errors.phone = '연락처를 입력해주세요.';
   } else if (!isValidPhone(form.phone)) {
     errors.phone = '올바른 연락처 형식(010-0000-0000)을 입력해주세요.';
+  } else if (isFakePhone(form.phone)) {
+    errors.phone = '실제 사용 중인 연락처를 입력해주세요.';
   }
 
   if (!form.industry) {
