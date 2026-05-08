@@ -76,6 +76,10 @@ function BrandFooter() {
 
 export default function MyDashboard() {
   const [authenticated, setAuthenticated] = useState(false);
+  // sessionStorage 에 세션이 있는지 확인하는 동안엔 로그인 폼/포탈 어느 쪽도 안 보여줌.
+  // SSR/첫 페인트엔 무조건 true 로 시작 → useEffect 가 즉시 false 로 바꿈.
+  // 세션이 없으면 false 로, 있으면 lookup 후 false 로.
+  const [sessionRestoring, setSessionRestoring] = useState(true);
   const [lookupEmail, setLookupEmail] = useState('');
   const [lookupPin, setLookupPin] = useState('');
   const [lookupEventId, setLookupEventId] = useState('');
@@ -166,11 +170,13 @@ export default function MyDashboard() {
 
     // 새로고침 시 세션 복원 — 직전 로그인의 email + pin 을 sessionStorage 에 보관해뒀다가
     // 페이지 재진입 시 lookup 을 자동 호출. 탭을 닫으면 사라짐.
+    let hasSession = false;
     try {
       const raw = sessionStorage.getItem('cloocus_my_session');
       if (raw) {
         const sess = JSON.parse(raw) as { email?: string; pin?: string; event_id?: string };
         if (sess?.email && /^\d{4}$/.test(sess?.pin || '')) {
+          hasSession = true;
           setLookupEmail(sess.email);
           setLookupPin(sess.pin!);
           if (sess.event_id) setLookupEventId(sess.event_id);
@@ -184,7 +190,6 @@ export default function MyDashboard() {
             .then((r) => r.json().then((d) => ({ ok: r.ok, d })))
             .then(({ ok, d }) => {
               if (!ok) {
-                // 세션 무효 — 정리하고 일반 로그인 화면으로
                 sessionStorage.removeItem('cloocus_my_session');
                 return;
               }
@@ -199,10 +204,15 @@ export default function MyDashboard() {
                 setAuthenticated(true);
               }
             })
-            .catch(() => sessionStorage.removeItem('cloocus_my_session'));
+            .catch(() => {
+              try { sessionStorage.removeItem('cloocus_my_session'); } catch { /* ignore */ }
+            })
+            .finally(() => setSessionRestoring(false));
         }
       }
     } catch { /* sessionStorage 미지원 환경 무시 */ }
+    // 세션이 없으면 즉시 복원 종료 — 로그인 폼이 바로 보이도록
+    if (!hasSession) setSessionRestoring(false);
   }, []);
 
   // 추가 문항은 lookup·GET 응답에 함께 포함되므로 setRegistration 시점에 같이 set.
@@ -534,6 +544,18 @@ export default function MyDashboard() {
     if (status === 'rejected') return { text: '등록 불가', bg: 'bg-red-100 text-red-600', icon: '✕' };
     return { text: '등록 대기', bg: 'bg-yellow-100 text-yellow-700', icon: '⏳' };
   };
+
+  // 세션 복원 중 — 로그인 폼/포탈 어느 쪽도 깜빡이지 않도록 로딩 화면
+  if (sessionRestoring) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3 text-gray-400">
+          <div className="w-7 h-7 border-2 border-gray-200 border-t-blue-500 rounded-full animate-spin" />
+          <p className="text-sm">불러오는 중...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Login screen
   if (!authenticated) {
