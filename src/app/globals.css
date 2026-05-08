@@ -286,6 +286,67 @@ table td .flex {
 }
 
 /* ==============================================================
+   홈 배경 — Soft Mesh ambient
+   파스텔 그라데이션 4개가 천천히 부유. AI workspace 트렌드(Stripe/Linear).
+============================================================== */
+.mesh-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.mesh-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  will-change: transform;
+}
+.mesh-blob-1 {
+  width: 50vw; height: 50vw;
+  max-width: 700px; max-height: 700px;
+  top: -10%; left: -10%;
+  background: radial-gradient(circle, #c4b5fd 0%, transparent 70%);
+  opacity: 0.45;
+  animation: mesh-float-1 22s ease-in-out infinite;
+}
+.mesh-blob-2 {
+  width: 45vw; height: 45vw;
+  max-width: 650px; max-height: 650px;
+  top: 5%; right: -10%;
+  background: radial-gradient(circle, #a5f3fc 0%, transparent 70%);
+  opacity: 0.4;
+  animation: mesh-float-2 26s ease-in-out infinite;
+}
+.mesh-blob-3 {
+  width: 50vw; height: 50vw;
+  max-width: 700px; max-height: 700px;
+  bottom: -15%; left: 20%;
+  background: radial-gradient(circle, #fed7aa 0%, transparent 70%);
+  opacity: 0.35;
+  animation: mesh-float-3 24s ease-in-out infinite;
+}
+.mesh-blob-4 {
+  width: 35vw; height: 35vw;
+  max-width: 500px; max-height: 500px;
+  bottom: 10%; right: 5%;
+  background: radial-gradient(circle, #bae6fd 0%, transparent 70%);
+  opacity: 0.4;
+  animation: mesh-float-4 20s ease-in-out infinite;
+}
+@keyframes mesh-float-1 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(8vw, 4vw) scale(1.05); } }
+@keyframes mesh-float-2 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-6vw, 6vw) scale(1.08); } }
+@keyframes mesh-float-3 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(5vw, -4vw) scale(1.06); } }
+@keyframes mesh-float-4 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-4vw, -3vw) scale(1.04); } }
+
+@media (max-width: 640px) {
+  .mesh-blob { filter: blur(50px); opacity: 0.3; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mesh-blob { animation: none !important; }
+}
+
+/* ==============================================================
    홈 이벤트 카드 — Premium AI Experience
    - 좌측 카테고리 아이콘 / 중앙 콘텐츠 / 우측 ambient + arrow
    - 호버: 2px lift, 보더 conic-gradient shimmer (5.5s),

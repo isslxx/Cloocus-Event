@@ -259,8 +259,16 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <div className="flex-1 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-50 flex flex-col relative overflow-hidden">
+      {/* Soft Mesh ambient — 파스텔 그라데이션 4개가 천천히 부유 */}
+      <div className="mesh-bg" aria-hidden="true">
+        <div className="mesh-blob mesh-blob-1" />
+        <div className="mesh-blob mesh-blob-2" />
+        <div className="mesh-blob mesh-blob-3" />
+        <div className="mesh-blob mesh-blob-4" />
+      </div>
+
+      <div className="relative z-[1] flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-2xl">
           <div className="bg-white rounded-xl border border-gray-200 p-6 sm:p-8">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -361,7 +369,9 @@ export default function Home() {
           </div>
         </div>
       </div>
-      <BrandFooter />
+      <div className="relative z-[1]">
+        <BrandFooter />
+      </div>
     </div>
   );
 }
