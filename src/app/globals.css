@@ -354,7 +354,7 @@ table td .flex {
 }
 .premium-card:hover:not(:disabled):not(.is-ended) .premium-card-border {
   opacity: 1;
-  animation: event-card-shimmer-rotate 5s linear infinite;
+  animation: event-card-shimmer-rotate 3.5s linear infinite;
 }
 
 .premium-icon {
