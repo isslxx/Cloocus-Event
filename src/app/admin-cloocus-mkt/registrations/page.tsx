@@ -382,7 +382,16 @@ export default function RegistrationsPage() {
         </select>
       </div>
 
-      {/* 테이블 */}
+      {/* 테이블 — 로딩 중엔 테이블을 렌더하지 않고 스피너만. 데이터 도착 시 한 번만 마운트되어
+           컬럼 너비 재계산으로 인한 사이즈 깜빡임 제거 */}
+      {loading && records.length === 0 ? (
+        <div className="bg-white rounded-xl border border-gray-200 flex items-center justify-center" style={{ minHeight: '400px' }}>
+          <div className="flex flex-col items-center gap-2 text-gray-400">
+            <div className="w-6 h-6 border-2 border-gray-200 border-t-blue-500 rounded-full animate-spin" />
+            <p className="text-sm">로딩 중...</p>
+          </div>
+        </div>
+      ) : (
       <div className="bg-white rounded-xl border border-gray-200 overflow-auto" style={{ maxHeight: 'calc(100vh - 300px)', minHeight: '400px' }}>
         <table className="w-full text-sm">
           <thead className="sticky top-0 z-20">
@@ -436,14 +445,10 @@ export default function RegistrationsPage() {
             </tr>
           </thead>
           <tbody>
-            {loading || records.length === 0 ? (
+            {records.length === 0 ? (
               <tr>
-                {/* 헤더와 동일한 컬럼 구조를 유지해 로딩→데이터 전환 시 너비 재계산 방지 */}
-                <td className="px-3 py-1.5 w-10 min-w-10 sticky left-0 z-10 border-r border-gray-100 bg-white">&nbsp;</td>
-                <td className="px-3 py-1.5 sticky left-[40px] z-10 border-r border-gray-100 bg-white w-20 min-w-20 max-w-20">&nbsp;</td>
-                <td className="px-3 py-1.5 sticky left-[120px] z-10 border-r border-gray-100 bg-white min-w-[140px] max-w-[140px]">&nbsp;</td>
-                <td colSpan={(canEditRecord || canDeleteRecord) ? 16 : 15} className="px-4 py-12 text-center text-gray-400">
-                  {loading ? '로딩 중...' : '등록 데이터가 없습니다.'}
+                <td colSpan={(canEditRecord || canDeleteRecord) ? 19 : 18} className="px-4 py-12 text-center text-gray-400">
+                  등록 데이터가 없습니다.
                 </td>
               </tr>
             ) : records.map((r) => (
@@ -530,6 +535,7 @@ export default function RegistrationsPage() {
           </tbody>
         </table>
       </div>
+      )}
 
       {/* 페이지네이션 바 — 화면 하단 고정 */}
       {totalPages > 1 && (
