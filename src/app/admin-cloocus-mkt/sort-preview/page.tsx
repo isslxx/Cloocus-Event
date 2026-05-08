@@ -27,7 +27,7 @@ const SAMPLE_ROWS = [
   { name: '최서연', company_name: '카카오',      created_at: '2026-05-05 11:22', event: 'Gemini 프로모션',   department: '플랫폼팀',     job_title: '매니저', email: 'choi@kakao.com',  phone: '010-4567-8901', industry: 'IT/소프트웨어', company_size: '대기업'   },
 ];
 
-type Variant = 'A' | 'B' | 'C';
+type Variant = 'A' | 'B' | 'C' | 'D';
 
 export default function SortPreviewPage() {
   const [sortKey, setSortKey] = useState<SortKey>('created_at');
@@ -83,6 +83,17 @@ export default function SortPreviewPage() {
         >
           <HeaderC columns={COLUMNS} sortKey={sortKey} sortAsc={sortAsc} onSort={handleSort} />
           <BodyRows />
+        </Variant>
+
+        <Variant
+          name="시안 D"
+          tag="Excel 스타일 — 헤더 우측 ▼ + 세로 구분선"
+          description="모든 헤더 우측에 작은 드롭다운 캐럿이 항상 표시 (Excel 필터 버튼 스타일). 활성 컬럼은 시안 A처럼 파란색으로 강조되고 ▼이 ↓/↑로 변환. 모든 셀에 세로 구분선 추가."
+          isActive={activeVariant === 'D'}
+          onPick={() => setActiveVariant('D')}
+        >
+          <HeaderD columns={COLUMNS} sortKey={sortKey} sortAsc={sortAsc} onSort={handleSort} />
+          <BodyRowsD />
         </Variant>
       </div>
 
@@ -249,6 +260,67 @@ function BodyRows() {
           <td className="px-4 py-3 text-gray-600 text-xs">{r.email}</td>
           <td className="px-4 py-3 text-gray-600 text-xs">{r.phone}</td>
           <td className="px-4 py-3 text-gray-600 text-xs">{r.industry}</td>
+          <td className="px-4 py-3 text-gray-600 text-xs">{r.company_size}</td>
+        </tr>
+      ))}
+    </tbody>
+  );
+}
+
+// ============ 시안 D: Excel 스타일 헤더 ▼ + 세로 구분선 ============
+function HeaderD({ columns, sortKey, sortAsc, onSort }: {
+  columns: { key: SortKey; label: string }[];
+  sortKey: SortKey;
+  sortAsc: boolean;
+  onSort: (k: SortKey) => void;
+}) {
+  return (
+    <thead>
+      <tr className="bg-gray-50 border-b border-gray-200">
+        {columns.map((col) => {
+          const isSorted = sortKey === col.key;
+          return (
+            <th
+              key={col.key}
+              onClick={() => onSort(col.key)}
+              className={`px-4 py-3 text-left font-medium cursor-pointer whitespace-nowrap select-none transition border-r border-gray-200 last:border-r-0
+                ${isSorted ? 'text-blue-700 bg-blue-50/40' : 'text-gray-600 hover:bg-gray-100'}`}
+            >
+              <span className="inline-flex items-center justify-between gap-2 w-full">
+                <span>{col.label}</span>
+                <span
+                  className={`inline-flex items-center justify-center w-4 h-4 rounded text-[9px] leading-none border transition
+                    ${isSorted
+                      ? 'border-blue-300 bg-white text-blue-600'
+                      : 'border-gray-300 bg-white text-gray-400 group-hover:text-gray-600'}`}
+                  aria-hidden="true"
+                >
+                  {isSorted ? (sortAsc ? '▲' : '▼') : '▼'}
+                </span>
+              </span>
+            </th>
+          );
+        })}
+      </tr>
+    </thead>
+  );
+}
+
+// 시안 D 전용 본문: 셀에도 세로 구분선
+function BodyRowsD() {
+  return (
+    <tbody>
+      {SAMPLE_ROWS.map((r, i) => (
+        <tr key={i} className="border-b border-gray-100 hover:bg-gray-50">
+          <td className="px-4 py-3 font-medium border-r border-gray-100">{r.name}</td>
+          <td className="px-4 py-3 border-r border-gray-100">{r.company_name}</td>
+          <td className="px-4 py-3 text-gray-500 text-xs border-r border-gray-100">{r.created_at}</td>
+          <td className="px-4 py-3 text-gray-600 text-xs border-r border-gray-100">{r.event}</td>
+          <td className="px-4 py-3 text-gray-600 text-xs border-r border-gray-100">{r.department}</td>
+          <td className="px-4 py-3 text-gray-600 text-xs border-r border-gray-100">{r.job_title}</td>
+          <td className="px-4 py-3 text-gray-600 text-xs border-r border-gray-100">{r.email}</td>
+          <td className="px-4 py-3 text-gray-600 text-xs border-r border-gray-100">{r.phone}</td>
+          <td className="px-4 py-3 text-gray-600 text-xs border-r border-gray-100">{r.industry}</td>
           <td className="px-4 py-3 text-gray-600 text-xs">{r.company_size}</td>
         </tr>
       ))}
