@@ -1,11 +1,11 @@
 'use client';
 
 // 임시 미리보기 — 카드 우측 ambient 시각 변주 비교.
-// 사용자가 선호하는 시안을 알려주면 홈 카드에 적용 + 페이지 삭제.
+// B(Constellation) 킵 + 4개 새 컨셉 추가 (Data Stream / Aurora Glow / AI Wave / Radar Sweep).
 
 import { useState } from 'react';
 
-type Variant = 'current' | 'orb' | 'network' | 'bars' | 'blob' | 'rings';
+type Variant = 'current' | 'network' | 'stream' | 'aurora' | 'wave' | 'radar';
 
 type SampleEvent = {
   id: string;
@@ -31,37 +31,37 @@ export default function AmbientPreview() {
         <header className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">우측 ambient 시안 비교</h1>
           <p className="text-sm text-gray-500 mt-2 leading-relaxed">
-            5가지 시각 언어로 만든 AI premium 느낌의 ambient. 카테고리 톤(violet/emerald 등) 은 모두 동일하게 적용됨.
+            B(Constellation Network) 킵 + 새 컨셉 4개. 모두 카테고리 톤(violet/emerald) 자동 적용.
             마음에 드는 시안 알려주면 홈 카드에 적용 + 미리보기 페이지 삭제.
           </p>
         </header>
 
-        <Section title="현재 — Neural Flow" subtitle="3개 곡선 + 펄스 도트" picked={picked === 'current'} onPick={() => setPicked('current')}>
+        <Section title="현재 — Neural Flow" subtitle="3개 곡선 + 펄스 도트 (기준)" picked={picked === 'current'} onPick={() => setPicked('current')}>
           {SAMPLES.map((e) => <PreviewCard key={e.id} event={e} variant="current" />)}
         </Section>
 
-        <Section title="시안 A — Pulsing Orb" subtitle="중앙 광원 + 동심원 파동. 'AI 가 사고하는' 느낌. ChatGPT/Claude 풍" picked={picked === 'orb'} onPick={() => setPicked('orb')}>
-          {SAMPLES.map((e) => <PreviewCard key={e.id} event={e} variant="orb" />)}
-        </Section>
-
-        <Section title="시안 B — Constellation Network" subtitle="여러 노드와 연결선 + 노드별 펄스. 신경망 시각화 느낌. 가장 'AI tech'" picked={picked === 'network'} onPick={() => setPicked('network')}>
+        <Section title="시안 B — Constellation Network (kept)" subtitle="여러 노드와 연결선 + 노드별 펄스. 신경망 시각화 느낌" picked={picked === 'network'} onPick={() => setPicked('network')}>
           {SAMPLES.map((e) => <PreviewCard key={e.id} event={e} variant="network" />)}
         </Section>
 
-        <Section title="시안 C — Frequency Bars" subtitle="높이가 다르게 움직이는 막대 5개. 음성 비서·EQ 처럼 살아있는 느낌" picked={picked === 'bars'} onPick={() => setPicked('bars')}>
-          {SAMPLES.map((e) => <PreviewCard key={e.id} event={e} variant="bars" />)}
+        <Section title="시안 F — Data Stream" subtitle="세로 파이프 3개 + 데이터 패킷이 위에서 아래로 흐름. 가장 'data' 느낌" picked={picked === 'stream'} onPick={() => setPicked('stream')}>
+          {SAMPLES.map((e) => <PreviewCard key={e.id} event={e} variant="stream" />)}
         </Section>
 
-        <Section title="시안 D — Liquid Blob" subtitle="유기적인 그라데이션 블롭이 천천히 변형. Apple Intelligence 풍" picked={picked === 'blob'} onPick={() => setPicked('blob')}>
-          {SAMPLES.map((e) => <PreviewCard key={e.id} event={e} variant="blob" />)}
+        <Section title="시안 G — Aurora Glow" subtitle="여러 겹의 부드러운 그라데이션 빛이 천천히 흐름. 가장 럭셔리·organic" picked={picked === 'aurora'} onPick={() => setPicked('aurora')}>
+          {SAMPLES.map((e) => <PreviewCard key={e.id} event={e} variant="aurora" />)}
         </Section>
 
-        <Section title="시안 E — Concentric Rings" subtitle="가는 동심원 3개가 회전. 미니멀하면서 우아함. Linear 풍" picked={picked === 'rings'} onPick={() => setPicked('rings')}>
-          {SAMPLES.map((e) => <PreviewCard key={e.id} event={e} variant="rings" />)}
+        <Section title="시안 H — AI Wave" subtitle="3개 사인파가 다른 속도로 흐름. 음성 AI / 신호 처리 느낌" picked={picked === 'wave'} onPick={() => setPicked('wave')}>
+          {SAMPLES.map((e) => <PreviewCard key={e.id} event={e} variant="wave" />)}
+        </Section>
+
+        <Section title="시안 I — Radar Sweep" subtitle="동심원 + 회전하는 레이더 빔 + 탐지된 도트. 'scanning / detecting' 느낌" picked={picked === 'radar'} onPick={() => setPicked('radar')}>
+          {SAMPLES.map((e) => <PreviewCard key={e.id} event={e} variant="radar" />)}
         </Section>
 
         <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-          <p className="text-sm text-blue-900"><strong>선택:</strong> &quot;시안 X 좋아&quot; 알려주면 적용하고 페이지 삭제.</p>
+          <p className="text-sm text-blue-900"><strong>선택:</strong> &quot;시안 X 좋아&quot; 알려주면 적용 + 페이지 삭제.</p>
           {picked && <p className="text-sm font-semibold text-blue-700 mt-2">현재 선호: <span className="px-2 py-0.5 bg-white rounded">{picked}</span></p>}
         </div>
       </div>
@@ -130,11 +130,11 @@ function PreviewCard({ event, variant }: { event: SampleEvent; variant: Variant 
         <div className="shrink-0 self-center">
           <div className="ap-ambient">
             {variant === 'current' && <NeuralFlow />}
-            {variant === 'orb' && <PulsingOrb />}
             {variant === 'network' && <ConstellationNetwork />}
-            {variant === 'bars' && <FrequencyBars />}
-            {variant === 'blob' && <LiquidBlob />}
-            {variant === 'rings' && <ConcentricRings />}
+            {variant === 'stream' && <DataStream />}
+            {variant === 'aurora' && <AuroraGlow />}
+            {variant === 'wave' && <AIWave />}
+            {variant === 'radar' && <RadarSweep />}
           </div>
         </div>
       </div>
@@ -172,37 +172,13 @@ function NeuralFlow() {
   );
 }
 
-// 시안 A: Pulsing Orb — 중앙 광원 + 동심 파동
-function PulsingOrb() {
-  return (
-    <svg viewBox="0 0 64 64" className="w-full h-full">
-      <defs>
-        <radialGradient id="orb-grad">
-          <stop offset="0%" stopColor="var(--tint-fg)" stopOpacity="0.95" />
-          <stop offset="60%" stopColor="var(--tint-fg)" stopOpacity="0.5" />
-          <stop offset="100%" stopColor="var(--tint-fg)" stopOpacity="0" />
-        </radialGradient>
-      </defs>
-      <circle cx="32" cy="32" r="22" fill="none" stroke="var(--tint-fg)" strokeOpacity="0.35" strokeWidth="0.8" className="ap-orb-ring ap-orb-ring-1" />
-      <circle cx="32" cy="32" r="22" fill="none" stroke="var(--tint-fg)" strokeOpacity="0.35" strokeWidth="0.8" className="ap-orb-ring ap-orb-ring-2" />
-      <circle cx="32" cy="32" r="9" fill="url(#orb-grad)" className="ap-orb-core" filter="drop-shadow(0 0 4px var(--tint-glow))" />
-    </svg>
-  );
-}
-
-// 시안 B: Constellation Network — 노드 + 연결선
+// 시안 B (kept)
 function ConstellationNetwork() {
-  // 노드 좌표 (5개)
   const nodes = [
-    { x: 14, y: 18 },
-    { x: 50, y: 14 },
-    { x: 32, y: 32 },
-    { x: 16, y: 48 },
-    { x: 52, y: 50 },
+    { x: 14, y: 18 }, { x: 50, y: 14 }, { x: 32, y: 32 },
+    { x: 16, y: 48 }, { x: 52, y: 50 },
   ];
-  const edges: [number, number][] = [
-    [0, 2], [1, 2], [2, 3], [2, 4], [0, 1], [3, 4],
-  ];
+  const edges: [number, number][] = [[0, 2], [1, 2], [2, 3], [2, 4], [0, 1], [3, 4]];
   return (
     <svg viewBox="0 0 64 64" className="w-full h-full">
       {edges.map(([a, b], i) => (
@@ -219,57 +195,90 @@ function ConstellationNetwork() {
   );
 }
 
-// 시안 C: Frequency Bars — EQ 막대
-function FrequencyBars() {
+// 시안 F: Data Stream — 세로 파이프 + 데이터 패킷이 흐름
+function DataStream() {
   return (
     <svg viewBox="0 0 64 64" className="w-full h-full">
-      {[0, 1, 2, 3, 4].map((i) => (
-        <rect key={i}
-          x={10 + i * 11}
-          y="22"
-          width="6"
-          height="20"
-          rx="3"
-          fill="var(--tint-fg)"
-          fillOpacity="0.85"
-          className={`ap-bar ap-bar-${i}`}
-        />
-      ))}
+      {/* 세로 파이프 3개 */}
+      <line x1="16" y1="6" x2="16" y2="58" stroke="var(--tint-line)" strokeOpacity="0.4" strokeWidth="0.6" strokeDasharray="2 3" />
+      <line x1="32" y1="6" x2="32" y2="58" stroke="var(--tint-line)" strokeOpacity="0.5" strokeWidth="0.6" strokeDasharray="2 3" />
+      <line x1="48" y1="6" x2="48" y2="58" stroke="var(--tint-line)" strokeOpacity="0.4" strokeWidth="0.6" strokeDasharray="2 3" />
+      {/* 흐르는 데이터 패킷 — 각 파이프마다 다른 속도 */}
+      <rect x="13" y="-8" width="6" height="6" rx="1.5" fill="var(--tint-fg)" className="ap-stream-pkt ap-stream-1" filter="drop-shadow(0 0 3px var(--tint-glow))" />
+      <rect x="29" y="-8" width="6" height="6" rx="1.5" fill="var(--tint-fg)" className="ap-stream-pkt ap-stream-2" filter="drop-shadow(0 0 3px var(--tint-glow))" />
+      <rect x="45" y="-8" width="6" height="6" rx="1.5" fill="var(--tint-fg)" className="ap-stream-pkt ap-stream-3" filter="drop-shadow(0 0 3px var(--tint-glow))" />
     </svg>
   );
 }
 
-// 시안 D: Liquid Blob — 유기적 그라데이션
-function LiquidBlob() {
+// 시안 G: Aurora Glow — 여러 겹 그라데이션이 부드럽게 흐름
+function AuroraGlow() {
   return (
     <svg viewBox="0 0 64 64" className="w-full h-full">
       <defs>
-        <radialGradient id="blob-grad" cx="40%" cy="40%">
+        <radialGradient id="aurora-1" cx="50%" cy="50%">
           <stop offset="0%" stopColor="var(--tint-fg)" stopOpacity="0.85" />
-          <stop offset="100%" stopColor="var(--tint-fg)" stopOpacity="0.35" />
+          <stop offset="100%" stopColor="var(--tint-fg)" stopOpacity="0" />
         </radialGradient>
-        <filter id="blob-blur"><feGaussianBlur stdDeviation="0.8" /></filter>
+        <radialGradient id="aurora-2" cx="50%" cy="50%">
+          <stop offset="0%" stopColor="var(--tint-fg)" stopOpacity="0.6" />
+          <stop offset="100%" stopColor="var(--tint-fg)" stopOpacity="0" />
+        </radialGradient>
+        <filter id="aurora-blur"><feGaussianBlur stdDeviation="1.8" /></filter>
       </defs>
-      <path
-        className="ap-blob-shape"
-        fill="url(#blob-grad)"
-        filter="url(#blob-blur)"
-        d="M 32 8 Q 50 14, 52 32 T 32 56 Q 14 50, 12 32 T 32 8 Z"
-      />
+      <g filter="url(#aurora-blur)">
+        <ellipse cx="22" cy="28" rx="20" ry="14" fill="url(#aurora-1)" className="ap-aurora-1" />
+        <ellipse cx="42" cy="36" rx="22" ry="14" fill="url(#aurora-2)" className="ap-aurora-2" />
+        <ellipse cx="32" cy="44" rx="18" ry="10" fill="url(#aurora-1)" className="ap-aurora-3" />
+      </g>
     </svg>
   );
 }
 
-// 시안 E: Concentric Rings — 동심원 3개
-function ConcentricRings() {
+// 시안 H: AI Wave — 다중 사인파
+function AIWave() {
+  return (
+    <svg viewBox="0 0 128 64" className="w-full h-full" preserveAspectRatio="xMidYMid slice">
+      <path d="M0 32 Q 8 18, 16 32 T 32 32 T 48 32 T 64 32 T 80 32 T 96 32 T 112 32 T 128 32"
+        stroke="var(--tint-fg)" strokeOpacity="0.85" strokeWidth="1.2" fill="none" strokeLinecap="round"
+        className="ap-wave-1" />
+      <path d="M0 32 Q 12 22, 24 32 T 48 32 T 72 32 T 96 32 T 120 32 T 144 32"
+        stroke="var(--tint-fg)" strokeOpacity="0.5" strokeWidth="1" fill="none" strokeLinecap="round"
+        className="ap-wave-2" />
+      <path d="M0 32 Q 16 24, 32 32 T 64 32 T 96 32 T 128 32 T 160 32"
+        stroke="var(--tint-fg)" strokeOpacity="0.3" strokeWidth="0.8" fill="none" strokeLinecap="round"
+        className="ap-wave-3" />
+    </svg>
+  );
+}
+
+// 시안 I: Radar Sweep — 회전 스윕 + 탐지된 도트
+function RadarSweep() {
   return (
     <svg viewBox="0 0 64 64" className="w-full h-full">
-      <g className="ap-rings-group">
-        <circle cx="32" cy="32" r="10" fill="none" stroke="var(--tint-fg)" strokeOpacity="0.85" strokeWidth="1" strokeDasharray="3 4" />
-        <circle cx="32" cy="32" r="18" fill="none" stroke="var(--tint-fg)" strokeOpacity="0.55" strokeWidth="0.8" strokeDasharray="2 5" />
-        <circle cx="32" cy="32" r="26" fill="none" stroke="var(--tint-fg)" strokeOpacity="0.3" strokeWidth="0.6" strokeDasharray="1 4" />
+      <defs>
+        <linearGradient id="radar-sweep" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="var(--tint-fg)" stopOpacity="0" />
+          <stop offset="100%" stopColor="var(--tint-fg)" stopOpacity="0.7" />
+        </linearGradient>
+      </defs>
+      {/* 동심원 */}
+      <circle cx="32" cy="32" r="26" fill="none" stroke="var(--tint-line)" strokeOpacity="0.4" strokeWidth="0.5" />
+      <circle cx="32" cy="32" r="17" fill="none" stroke="var(--tint-line)" strokeOpacity="0.3" strokeWidth="0.5" />
+      <circle cx="32" cy="32" r="8" fill="none" stroke="var(--tint-line)" strokeOpacity="0.25" strokeWidth="0.5" />
+      {/* 십자선 */}
+      <line x1="32" y1="6" x2="32" y2="58" stroke="var(--tint-line)" strokeOpacity="0.2" strokeWidth="0.4" />
+      <line x1="6" y1="32" x2="58" y2="32" stroke="var(--tint-line)" strokeOpacity="0.2" strokeWidth="0.4" />
+      {/* 회전 스윕 — 부채꼴 모양 */}
+      <g className="ap-radar-sweep">
+        <path d="M 32 32 L 58 32 A 26 26 0 0 0 50 14 Z" fill="url(#radar-sweep)" opacity="0.55" />
       </g>
-      <circle cx="32" cy="32" r="3" fill="var(--tint-fg)" filter="drop-shadow(0 0 3px var(--tint-glow))" />
+      {/* 탐지된 노드들 — 펄스 */}
+      <circle cx="44" cy="22" r="1.6" fill="var(--tint-fg)" className="ap-radar-blip ap-radar-b1" filter="drop-shadow(0 0 2.5px var(--tint-glow))" />
+      <circle cx="22" cy="44" r="1.4" fill="var(--tint-fg)" className="ap-radar-blip ap-radar-b2" filter="drop-shadow(0 0 2.5px var(--tint-glow))" />
+      <circle cx="48" cy="46" r="1.2" fill="var(--tint-fg)" className="ap-radar-blip ap-radar-b3" filter="drop-shadow(0 0 2.5px var(--tint-glow))" />
+      {/* 중앙 점 */}
+      <circle cx="32" cy="32" r="1.5" fill="var(--tint-fg)" />
     </svg>
   );
 }
@@ -308,27 +317,7 @@ function Styles() {
       /* === Neural Flow === */
       .ap-pulse { fill: var(--tint-fg); filter: drop-shadow(0 0 3px var(--tint-glow)); }
 
-      /* === Pulsing Orb === */
-      .ap-orb-core {
-        transform-origin: 32px 32px;
-        animation: ap-orb-breathe 2.6s ease-in-out infinite;
-      }
-      .ap-orb-ring {
-        transform-origin: 32px 32px;
-      }
-      .ap-orb-ring-1 { animation: ap-orb-wave 3s ease-out infinite; }
-      .ap-orb-ring-2 { animation: ap-orb-wave 3s ease-out infinite; animation-delay: 1.5s; }
-      @keyframes ap-orb-breathe {
-        0%, 100% { transform: scale(1); opacity: 0.95; }
-        50%      { transform: scale(1.15); opacity: 1; }
-      }
-      @keyframes ap-orb-wave {
-        0%   { transform: scale(0.4); opacity: 0; }
-        20%  { opacity: 1; }
-        100% { transform: scale(1.05); opacity: 0; }
-      }
-
-      /* === Constellation Network === */
+      /* === Constellation === */
       .ap-net-node { transform-box: fill-box; transform-origin: center; animation: ap-net-blink 3s ease-in-out infinite; }
       .ap-net-node-0 { animation-delay: 0s; }
       .ap-net-node-1 { animation-delay: 0.6s; }
@@ -351,44 +340,77 @@ function Styles() {
         50%      { stroke-opacity: 0.55; }
       }
 
-      /* === Frequency Bars === */
-      .ap-bar { transform-origin: center 32px; transform-box: fill-box; }
-      .ap-bar-0 { animation: ap-bar-flow 1.2s ease-in-out infinite; animation-delay: 0s; }
-      .ap-bar-1 { animation: ap-bar-flow 1.4s ease-in-out infinite; animation-delay: 0.15s; }
-      .ap-bar-2 { animation: ap-bar-flow 1.0s ease-in-out infinite; animation-delay: 0.3s; }
-      .ap-bar-3 { animation: ap-bar-flow 1.3s ease-in-out infinite; animation-delay: 0.45s; }
-      .ap-bar-4 { animation: ap-bar-flow 1.1s ease-in-out infinite; animation-delay: 0.6s; }
-      @keyframes ap-bar-flow {
-        0%, 100% { transform: scaleY(0.35); opacity: 0.6; }
-        50%      { transform: scaleY(1);    opacity: 1; }
+      /* === Data Stream === */
+      .ap-stream-pkt {
+        animation: ap-stream-fall 2.5s linear infinite;
+      }
+      .ap-stream-1 { animation-delay: 0s; animation-duration: 2.4s; }
+      .ap-stream-2 { animation-delay: -0.8s; animation-duration: 2.8s; }
+      .ap-stream-3 { animation-delay: -1.6s; animation-duration: 2.6s; }
+      @keyframes ap-stream-fall {
+        0%   { transform: translateY(0); opacity: 0; }
+        15%  { opacity: 1; }
+        85%  { opacity: 1; }
+        100% { transform: translateY(72px); opacity: 0; }
       }
 
-      /* === Liquid Blob === */
-      .ap-blob-shape {
-        animation: ap-blob-morph 6s ease-in-out infinite, ap-blob-rotate 18s linear infinite;
-        transform-origin: center;
-        transform-box: fill-box;
+      /* === Aurora Glow === */
+      .ap-aurora-1 {
+        animation: ap-aurora-drift1 7s ease-in-out infinite;
+        transform-box: fill-box; transform-origin: center;
       }
-      @keyframes ap-blob-morph {
-        0%, 100% { d: path("M 32 8 Q 50 14, 52 32 T 32 56 Q 14 50, 12 32 T 32 8 Z"); }
-        50%      { d: path("M 32 12 Q 56 20, 50 32 T 32 52 Q 8 44, 14 32 T 32 12 Z"); }
+      .ap-aurora-2 {
+        animation: ap-aurora-drift2 9s ease-in-out infinite;
+        transform-box: fill-box; transform-origin: center;
       }
-      @keyframes ap-blob-rotate {
-        to { transform: rotate(360deg); }
+      .ap-aurora-3 {
+        animation: ap-aurora-drift3 8s ease-in-out infinite;
+        transform-box: fill-box; transform-origin: center;
+      }
+      @keyframes ap-aurora-drift1 {
+        0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.7; }
+        50%      { transform: translate(8px, -4px) scale(1.1); opacity: 1; }
+      }
+      @keyframes ap-aurora-drift2 {
+        0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.5; }
+        50%      { transform: translate(-6px, 6px) scale(1.15); opacity: 0.85; }
+      }
+      @keyframes ap-aurora-drift3 {
+        0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.4; }
+        50%      { transform: translate(4px, -6px) scale(1.08); opacity: 0.7; }
       }
 
-      /* === Concentric Rings === */
-      .ap-rings-group {
+      /* === AI Wave === */
+      .ap-wave-1 { animation: ap-wave-flow1 3s linear infinite; }
+      .ap-wave-2 { animation: ap-wave-flow2 4s linear infinite; }
+      .ap-wave-3 { animation: ap-wave-flow3 5s linear infinite; }
+      @keyframes ap-wave-flow1 { from { transform: translateX(0); } to { transform: translateX(-32px); } }
+      @keyframes ap-wave-flow2 { from { transform: translateX(0); } to { transform: translateX(-48px); } }
+      @keyframes ap-wave-flow3 { from { transform: translateX(0); } to { transform: translateX(-64px); } }
+
+      /* === Radar Sweep === */
+      .ap-radar-sweep {
         transform-origin: 32px 32px;
-        animation: ap-rings-rotate 14s linear infinite;
+        animation: ap-radar-rotate 3.5s linear infinite;
       }
-      @keyframes ap-rings-rotate {
-        to { transform: rotate(360deg); }
+      @keyframes ap-radar-rotate { to { transform: rotate(360deg); } }
+      .ap-radar-blip {
+        transform-box: fill-box; transform-origin: center;
+        animation: ap-radar-blink 2.5s ease-in-out infinite;
+      }
+      .ap-radar-b1 { animation-delay: 0.2s; }
+      .ap-radar-b2 { animation-delay: 1.2s; }
+      .ap-radar-b3 { animation-delay: 2.0s; }
+      @keyframes ap-radar-blink {
+        0%, 70%, 100% { opacity: 0.4; transform: scale(1); }
+        15%, 35%      { opacity: 1;   transform: scale(1.6); }
       }
 
       @media (prefers-reduced-motion: reduce) {
-        .ap-pulse, .ap-orb-core, .ap-orb-ring, .ap-net-node, .ap-net-edge,
-        .ap-bar, .ap-blob-shape, .ap-rings-group {
+        .ap-pulse, .ap-net-node, .ap-net-edge,
+        .ap-stream-pkt, .ap-aurora-1, .ap-aurora-2, .ap-aurora-3,
+        .ap-wave-1, .ap-wave-2, .ap-wave-3,
+        .ap-radar-sweep, .ap-radar-blip {
           animation: none !important;
         }
       }
