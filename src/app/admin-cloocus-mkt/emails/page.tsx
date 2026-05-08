@@ -207,18 +207,18 @@ export default function EmailsPage() {
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
                 {canEdit && (
-                  <th className="px-3 py-3 w-10">
+                  <th className="px-3 py-3 w-10 border-r border-gray-200">
                     <input type="checkbox" checked={logs.length > 0 && selected.size === logs.length} onChange={toggleSelectAll} className="w-4 h-4 rounded accent-blue-600" />
                   </th>
                 )}
-                <th className="px-4 py-3 text-left font-medium text-gray-600">수신자</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">이메일</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">제목</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">이벤트</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">유형</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">상태</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">발송 시간</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">발송자</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600 border-r border-gray-200">수신자</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600 border-r border-gray-200">이메일</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600 border-r border-gray-200">제목</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600 border-r border-gray-200">이벤트</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600 border-r border-gray-200">유형</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600 border-r border-gray-200">상태</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600 border-r border-gray-200">발송 시간</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600 border-r border-gray-200">발송자</th>
                 <th className="px-4 py-3 text-left font-medium text-gray-600 w-16">상세</th>
               </tr>
             </thead>
@@ -230,22 +230,22 @@ export default function EmailsPage() {
               ) : logs.map((log) => (
                 <tr key={log.id} className={`border-b border-gray-100 hover:bg-gray-50 ${selected.has(log.id) ? 'bg-blue-50/50' : ''}`}>
                   {canEdit && (
-                    <td className="px-3 py-3">
+                    <td className="px-3 py-3 border-r border-gray-100">
                       <input type="checkbox" checked={selected.has(log.id)} onChange={() => toggleSelect(log.id)} className="w-4 h-4 rounded accent-blue-600" />
                     </td>
                   )}
-                  <td className="px-4 py-3 whitespace-nowrap font-medium">{log.recipient_name}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-gray-500">{log.recipient_email}</td>
-                  <td className="px-4 py-3 whitespace-nowrap max-w-[200px] truncate">{log.subject}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-gray-500 max-w-[150px] truncate">
+                  <td className="px-4 py-3 whitespace-nowrap font-medium border-r border-gray-100">{log.recipient_name}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-gray-500 border-r border-gray-100">{log.recipient_email}</td>
+                  <td className="px-4 py-3 whitespace-nowrap max-w-[200px] truncate border-r border-gray-100">{log.subject}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-gray-500 max-w-[150px] truncate border-r border-gray-100">
                     {log.event_id ? (eventNameMap.get(log.event_id) || '-') : '-'}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap">{typeBadge(log.email_type)}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">{statusBadge(log.status)}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-gray-500 text-xs">
+                  <td className="px-4 py-3 whitespace-nowrap border-r border-gray-100">{typeBadge(log.email_type)}</td>
+                  <td className="px-4 py-3 whitespace-nowrap border-r border-gray-100">{statusBadge(log.status)}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-gray-500 text-xs border-r border-gray-100">
                     {new Date(log.created_at).toLocaleString('ko-KR')}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-gray-500 text-xs">{log.sent_by}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-gray-500 text-xs border-r border-gray-100">{log.sent_by}</td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <button
                       onClick={() => setDetail(log)}

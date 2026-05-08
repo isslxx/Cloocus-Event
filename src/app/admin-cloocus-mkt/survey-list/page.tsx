@@ -118,7 +118,18 @@ export default function SurveyListPage() {
     if (sortKey === key) setSortAsc(!sortAsc);
     else { setSortKey(key); setSortAsc(true); }
   };
-  const sortIcon = (key: string) => sortKey === key ? (sortAsc ? ' ↑' : ' ↓') : ' ↕';
+  // Excel 스타일 정렬 캐럿 (시안 D)
+  const SortCaret = ({ active, asc }: { active: boolean; asc: boolean }) => (
+    <span
+      className={`inline-flex items-center justify-center w-4 h-4 rounded text-[9px] leading-none border transition shrink-0
+        ${active
+          ? 'border-blue-300 bg-white text-blue-600'
+          : 'border-gray-300 bg-white text-gray-400'}`}
+      aria-hidden="true"
+    >
+      {active ? (asc ? '▲' : '▼') : '▼'}
+    </span>
+  );
 
   const filteredParticipants = participants.filter((r) => {
     if (!searchTerm) return true;
@@ -237,18 +248,27 @@ export default function SurveyListPage() {
             <table className="w-full text-sm">
               <thead className="sticky top-0 z-20">
                 <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="px-3 py-3 w-10 bg-gray-50 sticky left-0 z-30">
+                  <th className="px-3 py-3 w-10 bg-gray-50 sticky left-0 z-30 border-r border-gray-200">
                     <input type="checkbox" checked={participants.length > 0 && selected.size === participants.length} onChange={toggleSelectAll} className="w-4 h-4 rounded accent-blue-600" />
                   </th>
-                  <th className={`px-4 py-3 text-left font-medium whitespace-nowrap cursor-pointer hover:bg-gray-100 bg-gray-50 sticky left-[40px] z-30 ${sortKey === 'name' ? 'text-blue-700 bg-blue-50/50' : 'text-gray-600'}`} onClick={() => handleSort('name')}>
-                    성함{sortIcon('name')}
+                  <th className={`px-4 py-3 text-left font-medium whitespace-nowrap cursor-pointer sticky left-[40px] z-30 border-r border-gray-200 transition ${sortKey === 'name' ? 'text-blue-700 bg-blue-50/40' : 'text-gray-600 bg-gray-50 hover:bg-gray-100'}`} onClick={() => handleSort('name')}>
+                    <span className="inline-flex items-center justify-between gap-2 w-full">
+                      <span>성함</span>
+                      <SortCaret active={sortKey === 'name'} asc={sortAsc} />
+                    </span>
                   </th>
-                  <th className={`px-4 py-3 text-left font-medium whitespace-nowrap cursor-pointer hover:bg-gray-100 bg-gray-50 sticky left-[120px] z-30 border-r border-gray-200 ${sortKey === 'company_name' ? 'text-blue-700 bg-blue-50/50' : 'text-gray-600'}`} onClick={() => handleSort('company_name')}>
-                    회사명{sortIcon('company_name')}
+                  <th className={`px-4 py-3 text-left font-medium whitespace-nowrap cursor-pointer sticky left-[120px] z-30 border-r border-gray-200 transition ${sortKey === 'company_name' ? 'text-blue-700 bg-blue-50/40' : 'text-gray-600 bg-gray-50 hover:bg-gray-100'}`} onClick={() => handleSort('company_name')}>
+                    <span className="inline-flex items-center justify-between gap-2 w-full">
+                      <span>회사명</span>
+                      <SortCaret active={sortKey === 'company_name'} asc={sortAsc} />
+                    </span>
                   </th>
                   {middleCols.map((col) => (
-                    <th key={col.key} className={`px-4 py-3 text-left font-medium whitespace-nowrap cursor-pointer hover:bg-gray-100 bg-gray-50 ${sortKey === col.key ? 'text-blue-700 bg-blue-50/50' : 'text-gray-600'}`} onClick={() => handleSort(col.key)}>
-                      {col.label}{sortIcon(col.key)}
+                    <th key={col.key} className={`px-4 py-3 text-left font-medium whitespace-nowrap cursor-pointer border-r border-gray-200 transition ${sortKey === col.key ? 'text-blue-700 bg-blue-50/40' : 'text-gray-600 bg-gray-50 hover:bg-gray-100'}`} onClick={() => handleSort(col.key)}>
+                      <span className="inline-flex items-center justify-between gap-2 w-full">
+                        <span>{col.label}</span>
+                        <SortCaret active={sortKey === col.key} asc={sortAsc} />
+                      </span>
                     </th>
                   ))}
                 </tr>
@@ -256,30 +276,30 @@ export default function SurveyListPage() {
               <tbody>
                 {sortedParticipants.map((r) => (
                   <tr key={r.id} className={`border-b border-gray-100 hover:bg-gray-50 ${selected.has(r.id) ? 'bg-blue-50/50' : ''}`}>
-                    <td className={`px-3 py-3 w-10 sticky left-0 z-10 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`}>
+                    <td className={`px-3 py-3 w-10 sticky left-0 z-10 border-r border-gray-100 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`}>
                       <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleSelect(r.id)} className="w-4 h-4 rounded accent-blue-600" />
                     </td>
-                    <td className={`px-4 py-3 whitespace-nowrap font-medium sticky left-[40px] z-10 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`}>{r.name}</td>
+                    <td className={`px-4 py-3 whitespace-nowrap font-medium sticky left-[40px] z-10 border-r border-gray-100 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`}>{r.name}</td>
                     <td className={`px-4 py-3 whitespace-nowrap sticky left-[120px] z-10 border-r border-gray-100 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`}>{r.company_name_raw || r.company_name}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.department || '-'}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.job_title || '-'}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.email}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.phone}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.industry || '-'}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.company_size || '-'}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">{r.referral_source || '-'}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.referrer_name || '-'}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-center">
+                    <td className="px-4 py-3 whitespace-nowrap text-gray-500 border-r border-gray-100">{r.department || '-'}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-gray-500 border-r border-gray-100">{r.job_title || '-'}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-gray-500 border-r border-gray-100">{r.email}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-gray-500 border-r border-gray-100">{r.phone}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-gray-500 border-r border-gray-100">{r.industry || '-'}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-gray-500 border-r border-gray-100">{r.company_size || '-'}</td>
+                    <td className="px-4 py-3 whitespace-nowrap border-r border-gray-100">{r.referral_source || '-'}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-gray-500 border-r border-gray-100">{r.referrer_name || '-'}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-center border-r border-gray-100">
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${r.survey_completed ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
                         {r.survey_completed ? '완료' : '미완료'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-gray-500 max-w-[200px] truncate" title={r.q1_azure_level || ''}>{r.q1_azure_level || '-'}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-gray-500">{r.q2_difficulty || '-'}</td>
-                    <td className="px-4 py-3 text-gray-500 max-w-[220px] truncate" title={formatArr(r.q3_purpose)}>{formatArr(r.q3_purpose) || '-'}</td>
-                    <td className="px-4 py-3 text-gray-500 max-w-[200px] truncate" title={r.q4_adoption || ''}>{r.q4_adoption || '-'}</td>
-                    <td className="px-4 py-3 text-gray-500 max-w-[220px] truncate" title={formatArr(r.q5_consulting)}>{formatArr(r.q5_consulting) || '-'}</td>
-                    <td className="px-4 py-3 text-gray-500 max-w-[260px] truncate" title={r.q6_feedback || ''}>{r.q6_feedback || '-'}</td>
+                    <td className="px-4 py-3 text-gray-500 max-w-[200px] truncate border-r border-gray-100" title={r.q1_azure_level || ''}>{r.q1_azure_level || '-'}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-gray-500 border-r border-gray-100">{r.q2_difficulty || '-'}</td>
+                    <td className="px-4 py-3 text-gray-500 max-w-[220px] truncate border-r border-gray-100" title={formatArr(r.q3_purpose)}>{formatArr(r.q3_purpose) || '-'}</td>
+                    <td className="px-4 py-3 text-gray-500 max-w-[200px] truncate border-r border-gray-100" title={r.q4_adoption || ''}>{r.q4_adoption || '-'}</td>
+                    <td className="px-4 py-3 text-gray-500 max-w-[220px] truncate border-r border-gray-100" title={formatArr(r.q5_consulting)}>{formatArr(r.q5_consulting) || '-'}</td>
+                    <td className="px-4 py-3 text-gray-500 max-w-[260px] truncate border-r border-gray-100" title={r.q6_feedback || ''}>{r.q6_feedback || '-'}</td>
                     <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-500">
                       {r.survey_submitted_at ? new Date(r.survey_submitted_at).toLocaleString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-'}
                     </td>
