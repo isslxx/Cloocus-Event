@@ -390,44 +390,48 @@ export default function RegistrationsPage() {
               <th className="px-3 py-1.5 w-10 bg-gray-50 sticky left-0 z-30 border-r border-gray-200">
                 <input type="checkbox" checked={records.length > 0 && selected.size === records.length} onChange={toggleSelectAll} className="w-4 h-4 rounded accent-blue-600" />
               </th>
-              <th className={`px-4 py-1.5 text-left font-medium cursor-pointer whitespace-nowrap sticky left-[40px] z-30 border-r border-gray-200 transition ${sortKey === 'name' ? 'text-blue-700 bg-blue-50/40' : 'text-gray-600 bg-gray-50 hover:bg-gray-100'}`} onClick={() => handleSort('name' as SortKey)}>
+              <th className={`px-3 py-1.5 text-left font-medium cursor-pointer whitespace-nowrap sticky left-[40px] z-30 border-r border-gray-200 transition ${sortKey === 'name' ? 'text-blue-700 bg-blue-50/40' : 'text-gray-600 bg-gray-50 hover:bg-gray-100'}`} onClick={() => handleSort('name' as SortKey)}>
                 <span className="inline-flex items-center justify-between gap-2 w-full">
                   <span>성함</span>
                   <SortCaret active={sortKey === 'name'} asc={sortAsc} />
                 </span>
               </th>
-              <th className={`px-4 py-1.5 text-left font-medium cursor-pointer whitespace-nowrap sticky left-[120px] z-30 border-r border-gray-200 transition ${sortKey === 'company_name' ? 'text-blue-700 bg-blue-50/40' : 'text-gray-600 bg-gray-50 hover:bg-gray-100'}`} onClick={() => handleSort('company_name' as SortKey)}>
+              <th className={`px-3 py-1.5 text-left font-medium cursor-pointer whitespace-nowrap sticky left-[120px] z-30 border-r border-gray-200 transition ${sortKey === 'company_name' ? 'text-blue-700 bg-blue-50/40' : 'text-gray-600 bg-gray-50 hover:bg-gray-100'}`} onClick={() => handleSort('company_name' as SortKey)}>
                 <span className="inline-flex items-center justify-between gap-2 w-full">
                   <span>회사명</span>
                   <SortCaret active={sortKey === 'company_name'} asc={sortAsc} />
                 </span>
               </th>
-              {[
-                { key: 'created_at' as SortKey, label: '등록일' },
-                { key: 'event_id' as SortKey, label: '이벤트' },
-                { key: 'department' as SortKey, label: '부서명' },
-                { key: 'job_title' as SortKey, label: '직급' },
-                { key: 'email' as SortKey, label: '이메일' },
-                { key: 'phone' as SortKey, label: '연락처' },
-                { key: 'industry' as SortKey, label: '산업군' },
-                { key: 'company_size' as SortKey, label: '기업 규모' },
-                { key: 'referral_source' as SortKey, label: '신청 경로' },
-                { key: 'referrer_name' as SortKey, label: '추천인' },
-                { key: 'inquiry' as SortKey, label: '문의사항' },
-                { key: 'cancelled_at' as SortKey, label: '취소여부' },
-                { key: 'registration_status' as SortKey, label: '등록 상태' },
-                { key: 'survey_enabled' as SortKey, label: '설문조사' },
-              ].map((col) => (
-                <th key={col.key} className={`px-4 py-1.5 text-left font-medium cursor-pointer whitespace-nowrap border-r border-gray-200 transition ${sortKey === col.key ? 'text-blue-700 bg-blue-50/40' : 'text-gray-600 bg-gray-50 hover:bg-gray-100'}`} onClick={() => handleSort(col.key)}>
-                  <span className="inline-flex items-center justify-between gap-2 w-full">
+              {([
+                { key: 'created_at' as SortKey,         label: '등록일' },
+                { key: 'event_id' as SortKey,           label: '이벤트' },
+                { key: 'department' as SortKey,         label: '부서명' },
+                { key: 'job_title' as SortKey,          label: '직급' },
+                { key: 'email' as SortKey,              label: '이메일' },
+                { key: 'phone' as SortKey,              label: '연락처' },
+                { key: 'industry' as SortKey,           label: '산업군' },
+                { key: 'company_size' as SortKey,       label: '기업 규모' },
+                { key: 'referral_source' as SortKey,    label: '신청 경로' },
+                { key: 'referrer_name' as SortKey,      label: '추천인',     center: true },
+                { key: 'inquiry' as SortKey,            label: '문의사항' },
+                { key: 'cancelled_at' as SortKey,       label: '취소여부',   center: true },
+                { key: 'registration_status' as SortKey, label: '등록 상태', center: true },
+                { key: 'survey_enabled' as SortKey,     label: '설문조사',   center: true },
+              ] as { key: SortKey; label: string; center?: boolean }[]).map((col) => (
+                <th
+                  key={col.key}
+                  className={`px-3 py-1.5 ${col.center ? 'text-center' : 'text-left'} font-medium cursor-pointer whitespace-nowrap border-r border-gray-200 transition ${sortKey === col.key ? 'text-blue-700 bg-blue-50/40' : 'text-gray-600 bg-gray-50 hover:bg-gray-100'}`}
+                  onClick={() => handleSort(col.key)}
+                >
+                  <span className={`inline-flex items-center gap-2 ${col.center ? 'justify-center' : 'justify-between w-full'}`}>
                     <span>{col.label}</span>
                     <SortCaret active={sortKey === col.key} asc={sortAsc} />
                   </span>
                 </th>
               ))}
-              <th className="px-4 py-1.5 text-left font-medium text-gray-600 whitespace-nowrap bg-gray-50 border-r border-gray-200">이메일 상태</th>
+              <th className="px-3 py-1.5 text-center font-medium text-gray-600 whitespace-nowrap bg-gray-50 border-r border-gray-200">이메일 상태</th>
               {(canEditRecord || canDeleteRecord) && (
-                <th className="px-4 py-1.5 text-left font-medium text-gray-600 w-24 bg-gray-50">작업</th>
+                <th className="px-3 py-1.5 text-center font-medium text-gray-600 w-24 bg-gray-50">작업</th>
               )}
             </tr>
           </thead>
@@ -441,20 +445,20 @@ export default function RegistrationsPage() {
                 <td className={`px-3 py-1.5 w-10 sticky left-0 z-10 border-r border-gray-100 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`}>
                   <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleSelect(r.id)} className="w-4 h-4 rounded accent-blue-600" />
                 </td>
-                <td className={`px-4 py-1.5 whitespace-nowrap font-medium sticky left-[40px] z-10 border-r border-gray-100 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`}>{r.name}</td>
-                <td className={`px-4 py-1.5 whitespace-nowrap sticky left-[120px] z-10 border-r border-gray-100 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`}>{r.company_name}</td>
-                <td className="px-4 py-1.5 whitespace-nowrap text-gray-500 border-r border-gray-100">{new Date(r.created_at).toLocaleDateString('ko-KR')}</td>
-                <td className="px-4 py-1.5 whitespace-nowrap text-xs text-gray-500 max-w-[150px] truncate border-r border-gray-100">{r.event_id ? (events.find((e) => e.id === r.event_id)?.name || '-') : '-'}</td>
-                <td className="px-4 py-1.5 whitespace-nowrap text-gray-500 border-r border-gray-100">{r.department || '-'}</td>
-                <td className="px-4 py-1.5 whitespace-nowrap text-gray-500 border-r border-gray-100">{r.job_title || '-'}</td>
-                <td className="px-4 py-1.5 whitespace-nowrap text-gray-500 border-r border-gray-100">{r.email}</td>
-                <td className="px-4 py-1.5 whitespace-nowrap text-gray-500 border-r border-gray-100">{r.phone}</td>
-                <td className="px-4 py-1.5 whitespace-nowrap text-gray-500 border-r border-gray-100">{r.industry || '-'}</td>
-                <td className="px-4 py-1.5 whitespace-nowrap text-gray-500 border-r border-gray-100">{r.company_size || '-'}</td>
-                <td className="px-4 py-1.5 whitespace-nowrap border-r border-gray-100">{r.referral_source || '-'}</td>
-                <td className="px-4 py-1.5 whitespace-nowrap text-gray-500 border-r border-gray-100">{r.referrer_name || '-'}</td>
-                <td className="px-4 py-1.5 whitespace-nowrap text-gray-500 max-w-[200px] truncate border-r border-gray-100">{r.inquiry || '-'}</td>
-                <td className="px-4 py-1.5 whitespace-nowrap border-r border-gray-100">
+                <td className={`px-3 py-1.5 whitespace-nowrap font-medium sticky left-[40px] z-10 border-r border-gray-100 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`}>{r.name}</td>
+                <td className={`px-3 py-1.5 whitespace-nowrap sticky left-[120px] z-10 border-r border-gray-100 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`}>{r.company_name}</td>
+                <td className="px-3 py-1.5 whitespace-nowrap text-gray-500 border-r border-gray-100">{new Date(r.created_at).toLocaleDateString('ko-KR')}</td>
+                <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-500 max-w-[150px] truncate border-r border-gray-100">{r.event_id ? (events.find((e) => e.id === r.event_id)?.name || '-') : '-'}</td>
+                <td className="px-3 py-1.5 whitespace-nowrap text-gray-500 border-r border-gray-100">{r.department || '-'}</td>
+                <td className="px-3 py-1.5 whitespace-nowrap text-gray-500 border-r border-gray-100">{r.job_title || '-'}</td>
+                <td className="px-3 py-1.5 whitespace-nowrap text-gray-500 border-r border-gray-100">{r.email}</td>
+                <td className="px-3 py-1.5 whitespace-nowrap text-gray-500 border-r border-gray-100">{r.phone}</td>
+                <td className="px-3 py-1.5 whitespace-nowrap text-gray-500 border-r border-gray-100">{r.industry || '-'}</td>
+                <td className="px-3 py-1.5 whitespace-nowrap text-gray-500 border-r border-gray-100">{r.company_size || '-'}</td>
+                <td className="px-3 py-1.5 whitespace-nowrap border-r border-gray-100">{r.referral_source || '-'}</td>
+                <td className="px-3 py-1.5 whitespace-nowrap text-center text-gray-500 border-r border-gray-100">{r.referrer_name || '-'}</td>
+                <td className="px-3 py-1.5 whitespace-nowrap text-gray-500 max-w-[200px] truncate border-r border-gray-100">{r.inquiry || '-'}</td>
+                <td className="px-3 py-1.5 whitespace-nowrap text-center border-r border-gray-100">
                   {r.cancelled_at ? (
                     <span className="text-xs px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 font-medium" title={`${new Date(r.cancelled_at).toLocaleString('ko-KR')} 신청자 직접 취소`}>
                       취소
@@ -463,7 +467,7 @@ export default function RegistrationsPage() {
                     <span className="text-xs text-gray-300">-</span>
                   )}
                 </td>
-                <td className="px-4 py-1.5 whitespace-nowrap border-r border-gray-100">
+                <td className="px-3 py-1.5 whitespace-nowrap text-center border-r border-gray-100">
                   {canEditRecord ? (
                     <select
                       value={r.registration_status || 'pending'}
@@ -486,7 +490,7 @@ export default function RegistrationsPage() {
                     registrationStatusLabel(r.registration_status)
                   )}
                 </td>
-                <td className="px-4 py-1.5 whitespace-nowrap border-r border-gray-100">
+                <td className="px-3 py-1.5 whitespace-nowrap text-center border-r border-gray-100">
                   {r.registration_status === 'confirmed' ? (
                     <button
                       onClick={async () => {
@@ -506,10 +510,10 @@ export default function RegistrationsPage() {
                     <span className="text-xs text-gray-300">-</span>
                   )}
                 </td>
-                <td className="px-4 py-1.5 whitespace-nowrap border-r border-gray-100">{emailStatusLabel(r.email_status)}</td>
+                <td className="px-3 py-1.5 whitespace-nowrap text-center border-r border-gray-100">{emailStatusLabel(r.email_status)}</td>
                 {(canEditRecord || canDeleteRecord) && (
-                  <td className="px-4 py-1.5 whitespace-nowrap">
-                    <div className="flex gap-1">
+                  <td className="px-3 py-1.5 whitespace-nowrap">
+                    <div className="flex gap-1 justify-center">
                       {canEditRecord && <button onClick={() => handleEdit(r)} className="text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100">수정</button>}
                       {canDeleteRecord && <button onClick={() => setDeleting(r.id)} className="text-xs px-2 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100">삭제</button>}
                     </div>
@@ -679,7 +683,7 @@ export default function RegistrationsPage() {
 
                 {showPreview && previewHtml && (
                   <div className="mb-4 border border-gray-200 rounded-lg overflow-hidden">
-                    <div className="bg-gray-50 px-4 py-1.5 border-b border-gray-200">
+                    <div className="bg-gray-50 px-3 py-1.5 border-b border-gray-200">
                       <p className="text-xs text-gray-500">제목</p>
                       <p className="text-sm font-semibold">{previewSubject}</p>
                     </div>
