@@ -272,7 +272,7 @@ export default function Home() {
         <div className="w-full max-w-2xl">
           <div className="bg-white rounded-xl border border-gray-200 p-6 sm:p-8">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/cloocus-logo.png" alt="Cloocus" className="h-7 mx-auto mb-5" />
+            <img src="/cloocus-logo.png" alt="Cloocus" className="h-6 mx-auto mb-5" />
             <h1 className="text-2xl font-bold text-center mb-2">클루커스 이벤트</h1>
             <p className="text-gray-500 text-center mb-8">참여하실 이벤트를 선택해주세요.</p>
 
