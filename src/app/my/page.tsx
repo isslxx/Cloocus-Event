@@ -801,7 +801,7 @@ export default function MyDashboard() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-6 flex-1 w-full">
+      <main className="max-w-4xl mx-auto px-4 py-6 flex-1 w-full bg-white">
         {isEventEnded && daysRemaining !== null && daysRemaining > 0 && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-center">
             <p className="text-sm text-amber-700 font-medium">이벤트가 종료되었습니다. 조회 가능 기간이 <strong>{daysRemaining}일</strong> 남았습니다.</p>

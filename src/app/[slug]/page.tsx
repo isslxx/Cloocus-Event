@@ -532,7 +532,7 @@ export default function EventRegistrationPage({ params }: { params: Promise<{ sl
       </header>
 
       <main
-        className="max-w-2xl mx-auto px-4 py-8"
+        className="max-w-2xl mx-auto px-4 py-8 bg-white"
         style={{ paddingBottom: 'max(48px, env(safe-area-inset-bottom, 32px))' }}
       >
         <div className="mb-6 border border-gray-200 rounded-xl px-5 py-4" style={{ backgroundColor: '#e0f2fe' }}>
