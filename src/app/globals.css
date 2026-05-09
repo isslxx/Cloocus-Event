@@ -351,6 +351,8 @@ table td .flex {
 @media (max-width: 640px) {
   .mesh-blob { filter: blur(50px); opacity: 0.3; }
 }
+/* /my 인증 후 대시보드 진입 시 body.mesh-hide 클래스로 mesh 숨김 */
+body.mesh-hide .mesh-bg-portal { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .mesh-blob { animation: none !important; }
 }

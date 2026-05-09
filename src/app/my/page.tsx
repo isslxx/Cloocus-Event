@@ -157,6 +157,14 @@ export default function MyDashboard() {
   const ETC_LABEL = '기타';
   const ETC_PREFIX = '기타: ';
 
+  // 로그인 후 대시보드에선 layout-level Soft Mesh 숨김 (로그인 화면은 그대로 노출)
+  useEffect(() => {
+    if (authenticated) {
+      document.body.classList.add('mesh-hide');
+      return () => document.body.classList.remove('mesh-hide');
+    }
+  }, [authenticated]);
+
   useEffect(() => {
     captureAttribution();
     trackView('/my');

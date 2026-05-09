@@ -2,13 +2,22 @@
 
 import { usePathname } from 'next/navigation';
 
-// 신청자 포탈 (홈, 등록 페이지, /my, /verify) 전체에 깔리는 Soft Mesh ambient.
-// 관리자 경로(/admin-cloocus-mkt)에서는 렌더하지 않음.
-// position: fixed 로 viewport 기준에 고정되어 스크롤해도 항상 보임.
+// 신청자 포탈 Soft Mesh ambient.
+// 노출: 홈(/), 로그인 화면(/my, 인증 전 - body.mesh-hide 가 없을 때), /verify/[id]
+// 숨김: 등록 페이지(/[slug]), 로그인 후 /my 대시보드(body.mesh-hide 가 붙음)
+// 관리자/미리보기 경로는 렌더하지 않음.
 
 export default function PortalMeshBackground() {
   const pathname = usePathname();
-  if (pathname?.startsWith('/admin-cloocus-mkt')) return null;
+  if (!pathname) return null;
+  if (pathname.startsWith('/admin-cloocus-mkt')) return null;
+  if (pathname.startsWith('/preview')) return null;
+
+  const allowMesh =
+    pathname === '/' ||
+    pathname === '/my' ||
+    pathname.startsWith('/verify/');
+  if (!allowMesh) return null;
 
   return (
     <div className="mesh-bg-portal" aria-hidden="true">
