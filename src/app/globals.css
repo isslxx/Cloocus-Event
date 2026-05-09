@@ -291,13 +291,7 @@ table td .flex {
    .mesh-bg-portal: 전체 포탈 (viewport fixed)
    .mesh-bg: 단일 페이지 안에 갇힌 형태 (legacy, 호환성 위해 유지)
 ============================================================== */
-.mesh-bg-portal {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  overflow: hidden;
-}
+.mesh-bg-portal,
 .mesh-bg {
   position: absolute;
   inset: 0;
@@ -305,42 +299,59 @@ table td .flex {
   pointer-events: none;
   overflow: hidden;
 }
+.mesh-bg-portal { position: fixed; }
+
+/* 중앙 부드러운 화이트 vignette — 콘텐츠 영역에서 mesh 강도 감쇠 */
+.mesh-bg-portal::after,
+.mesh-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 70% 60% at 50% 50%,
+    rgba(255, 255, 255, 0.55) 0%,
+    rgba(255, 255, 255, 0.2) 40%,
+    transparent 75%
+  );
+  pointer-events: none;
+}
+
 .mesh-blob {
   position: absolute;
   border-radius: 50%;
-  filter: blur(70px);
+  filter: blur(80px);
   will-change: transform;
 }
 .mesh-blob-1 {
   width: 50vw; height: 50vw;
   max-width: 700px; max-height: 700px;
-  top: -10%; left: -10%;
+  top: -12%; left: -12%;
   background: radial-gradient(circle, #c4b5fd 0%, transparent 70%);
-  opacity: 0.45;
+  opacity: 0.28;
   animation: mesh-float-1 22s ease-in-out infinite;
 }
 .mesh-blob-2 {
   width: 45vw; height: 45vw;
   max-width: 650px; max-height: 650px;
-  top: 5%; right: -10%;
+  top: 5%; right: -12%;
   background: radial-gradient(circle, #a5f3fc 0%, transparent 70%);
-  opacity: 0.4;
+  opacity: 0.24;
   animation: mesh-float-2 26s ease-in-out infinite;
 }
 .mesh-blob-3 {
   width: 50vw; height: 50vw;
   max-width: 700px; max-height: 700px;
-  bottom: -15%; left: 20%;
+  bottom: -18%; left: 18%;
   background: radial-gradient(circle, #fed7aa 0%, transparent 70%);
-  opacity: 0.35;
+  opacity: 0.20;
   animation: mesh-float-3 24s ease-in-out infinite;
 }
 .mesh-blob-4 {
   width: 35vw; height: 35vw;
   max-width: 500px; max-height: 500px;
-  bottom: 10%; right: 5%;
+  bottom: 8%; right: 3%;
   background: radial-gradient(circle, #bae6fd 0%, transparent 70%);
-  opacity: 0.4;
+  opacity: 0.24;
   animation: mesh-float-4 20s ease-in-out infinite;
 }
 @keyframes mesh-float-1 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(8vw, 4vw) scale(1.05); } }
@@ -349,7 +360,10 @@ table td .flex {
 @keyframes mesh-float-4 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-4vw, -3vw) scale(1.04); } }
 
 @media (max-width: 640px) {
-  .mesh-blob { filter: blur(50px); opacity: 0.3; }
+  .mesh-blob { filter: blur(55px); opacity: 0.18; }
+  .mesh-bg-portal::after, .mesh-bg::after {
+    background: radial-gradient(ellipse 90% 70% at 50% 50%, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0.3) 50%, transparent 80%);
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .mesh-blob { animation: none !important; }
