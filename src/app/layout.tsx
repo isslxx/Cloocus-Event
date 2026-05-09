@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { headers } from "next/headers";
 import "./globals.css";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
+import PortalMeshBackground from "@/components/PortalMeshBackground";
 import { isInternalRequest } from "@/lib/internal-ip";
 
 const geistSans = Geist({
@@ -47,6 +48,7 @@ export default async function RootLayout({
       </head>
       <body className="min-h-full flex flex-col">
         <GoogleAnalytics suppress={suppressAnalytics} />
+        <PortalMeshBackground />
         {children}
       </body>
     </html>

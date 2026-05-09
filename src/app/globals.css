@@ -286,9 +286,18 @@ table td .flex {
 }
 
 /* ==============================================================
-   홈 배경 — Soft Mesh ambient
+   신청자 포탈 배경 — Soft Mesh ambient
    파스텔 그라데이션 4개가 천천히 부유. AI workspace 트렌드(Stripe/Linear).
+   .mesh-bg-portal: 전체 포탈 (viewport fixed)
+   .mesh-bg: 단일 페이지 안에 갇힌 형태 (legacy, 호환성 위해 유지)
 ============================================================== */
+.mesh-bg-portal {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
 .mesh-bg {
   position: absolute;
   inset: 0;

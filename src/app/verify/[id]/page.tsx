@@ -37,7 +37,7 @@ export default function VerifyPage({ params }: { params: Promise<{ id: string }>
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center">
         <p className="text-gray-400">확인 중...</p>
       </div>
     );
@@ -45,7 +45,7 @@ export default function VerifyPage({ params }: { params: Promise<{ id: string }>
 
   if (error || !data) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+      <div className="min-h-screen flex items-center justify-center p-4">
         <div className="bg-white rounded-xl border border-red-200 p-8 max-w-sm w-full text-center">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <span className="text-2xl">✕</span>
@@ -60,7 +60,7 @@ export default function VerifyPage({ params }: { params: Promise<{ id: string }>
   const isConfirmed = data.registration_status === 'confirmed';
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+    <div className="min-h-screen flex items-center justify-center p-4">
       <div className={`bg-white rounded-xl border-2 p-8 max-w-sm w-full text-center ${isConfirmed ? 'border-green-300' : 'border-yellow-300'}`}>
         <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 ${isConfirmed ? 'bg-green-100' : 'bg-yellow-100'}`}>
           <span className="text-3xl">{isConfirmed ? '✓' : '⏳'}</span>

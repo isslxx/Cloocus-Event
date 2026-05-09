@@ -584,7 +584,7 @@ export default function MyDashboard() {
   // 세션 복원 중 — 로그인 폼/포탈 어느 쪽도 깜빡이지 않도록 로딩 화면
   if (sessionRestoring) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-3 text-gray-400">
           <div className="w-7 h-7 border-2 border-gray-200 border-t-blue-500 rounded-full animate-spin" />
           <p className="text-sm">불러오는 중...</p>
@@ -596,7 +596,7 @@ export default function MyDashboard() {
   // Login screen
   if (!authenticated) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div className="min-h-screen flex flex-col">
         <div className="flex-1 flex items-center justify-center p-4">
           <div className="w-full max-w-sm">
             <div className="bg-white rounded-xl border border-gray-200 p-8">
@@ -691,7 +691,7 @@ export default function MyDashboard() {
     };
 
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div className="min-h-screen flex flex-col">
         <div className="flex-1 flex items-center justify-center p-4">
           <div className="w-full max-w-md">
             <div className="bg-white rounded-xl border border-gray-200 p-8">
@@ -740,7 +740,7 @@ export default function MyDashboard() {
   // Cancelled screen
   if (cancelled) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div className="min-h-screen flex flex-col">
         <div className="flex-1 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl border border-gray-200 p-8 max-w-sm w-full text-center">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -758,7 +758,7 @@ export default function MyDashboard() {
 
   if (isAccessExpired) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div className="min-h-screen flex flex-col">
         <div className="flex-1 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl border border-gray-200 p-8 max-w-sm w-full text-center">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -784,7 +784,7 @@ export default function MyDashboard() {
     : `/verify/${registration.id}`;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen flex flex-col">
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-4xl mx-auto px-4 py-5">
           <div className="flex items-center justify-between">
