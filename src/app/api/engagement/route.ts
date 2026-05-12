@@ -51,7 +51,7 @@ const DEFAULT_THRESHOLDS = {
 
 const DEFAULT_SETTINGS = {
   enabled: true,
-  emoji_position: 'end' as const,
+  emoji_position: 'end' as 'none' | 'end',
   labels: DEFAULT_LABELS,
   thresholds: DEFAULT_THRESHOLDS,
   top_live_counter_enabled: true,
