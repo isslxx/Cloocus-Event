@@ -646,3 +646,88 @@ body.mesh-hide .mesh-bg-portal { display: none; }
     transform: none !important;
   }
 }
+
+/* ==============================================================
+   소셜 프루프 (실시간 활성도 배지 · D-day · 상단 라이브 카운터)
+   - 톤별 CSS 변수: --sp-fg, --sp-line, --sp-dot 를 인라인 주입
+   - 라이브 신호는 좌측 dot 이 호흡 (sp-breath)
+   ============================================================== */
+.sp-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--sp-fg);
+  background: transparent;
+  border: 1px solid var(--sp-line);
+  border-radius: 999px;
+  padding: 2px 8px;
+  white-space: nowrap;
+  letter-spacing: 0.005em;
+  vertical-align: middle;
+}
+.sp-emoji-end {
+  font-size: 11px;
+  line-height: 1;
+  margin-left: 1px;
+}
+.sp-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--sp-dot);
+  flex-shrink: 0;
+  opacity: 0.95;
+  animation: sp-breath 2.6s ease-in-out infinite;
+}
+@keyframes sp-breath {
+  0%, 100% { opacity: 0.5; transform: scale(0.94); }
+  50%      { opacity: 1;   transform: scale(1.06); }
+}
+
+/* D-day 칩 — 메타 라인에 작은 텍스트 */
+.sp-dday {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--sp-fg);
+  border: 1px solid var(--sp-line);
+  border-radius: 999px;
+  padding: 1px 7px;
+  letter-spacing: 0.015em;
+  line-height: 1;
+}
+
+/* 상단 라이브 카운터 — 한 줄 칩 */
+.sp-toplive {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: #374151;
+  background: rgba(243, 244, 246, 0.9);
+  border: 1px solid rgba(209, 213, 219, 0.7);
+  border-radius: 999px;
+  padding: 5px 12px;
+  backdrop-filter: blur(6px);
+}
+.sp-toplive b { color: #111827; font-weight: 700; }
+.sp-toplive-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #2563eb;
+  animation: sp-breath 2.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sp-dot, .sp-toplive-dot {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+

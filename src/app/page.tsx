@@ -6,6 +6,10 @@ import { trackEventView } from '@/lib/analytics';
 import { captureAttribution } from '@/lib/utm';
 import { trackView, trackClick } from '@/lib/tracker';
 import type { Event } from '@/lib/types';
+import {
+  SocialProofBadge, DDayChip, TopLiveCounter, useEngagement,
+  type Tone, type EngagementData,
+} from '@/components/SocialProof';
 
 // ============================================================
 // 홈 이벤트 카드 (Premium AI Experience)
@@ -115,14 +119,26 @@ function NeuralFlow() {
   );
 }
 
-function PremiumEventCard({ event, isSelected, onSelect }: {
+function PremiumEventCard({ event, isSelected, onSelect, engagement }: {
   event: Event;
   isSelected: boolean;
   onSelect: () => void;
+  engagement?: EngagementData;
 }) {
   const isEnded = event.status === 'ended';
   const isClosed = event.status === 'closed';
   const tint = CATEGORY_TINTS[(event.category as CategoryKey)] || CATEGORY_TINTS.default;
+
+  // 소셜 프루프 톤 (engagement 응답에서 매칭)
+  const eventEng = engagement?.events.find((e) => e.event_id === event.id);
+  const tone: Tone | null = engagement?.settings.enabled && !isEnded && !isClosed ? (eventEng?.tone ?? null) : null;
+
+  // D-day 칩 노출 여부 (프로모션 카테고리는 표시 안 함 — event_date 가 마감 기한)
+  const showDDay =
+    engagement?.settings.dday_chip_enabled !== false &&
+    !isEnded && !isClosed &&
+    event.category !== '프로모션' &&
+    !!event.event_date;
 
   return (
     <button
@@ -153,6 +169,14 @@ function PremiumEventCard({ event, isSelected, onSelect }: {
             {event.category && <span className="premium-category">{event.category}</span>}
             {isEnded && <span className="premium-status-end">종료</span>}
             {isClosed && <span className="premium-status-closed">마감</span>}
+            {tone && (
+              <SocialProofBadge
+                tone={tone}
+                label={engagement?.settings.labels?.[tone]}
+                count={eventEng?.count}
+                emojiPos={engagement?.settings.emoji_position ?? 'end'}
+              />
+            )}
           </div>
           <h3 className="premium-title">{event.name}</h3>
           {event.summary && <p className="premium-summary">{event.summary}</p>}
@@ -171,6 +195,12 @@ function PremiumEventCard({ event, isSelected, onSelect }: {
               <>
                 <span className="premium-meta-dot">·</span>
                 <span>정원 {event.capacity}명</span>
+              </>
+            )}
+            {showDDay && (
+              <>
+                <span className="premium-meta-dot">·</span>
+                <DDayChip eventDate={event.event_date} />
               </>
             )}
           </div>
@@ -214,6 +244,13 @@ export default function Home() {
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [eventsLoading, setEventsLoading] = useState(true);
+
+  // 실시간 활성도 (소셜 프루프) — 20s polling, 탭 활성 시 즉시 갱신
+  const engagement = useEngagement();
+  const showTopLive =
+    engagement.settings.enabled &&
+    engagement.settings.top_live_counter_enabled &&
+    engagement.page.active_viewers >= engagement.settings.top_live_counter_min;
 
   // 마감 이벤트 팝업
   const [closedEventPopup, setClosedEventPopup] = useState<Event | null>(null);
@@ -266,7 +303,16 @@ export default function Home() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/cloocus-logo.png" alt="Cloocus" className="h-6 mx-auto mb-5" />
             <h1 className="text-2xl font-bold text-center mb-2">클루커스 이벤트</h1>
-            <p className="text-gray-500 text-center mb-8">참여하실 이벤트를 선택해주세요.</p>
+            <p className="text-gray-500 text-center mb-5">참여하실 이벤트를 선택해주세요.</p>
+
+            {showTopLive && (
+              <div className="flex justify-center mb-5">
+                <TopLiveCounter
+                  count={engagement.page.active_viewers}
+                  min={engagement.settings.top_live_counter_min}
+                />
+              </div>
+            )}
 
             {eventsLoading ? (
               <p className="text-center text-gray-400 py-8">로딩 중...</p>
@@ -280,6 +326,7 @@ export default function Home() {
                       key={event.id}
                       event={event}
                       isSelected={selectedEvent?.id === event.id}
+                      engagement={engagement}
                       onSelect={() => {
                         if (event.status === 'ended') return;
                         if (event.status === 'closed') {

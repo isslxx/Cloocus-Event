@@ -61,9 +61,10 @@ export const ADMIN_NAV: AdminNavEntry[] = [
     label: '페이지 관리',
     icon: '🛠️',
     children: [
-      { type: 'item', href: '/admin-cloocus-mkt/form',    label: '등록 폼', icon: '📝' },
-      { type: 'item', href: '/admin-cloocus-mkt/surveys', label: '설문 폼', icon: '📄' },
-      { type: 'item', href: '/admin-cloocus-mkt/faqs',    label: 'FAQ',    icon: '❓' },
+      { type: 'item', href: '/admin-cloocus-mkt/form',           label: '등록 폼',      icon: '📝' },
+      { type: 'item', href: '/admin-cloocus-mkt/surveys',        label: '설문 폼',      icon: '📄' },
+      { type: 'item', href: '/admin-cloocus-mkt/faqs',           label: 'FAQ',         icon: '❓' },
+      { type: 'item', href: '/admin-cloocus-mkt/feature-flags',  label: '실시간 활성도', icon: '✨' },
     ],
   },
   {
