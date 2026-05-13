@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useAdmin } from '../layout';
+import { formatKST } from '@/lib/date';
 import type { Event } from '@/lib/types';
 
 type SurveyResponse = {
@@ -103,10 +104,10 @@ export default function SurveyResponsesPage() {
       'Q1. Azure 이해 수준': r.q1_azure_level, 'Q2. 난이도': r.q2_difficulty,
       'Q3. 참여 목적': (r.q3_purpose || []).join(', '), 'Q4. Azure 도입 계획': r.q4_adoption,
       'Q5. 컨설팅 희망 여부': (r.q5_consulting || []).join(', '), 'Q6. 피드백': r.q6_feedback,
-      '제출일': new Date(r.created_at).toLocaleDateString('ko-KR'),
+      '제출일시 (KST)': formatKST(r.created_at, { withSeconds: true }),
     }));
     const ws = XLSX.utils.json_to_sheet(exportData);
-    ws['!cols'] = [{ wch: 10 }, { wch: 15 }, { wch: 25 }, { wch: 15 }, { wch: 25 }, { wch: 10 }, { wch: 35 }, { wch: 25 }, { wch: 25 }, { wch: 40 }, { wch: 12 }];
+    ws['!cols'] = [{ wch: 10 }, { wch: 15 }, { wch: 25 }, { wch: 15 }, { wch: 25 }, { wch: 10 }, { wch: 35 }, { wch: 25 }, { wch: 25 }, { wch: 40 }, { wch: 20 }];
     XLSX.utils.book_append_sheet(wb, ws, '설문 응답');
     const evtName = events.find((e) => e.id === selectedEvent)?.name || '전체';
     XLSX.writeFile(wb, `설문응답_${evtName}_${new Date().toISOString().slice(0, 10)}.xlsx`);
@@ -252,7 +253,7 @@ export default function SurveyResponsesPage() {
                     <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Q4. 도입 계획</th>
                     <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Q5. 컨설팅 희망 여부</th>
                     <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">Q6. 피드백</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">제출일</th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-600 whitespace-nowrap">제출일시 (KST)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -267,7 +268,7 @@ export default function SurveyResponsesPage() {
                       <td className="px-4 py-3 text-xs max-w-[200px] truncate" title={r.q4_adoption || ''}>{r.q4_adoption}</td>
                       <td className="px-4 py-3 text-xs max-w-[120px] truncate">{(r.q5_consulting || []).join(', ')}</td>
                       <td className="px-4 py-3 text-xs max-w-[150px] truncate text-gray-500">{r.q6_feedback || '-'}</td>
-                      <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{new Date(r.created_at).toLocaleDateString('ko-KR')}</td>
+                      <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap font-mono tabular-nums" title={formatKST(r.created_at, { withSeconds: true })}>{formatKST(r.created_at)}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { useAdmin } from '../layout';
 import { INDUSTRIES, COMPANY_SIZES, REFERRAL_SOURCES } from '@/lib/constants';
 import { formatPhone } from '@/lib/validation';
+import { formatKST } from '@/lib/date';
 import type { Registration, Event } from '@/lib/types';
 
 type SortKey = keyof Registration;
@@ -412,7 +413,7 @@ export default function RegistrationsPage() {
                 </span>
               </th>
               {([
-                { key: 'created_at' as SortKey,         label: '등록일' },
+                { key: 'created_at' as SortKey,         label: '등록일시 (KST)' },
                 { key: 'event_id' as SortKey,           label: '이벤트' },
                 { key: 'department' as SortKey,         label: '부서명' },
                 { key: 'job_title' as SortKey,          label: '직급' },
@@ -458,7 +459,7 @@ export default function RegistrationsPage() {
                 </td>
                 <td className={`px-3 py-1.5 whitespace-nowrap truncate font-medium sticky left-[40px] z-10 border-r border-gray-100 w-20 min-w-20 max-w-20 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`} title={r.name}>{r.name}</td>
                 <td className={`px-3 py-1.5 whitespace-nowrap truncate sticky left-[120px] z-10 border-r border-gray-100 min-w-[140px] max-w-[140px] ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`} title={r.company_name}>{r.company_name}</td>
-                <td className="px-3 py-1.5 whitespace-nowrap text-gray-500 border-r border-gray-100">{new Date(r.created_at).toLocaleDateString('ko-KR')}</td>
+                <td className="px-3 py-1.5 whitespace-nowrap text-gray-500 border-r border-gray-100 font-mono tabular-nums text-xs" title={formatKST(r.created_at, { withSeconds: true })}>{formatKST(r.created_at)}</td>
                 <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-500 max-w-[150px] truncate border-r border-gray-100">{r.event_id ? (events.find((e) => e.id === r.event_id)?.name || '-') : '-'}</td>
                 <td className="px-3 py-1.5 whitespace-nowrap text-gray-500 border-r border-gray-100">{r.department || '-'}</td>
                 <td className="px-3 py-1.5 whitespace-nowrap text-gray-500 border-r border-gray-100">{r.job_title || '-'}</td>
@@ -471,7 +472,7 @@ export default function RegistrationsPage() {
                 <td className="px-3 py-1.5 whitespace-nowrap text-gray-500 max-w-[200px] truncate border-r border-gray-100">{r.inquiry || '-'}</td>
                 <td className="px-3 py-1.5 whitespace-nowrap text-center border-r border-gray-100">
                   {r.cancelled_at ? (
-                    <span className="text-xs px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 font-medium" title={`${new Date(r.cancelled_at).toLocaleString('ko-KR')} 신청자 직접 취소`}>
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 font-medium" title={`${formatKST(r.cancelled_at, { withSeconds: true })} (KST) 신청자 직접 취소`}>
                       취소
                     </span>
                   ) : (

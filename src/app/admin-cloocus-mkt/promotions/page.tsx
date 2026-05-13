@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAdmin } from '../layout';
+import { formatKST } from '@/lib/date';
 import type { Registration, Event } from '@/lib/types';
 
 type SortKey = keyof Registration;
@@ -388,7 +389,7 @@ export default function PromotionsListPage() {
                   <td className="px-4 py-3 text-gray-600 text-xs border-r border-gray-100">{eventName(r.event_id)}</td>
                   <td className="px-4 py-3 text-gray-600 text-xs border-r border-gray-100">{r.email}</td>
                   <td className="px-4 py-3 text-gray-600 text-xs border-r border-gray-100">{r.phone}</td>
-                  <td className="px-4 py-3 text-gray-500 text-xs border-r border-gray-100">{new Date(r.created_at).toLocaleString('ko-KR')}</td>
+                  <td className="px-4 py-3 text-gray-500 text-xs border-r border-gray-100 font-mono tabular-nums" title={formatKST(r.created_at, { withSeconds: true })}>{formatKST(r.created_at)}</td>
                   <td className="px-4 py-3">
                     <button onClick={() => openDetail(r)} className="text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100">
                       보기
@@ -445,9 +446,9 @@ export default function PromotionsListPage() {
                     detail.registration_status === 'confirmed' ? '확정' :
                     detail.registration_status === 'rejected' ? '불가' : '대기'
                   } />
-                  <Row label="등록일" value={new Date(detail.created_at).toLocaleString('ko-KR')} />
+                  <Row label="등록일시 (KST)" value={formatKST(detail.created_at, { withSeconds: true })} />
                   {detail.cancelled_at && (
-                    <Row label="취소일" value={new Date(detail.cancelled_at).toLocaleString('ko-KR')} />
+                    <Row label="취소일시 (KST)" value={formatKST(detail.cancelled_at, { withSeconds: true })} />
                   )}
                 </dl>
               </section>

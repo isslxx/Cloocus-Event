@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useAdmin } from '../layout';
+import { formatKST } from '@/lib/date';
 import type { Event } from '@/lib/types';
 
 type SurveyParticipant = {
@@ -105,7 +106,7 @@ export default function SurveyListPage() {
       'Q4. 도입 계획': r.q4_adoption || '',
       'Q5. 상담 희망': Array.isArray(r.q5_consulting) ? r.q5_consulting.join(', ') : (r.q5_consulting || ''),
       'Q6. 피드백': r.q6_feedback || '',
-      '설문 완료일': r.survey_submitted_at ? new Date(r.survey_submitted_at).toLocaleString('ko-KR') : '',
+      '설문 완료일시 (KST)': formatKST(r.survey_submitted_at, { withSeconds: true }),
     }));
     const ws = XLSX.utils.json_to_sheet(exportData);
     ws['!cols'] = Array(Object.keys(exportData[0] || {}).length).fill({ wch: 16 });
@@ -164,7 +165,7 @@ export default function SurveyListPage() {
     { key: 'q4_adoption', label: 'Q4. 도입 계획' },
     { key: 'q5_consulting', label: 'Q5. 상담 희망' },
     { key: 'q6_feedback', label: 'Q6. 피드백' },
-    { key: 'survey_submitted_at', label: '설문 완료일' },
+    { key: 'survey_submitted_at', label: '설문 완료일시 (KST)' },
   ];
 
   return (
@@ -300,8 +301,8 @@ export default function SurveyListPage() {
                     <td className="px-4 py-3 text-gray-500 max-w-[200px] truncate border-r border-gray-100" title={r.q4_adoption || ''}>{r.q4_adoption || '-'}</td>
                     <td className="px-4 py-3 text-gray-500 max-w-[220px] truncate border-r border-gray-100" title={formatArr(r.q5_consulting)}>{formatArr(r.q5_consulting) || '-'}</td>
                     <td className="px-4 py-3 text-gray-500 max-w-[260px] truncate border-r border-gray-100" title={r.q6_feedback || ''}>{r.q6_feedback || '-'}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-500">
-                      {r.survey_submitted_at ? new Date(r.survey_submitted_at).toLocaleString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-'}
+                    <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-500 font-mono tabular-nums" title={r.survey_submitted_at ? formatKST(r.survey_submitted_at, { withSeconds: true }) : ''}>
+                      {r.survey_submitted_at ? formatKST(r.survey_submitted_at) : '-'}
                     </td>
                   </tr>
                 ))}

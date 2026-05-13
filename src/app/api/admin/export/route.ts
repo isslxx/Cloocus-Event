@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFromToken, getServiceSupabase } from '@/lib/supabase-auth';
+import { formatKST } from '@/lib/date';
 import * as XLSX from 'xlsx';
 
 type RegRow = {
@@ -52,9 +53,9 @@ function rowFromReg(r: RegRow, i: number, eventName: string) {
     '신청 경로': r.referral_source,
     '추천인': r.referrer_name || '',
     '문의사항': r.inquiry || '',
-    '취소여부': r.cancelled_at ? `취소 (${new Date(r.cancelled_at).toLocaleString('ko-KR')})` : '',
+    '취소여부': r.cancelled_at ? `취소 (${formatKST(r.cancelled_at, { withSeconds: true })})` : '',
     '개인정보 동의': r.privacy_consent ? 'Y' : 'N',
-    '등록일': new Date(r.created_at).toLocaleString('ko-KR'),
+    '등록일시 (KST)': formatKST(r.created_at, { withSeconds: true }),
   };
 }
 

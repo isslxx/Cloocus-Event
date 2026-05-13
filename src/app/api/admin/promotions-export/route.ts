@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFromToken, getServiceSupabase } from '@/lib/supabase-auth';
+import { formatKST } from '@/lib/date';
 import * as XLSX from 'xlsx';
 
 // 프로모션 카테고리 등록자 추출
@@ -135,9 +136,9 @@ export async function GET(req: NextRequest) {
       '문의사항': r.inquiry || '',
       '등록 상태': r.registration_status === 'confirmed' ? '확정' : r.registration_status === 'rejected' ? '불가' : '대기',
       '이메일 발송': r.email_status === 'confirmed' ? '확정 발송' : r.email_status === 'rejected' ? '불가 발송' : '미발송',
-      '취소여부': r.cancelled_at ? `취소 (${new Date(r.cancelled_at).toLocaleString('ko-KR')})` : '',
+      '취소여부': r.cancelled_at ? `취소 (${formatKST(r.cancelled_at, { withSeconds: true })})` : '',
       '개인정보 동의': r.privacy_consent ? 'Y' : 'N',
-      '등록일': new Date(r.created_at).toLocaleString('ko-KR'),
+      '등록일시 (KST)': formatKST(r.created_at, { withSeconds: true }),
     };
 
     // 커스텀 문항 응답을 라벨 컬럼으로 풀어 채움
@@ -161,10 +162,10 @@ export async function GET(req: NextRequest) {
     const baseHeaders = [
       'No.', '프로모션', '성함', '회사명', '부서명', '직급',
       '이메일', '연락처', '산업군', '기업 규모', '신청 경로', '추천인',
-      '문의사항', '등록 상태', '이메일 발송', '취소여부', '개인정보 동의', '등록일',
+      '문의사항', '등록 상태', '이메일 발송', '취소여부', '개인정보 동의', '등록일시 (KST)',
     ];
     ws['!cols'] = [
-      ...baseHeaders.map((h) => ({ wch: h === '문의사항' ? 30 : h === '이메일' ? 25 : h === '프로모션' ? 24 : h === '취소여부' ? 22 : 14 })),
+      ...baseHeaders.map((h) => ({ wch: h === '문의사항' ? 30 : h === '이메일' ? 25 : h === '프로모션' ? 24 : h === '취소여부' ? 22 : h === '등록일시 (KST)' ? 20 : 14 })),
       ...customLabels.map(() => ({ wch: 25 })),
     ];
 
