@@ -92,6 +92,16 @@ export default function EventRegistrationPage({ params }: { params: Promise<{ sl
 
   const [validationPopup, setValidationPopup] = useState<string[]>([]);
 
+  // 마감(closed) 이벤트에 바로가기 URL 로 진입했을 때 안내 팝업
+  // 홈에서는 카드 클릭 시 동일 팝업을 띄우지만, slug URL 직접 진입은 그 경로를 거치지 않음.
+  // - closedPopupOpen: 팝업 표시 여부 (닫기 버튼·체크박스 확인 후 false 로)
+  // - closedAcknowledged: 체크박스 상태 ("등록 진행하기" 활성화 조건)
+  const [closedPopupOpen, setClosedPopupOpen] = useState(false);
+  const [closedAcknowledged, setClosedAcknowledged] = useState(false);
+  useEffect(() => {
+    if (event?.status === 'closed') setClosedPopupOpen(true);
+  }, [event?.status]);
+
   const [companySuggestions, setCompanySuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const companyDebounce = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -515,6 +525,42 @@ export default function EventRegistrationPage({ params }: { params: Promise<{ sl
   // ==================== 등록 폼 ====================
   return (
     <div className="min-h-screen">
+      {closedPopupOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
+          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-amber-500 text-xl">⚠</span>
+              <h3 className="text-lg font-bold text-gray-900">마감 안내</h3>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">현재 정원이 마감되어 등록이 어려울 수 있습니다.</p>
+            <label className="flex items-start gap-2 cursor-pointer mb-4">
+              <input
+                type="checkbox"
+                checked={closedAcknowledged}
+                onChange={(e) => setClosedAcknowledged(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded accent-blue-600"
+              />
+              <span className="text-sm text-gray-700">위 내용을 확인했습니다.</span>
+            </label>
+            <div className="flex gap-2">
+              <button
+                disabled={!closedAcknowledged}
+                onClick={() => setClosedPopupOpen(false)}
+                className="btn-primary flex-1 disabled:opacity-40"
+              >
+                등록 진행하기
+              </button>
+              <button
+                onClick={() => router.push('/')}
+                className="btn-secondary flex-1"
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-2xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between mb-2">
