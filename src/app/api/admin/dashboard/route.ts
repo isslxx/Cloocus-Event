@@ -244,10 +244,15 @@ type VisitUtmAggregate = {
 };
 
 // 방문 기준 — page_events 전체 트래픽을 UTM별로 집계 (UTM 없는 방문은 '(직접/내부)' 버킷)
+//
+// 이벤트/카테고리 필터가 걸렸을 때:
+//   - trackView() 가 event_id 없이 행을 적재하므로 event_id 매칭만으로는 0건
+//   - URL 패턴(/{slug}) 으로도 함께 매칭해 신청 페이지로 들어온 방문을 누락 없이 집계
 async function fetchVisitUtm(
   supabase: ReturnType<typeof getServiceSupabase>,
   win: Window,
-  eventIds: string[] | null
+  eventIds: string[] | null,
+  eventPages: string[] | null,
 ): Promise<VisitUtmAggregate> {
   let q = supabase
     .from('page_events')
@@ -259,7 +264,15 @@ async function fetchVisitUtm(
   if (win.start) q = q.gte('created_at', `${win.start}T00:00:00+09:00`);
   if (win.end)   q = q.lte('created_at', `${win.end}T23:59:59+09:00`);
   if (eventIds && eventIds.length > 0) {
-    q = q.in('event_id', eventIds);
+    const hasPages = eventPages && eventPages.length > 0;
+    if (hasPages) {
+      // PostgREST .or() 문법: 문자열 값은 큰따옴표로 감싸야 슬래시·하이픈 안전
+      const idsCsv = eventIds.join(',');
+      const pagesCsv = eventPages!.map((p) => `"${p}"`).join(',');
+      q = q.or(`event_id.in.(${idsCsv}),page.in.(${pagesCsv})`);
+    } else {
+      q = q.in('event_id', eventIds);
+    }
   }
 
   const { data } = await q.range(0, 49999);
@@ -291,6 +304,24 @@ async function fetchVisitUtm(
     byCampaign: sortTopN(Object.entries(campaignMap).map(([name, value]) => ({ name, value })), 10),
     byId:       sortTopN(Object.entries(idMap).map(([name, value])       => ({ name, value })), 10),
   };
+}
+
+// eventIds → ['/{slug1}', '/{slug2}', ...] 로 변환.
+// trackView() 가 event_id 없이 적재된 과거 방문 행을 URL 로 매칭하기 위해 사용.
+async function eventIdsToPages(
+  supabase: ReturnType<typeof getServiceSupabase>,
+  eventIds: string[] | null,
+): Promise<string[] | null> {
+  if (!eventIds || eventIds.length === 0) return null;
+  const { data } = await supabase
+    .from('events')
+    .select('slug')
+    .in('id', eventIds)
+    .not('slug', 'is', null);
+  const slugs = ((data || []) as { slug: string | null }[])
+    .map((e) => e.slug)
+    .filter((s): s is string => !!s);
+  return slugs.length > 0 ? slugs.map((s) => `/${s}`) : null;
 }
 
 async function resolveEventIds(
@@ -347,11 +378,14 @@ export async function GET(req: NextRequest) {
   const eventIds = await resolveEventIds(supabase, filter, category);
   if (eventIds === 'empty') return NextResponse.json(emptyResponse());
 
+  // 필터에 해당하는 이벤트들의 slug → '/{slug}' page 패턴 변환 (방문 매칭용)
+  const eventPages = await eventIdsToPages(supabase, eventIds as string[] | null);
+
   // Records fetch (primary) + page_events UTM (방문 기준)
   const [primaryRecords, { data: events }, primaryVisitUtm] = await Promise.all([
     fetchRecords(supabase, eventIds as string[] | null),
     supabase.from('events').select('id, name').order('event_date', { ascending: false }),
-    fetchVisitUtm(supabase, primaryWin, eventIds as string[] | null),
+    fetchVisitUtm(supabase, primaryWin, eventIds as string[] | null, eventPages),
   ]);
   const eventMap = new Map((events || []).map((e) => [e.id as string, e.name as string]));
 
