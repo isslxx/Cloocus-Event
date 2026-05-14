@@ -252,10 +252,6 @@ export default function Home() {
     engagement.settings.top_live_counter_enabled &&
     engagement.page.active_viewers >= engagement.settings.top_live_counter_min;
 
-  // 마감 이벤트 팝업
-  const [closedEventPopup, setClosedEventPopup] = useState<Event | null>(null);
-  const [closedAcknowledged, setClosedAcknowledged] = useState(false);
-
   // UTM / referrer 캡처 + page_view
   useEffect(() => {
     captureAttribution();
@@ -329,10 +325,7 @@ export default function Home() {
                       engagement={engagement}
                       onSelect={() => {
                         if (event.status === 'ended') return;
-                        if (event.status === 'closed') {
-                          setClosedEventPopup(event);
-                          return;
-                        }
+                        // closed 이벤트 안내는 /[slug] 진입 시 팝업이 일괄 담당 (중복 안내 방지)
                         setSelectedEvent(event);
                       }}
                     />
@@ -343,47 +336,6 @@ export default function Home() {
                   <p className="text-center text-gray-400 text-sm mt-4">현재 모든 이벤트의 신청이 마감되었습니다.</p>
                 )}
               </>
-            )}
-
-            {closedEventPopup && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
-                <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-amber-500 text-xl">⚠</span>
-                    <h3 className="text-lg font-bold text-gray-900">마감 안내</h3>
-                  </div>
-                  <p className="text-sm text-gray-600 mb-4">현재 정원이 마감되어 등록이 어려울 수 있습니다.</p>
-                  <label className="flex items-start gap-2 cursor-pointer mb-4">
-                    <input
-                      type="checkbox"
-                      checked={closedAcknowledged}
-                      onChange={(e) => setClosedAcknowledged(e.target.checked)}
-                      className="mt-0.5 w-4 h-4 rounded accent-blue-600"
-                    />
-                    <span className="text-sm text-gray-700">위 내용을 확인했습니다.</span>
-                  </label>
-                  <div className="flex gap-2">
-                    <button
-                      disabled={!closedAcknowledged}
-                      onClick={() => {
-                        const evt = closedEventPopup;
-                        setClosedEventPopup(null);
-                        setClosedAcknowledged(false);
-                        if (evt) goToEvent(evt);
-                      }}
-                      className="btn-primary flex-1 disabled:opacity-40"
-                    >
-                      등록 진행하기
-                    </button>
-                    <button
-                      onClick={() => { setClosedEventPopup(null); setClosedAcknowledged(false); }}
-                      className="btn-secondary flex-1"
-                    >
-                      취소
-                    </button>
-                  </div>
-                </div>
-              </div>
             )}
 
             <button
