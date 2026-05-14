@@ -225,10 +225,12 @@ async function fetchRecords(
   supabase: ReturnType<typeof getServiceSupabase>,
   eventIds: string[] | null
 ): Promise<Row[]> {
+  // is_internal=true 행은 운영자 본인 테스트 등록이라 통계에서 제외 (lib/internal-ip.ts 참고)
   let q = supabase
     .from('event_registrations')
     .select('created_at, industry, referral_source, referrer_name, event_id, survey_completed, certificate_issued, utm_source, utm_medium, utm_campaign, utm_id')
-    .is('deleted_at', null);
+    .is('deleted_at', null)
+    .eq('is_internal', false);
   if (eventIds) q = q.in('event_id', eventIds);
   const { data } = await q;
   return (data as Row[]) || [];

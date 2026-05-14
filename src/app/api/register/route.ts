@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { normalizeCompanyName } from '@/lib/company-normalize';
 import { isBlockedEmailDomain, isValidEmail, isValidPhone, isFakePhone } from '@/lib/validation';
 import { validateAndPrepareCustomAnswers } from '@/lib/custom-answers';
+import { isInternalRequest } from '@/lib/internal-ip';
 
 function getServiceSupabase() {
   return createClient(
@@ -79,6 +80,10 @@ export async function POST(req: NextRequest) {
 
     const trimOrNull = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, 255) : null);
 
+    // 운영자 본인 IP 등 내부 트래픽에서 들어온 등록은 통계에서 제외하기 위해 표시.
+    // 등록 자체는 정상 처리되고, 대시보드 집계 단계에서 필터됨.
+    const is_internal = isInternalRequest(req.headers);
+
     const insertRow = {
       name: name.trim(),
       company_name: normalizedCompany,
@@ -105,6 +110,7 @@ export async function POST(req: NextRequest) {
       referrer_url: trimOrNull(referrer_url),
       user_id:      trimOrNull(user_id),
       custom_answers: customResult.value,
+      is_internal,
     };
 
     const { data: insertedData, error } = await supabase

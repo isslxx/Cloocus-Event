@@ -457,7 +457,10 @@ export default function RegistrationsPage() {
                 <td className={`px-3 py-1.5 w-10 min-w-10 sticky left-0 z-10 border-r border-gray-100 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`}>
                   <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleSelect(r.id)} className="w-4 h-4 rounded accent-blue-600" />
                 </td>
-                <td className={`px-3 py-1.5 whitespace-nowrap truncate font-medium sticky left-[40px] z-10 border-r border-gray-100 w-20 min-w-20 max-w-20 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`} title={r.name}>{r.name}</td>
+                <td className={`px-3 py-1.5 whitespace-nowrap truncate font-medium sticky left-[40px] z-10 border-r border-gray-100 w-20 min-w-20 max-w-20 ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`} title={r.is_internal ? `${r.name} (내부 테스트 — 통계 제외)` : r.name}>
+                  {r.is_internal && <span className="inline-block mr-1 align-middle text-[9px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 font-semibold leading-none" aria-label="내부 테스트">내부</span>}
+                  {r.name}
+                </td>
                 <td className={`px-3 py-1.5 whitespace-nowrap truncate sticky left-[120px] z-10 border-r border-gray-100 min-w-[140px] max-w-[140px] ${selected.has(r.id) ? 'bg-blue-50' : 'bg-white'}`} title={r.company_name}>{r.company_name}</td>
                 <td className="px-3 py-1.5 whitespace-nowrap text-gray-500 border-r border-gray-100 font-mono tabular-nums text-xs" title={formatKST(r.created_at, { withSeconds: true })}>{formatKST(r.created_at)}</td>
                 <td className="px-3 py-1.5 whitespace-nowrap text-xs text-gray-500 max-w-[150px] truncate border-r border-gray-100">{r.event_id ? (events.find((e) => e.id === r.event_id)?.name || '-') : '-'}</td>

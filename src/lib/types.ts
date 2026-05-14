@@ -49,6 +49,8 @@ export type Registration = {
   custom_answers?: Record<string, string | string[] | boolean>;
   // PIN 은 admin 만 조회/수정. 일반적으로 노출되지 않음.
   pin?: string;
+  // 운영자 IP에서 들어온 테스트 등록. 대시보드 통계에서 제외됨.
+  is_internal?: boolean;
 };
 
 export type AdminUser = {
