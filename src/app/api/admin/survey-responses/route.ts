@@ -41,6 +41,9 @@ export async function GET(req: NextRequest) {
       q4_adoption: s.q4_adoption,
       q5_consulting: s.q5_consulting,
       q6_feedback: s.q6_feedback,
+      // 동적 설문 응답(answers JSONB) — admin 이 페이지 관리>설문 폼에서 편집한 문항 응답.
+      // legacy q1~q6 가 비어 있어도 이 필드를 보면 응답 내역을 확인할 수 있다.
+      answers: Array.isArray(s.answers) ? s.answers : [],
       created_at: s.created_at,
       name: reg?.name || '',
       company_name: reg?.company_name || '',

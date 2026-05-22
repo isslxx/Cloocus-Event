@@ -28,13 +28,16 @@ type SurveyParticipant = {
   certificate_issued?: boolean;
   certificate_issued_at?: string | null;
   created_at: string;
-  // 설문 응답
+  // 설문 응답 (Azure 6문항 — 동적 설문에선 null)
   q1_azure_level: string | null;
   q2_difficulty: string | null;
   q3_purpose: string[] | null;
   q4_adoption: string | null;
   q5_consulting: string[] | null;
   q6_feedback: string | null;
+  // 동적 설문 응답 — admin 페이지 관리>설문 폼에서 편집된 문항에 대한 응답.
+  // q1~q6 가 null 이어도 이 필드를 보면 응답 내역을 확인할 수 있다.
+  answers: { question_id: string; question_text: string; question_type: 'single' | 'multiple' | 'text'; value: string | string[] }[];
   survey_feedback: string | null;
   survey_submitted_at: string | null;
 };
@@ -88,26 +91,63 @@ export default function SurveyListPage() {
   const handleExport = async () => {
     const XLSX = await import('xlsx');
     const wb = XLSX.utils.book_new();
-    const exportData = (selected.size > 0 ? participants.filter((r) => selected.has(r.id)) : participants).map((r) => ({
-      '성함': r.name,
-      '회사명': r.company_name_raw || r.company_name,
-      '부서명': r.department,
-      '직급': r.job_title,
-      '이메일': r.email,
-      '연락처': r.phone,
-      '산업군': r.industry,
-      '기업 규모': r.company_size,
-      '신청 경로': r.referral_source,
-      '추천인': r.referrer_name || '-',
-      '설문 완료': r.survey_completed ? 'O' : 'X',
-      'Q1. Azure 이해 수준': r.q1_azure_level || '',
-      'Q2. 난이도': r.q2_difficulty || '',
-      'Q3. 참여 목적': Array.isArray(r.q3_purpose) ? r.q3_purpose.join(', ') : (r.q3_purpose || ''),
-      'Q4. 도입 계획': r.q4_adoption || '',
-      'Q5. 상담 희망': Array.isArray(r.q5_consulting) ? r.q5_consulting.join(', ') : (r.q5_consulting || ''),
-      'Q6. 피드백': r.q6_feedback || '',
-      '설문 완료일시 (KST)': formatKST(r.survey_submitted_at, { withSeconds: true }),
-    }));
+    const rows = selected.size > 0 ? participants.filter((r) => selected.has(r.id)) : participants;
+
+    // 동적 설문 모드면 question_text 별 컬럼을 만들고, 그렇지 않으면 Azure 기본 6문항 컬럼을 쓴다.
+    const useDynamic = !rows.some((r) => r.q1_azure_level || r.q2_difficulty || (r.q3_purpose?.length ?? 0) > 0);
+
+    let exportData: Record<string, string>[];
+    if (useDynamic) {
+      const colOrder: string[] = [];
+      for (const r of rows) {
+        for (const a of (r.answers || [])) {
+          if (!colOrder.includes(a.question_text)) colOrder.push(a.question_text);
+        }
+      }
+      exportData = rows.map((r) => {
+        const row: Record<string, string> = {
+          '성함': r.name,
+          '회사명': r.company_name_raw || r.company_name,
+          '부서명': r.department,
+          '직급': r.job_title,
+          '이메일': r.email,
+          '연락처': r.phone,
+          '산업군': r.industry,
+          '기업 규모': r.company_size,
+          '신청 경로': r.referral_source,
+          '추천인': r.referrer_name || '-',
+          '설문 완료': r.survey_completed ? 'O' : 'X',
+        };
+        const byText = new Map((r.answers || []).map((a) => [a.question_text, a]));
+        for (const col of colOrder) {
+          const a = byText.get(col);
+          row[col] = a ? (Array.isArray(a.value) ? a.value.join(', ') : a.value) : '';
+        }
+        row['설문 완료일시 (KST)'] = formatKST(r.survey_submitted_at, { withSeconds: true });
+        return row;
+      });
+    } else {
+      exportData = rows.map((r) => ({
+        '성함': r.name,
+        '회사명': r.company_name_raw || r.company_name,
+        '부서명': r.department,
+        '직급': r.job_title,
+        '이메일': r.email,
+        '연락처': r.phone,
+        '산업군': r.industry,
+        '기업 규모': r.company_size,
+        '신청 경로': r.referral_source,
+        '추천인': r.referrer_name || '-',
+        '설문 완료': r.survey_completed ? 'O' : 'X',
+        'Q1. Azure 이해 수준': r.q1_azure_level || '',
+        'Q2. 난이도': r.q2_difficulty || '',
+        'Q3. 참여 목적': Array.isArray(r.q3_purpose) ? r.q3_purpose.join(', ') : (r.q3_purpose || ''),
+        'Q4. 도입 계획': r.q4_adoption || '',
+        'Q5. 상담 희망': Array.isArray(r.q5_consulting) ? r.q5_consulting.join(', ') : (r.q5_consulting || ''),
+        'Q6. 피드백': r.q6_feedback || '',
+        '설문 완료일시 (KST)': formatKST(r.survey_submitted_at, { withSeconds: true }),
+      }));
+    }
     const ws = XLSX.utils.json_to_sheet(exportData);
     ws['!cols'] = Array(Object.keys(exportData[0] || {}).length).fill({ wch: 16 });
     XLSX.utils.book_append_sheet(wb, ws, '설문 리스트');
@@ -147,6 +187,15 @@ export default function SurveyListPage() {
   const completedCount = filteredParticipants.filter((r) => r.survey_completed).length;
 
   const formatArr = (v: unknown): string => Array.isArray(v) ? v.join(', ') : (v ? String(v) : '');
+  // legacy q1~q6 컬럼이 비었을 때 동적 answers 배열의 같은 인덱스 응답을 fallback 으로 보여준다.
+  // 동적 설문(예: Copilot Hands-on Labs)에서도 테이블이 비어 보이지 않도록 한다.
+  const cellAnswer = (legacy: string | string[] | null | undefined, r: SurveyParticipant, idx: number): string => {
+    const lv = Array.isArray(legacy) ? legacy.join(', ') : (legacy || '');
+    if (lv) return lv;
+    const a = Array.isArray(r.answers) ? r.answers[idx] : undefined;
+    if (!a) return '';
+    return Array.isArray(a.value) ? a.value.join(', ') : a.value;
+  };
 
   // 정렬 가능한 일반 컬럼
   const middleCols: { key: string; label: string }[] = [
@@ -295,12 +344,12 @@ export default function SurveyListPage() {
                         {r.survey_completed ? '완료' : '미완료'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-gray-500 max-w-[200px] truncate border-r border-gray-100" title={r.q1_azure_level || ''}>{r.q1_azure_level || '-'}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-gray-500 border-r border-gray-100">{r.q2_difficulty || '-'}</td>
-                    <td className="px-4 py-3 text-gray-500 max-w-[220px] truncate border-r border-gray-100" title={formatArr(r.q3_purpose)}>{formatArr(r.q3_purpose) || '-'}</td>
-                    <td className="px-4 py-3 text-gray-500 max-w-[200px] truncate border-r border-gray-100" title={r.q4_adoption || ''}>{r.q4_adoption || '-'}</td>
-                    <td className="px-4 py-3 text-gray-500 max-w-[220px] truncate border-r border-gray-100" title={formatArr(r.q5_consulting)}>{formatArr(r.q5_consulting) || '-'}</td>
-                    <td className="px-4 py-3 text-gray-500 max-w-[260px] truncate border-r border-gray-100" title={r.q6_feedback || ''}>{r.q6_feedback || '-'}</td>
+                    <td className="px-4 py-3 text-gray-500 max-w-[200px] truncate border-r border-gray-100" title={cellAnswer(r.q1_azure_level, r, 0)}>{cellAnswer(r.q1_azure_level, r, 0) || '-'}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-gray-500 border-r border-gray-100">{cellAnswer(r.q2_difficulty, r, 1) || '-'}</td>
+                    <td className="px-4 py-3 text-gray-500 max-w-[220px] truncate border-r border-gray-100" title={cellAnswer(r.q3_purpose, r, 2)}>{cellAnswer(r.q3_purpose, r, 2) || '-'}</td>
+                    <td className="px-4 py-3 text-gray-500 max-w-[200px] truncate border-r border-gray-100" title={cellAnswer(r.q4_adoption, r, 3)}>{cellAnswer(r.q4_adoption, r, 3) || '-'}</td>
+                    <td className="px-4 py-3 text-gray-500 max-w-[220px] truncate border-r border-gray-100" title={cellAnswer(r.q5_consulting, r, 4)}>{cellAnswer(r.q5_consulting, r, 4) || '-'}</td>
+                    <td className="px-4 py-3 text-gray-500 max-w-[260px] truncate border-r border-gray-100" title={cellAnswer(r.q6_feedback, r, 5)}>{cellAnswer(r.q6_feedback, r, 5) || '-'}</td>
                     <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-500 font-mono tabular-nums" title={r.survey_submitted_at ? formatKST(r.survey_submitted_at, { withSeconds: true }) : ''}>
                       {r.survey_submitted_at ? formatKST(r.survey_submitted_at) : '-'}
                     </td>

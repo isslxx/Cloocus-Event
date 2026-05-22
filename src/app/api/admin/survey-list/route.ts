@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   if (regIds.length > 0) {
     const { data: surveys } = await supabase
       .from('surveys')
-      .select('registration_id, q1_azure_level, q2_difficulty, q3_purpose, q4_adoption, q5_consulting, q6_feedback, created_at')
+      .select('registration_id, q1_azure_level, q2_difficulty, q3_purpose, q4_adoption, q5_consulting, q6_feedback, answers, created_at')
       .in('registration_id', regIds);
     for (const s of surveys || []) {
       surveyMap[s.registration_id] = s;
@@ -45,6 +45,8 @@ export async function GET(req: NextRequest) {
       q4_adoption: s.q4_adoption || null,
       q5_consulting: s.q5_consulting || null,
       q6_feedback: q6 || null,
+      // 동적 설문 응답 — admin 페이지 관리>설문 폼에서 편집된 문항 응답이 들어있다.
+      answers: Array.isArray(s.answers) ? s.answers : [],
       survey_feedback: q6.trim() !== '' ? q6 : null,
       survey_submitted_at: s.created_at || null,
     };

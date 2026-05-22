@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { notifyAdminSurveyComplete } from '@/lib/notifications';
+import {
+  DEFAULT_SURVEY_QUESTIONS,
+  loadSurveyQuestions,
+  mapAnswersToLegacyColumns,
+  validateAnswers,
+  type SurveyAnswer,
+} from '@/lib/survey-questions';
 
 function getServiceSupabase() {
   return createClient(
@@ -9,7 +16,8 @@ function getServiceSupabase() {
   );
 }
 
-// 기존 설문 응답 조회
+// 기존 응답 조회. 응답에는 generic answers JSONB 와 legacy q1~q6 가 모두 들어있다.
+// 신청자 페이지는 answers 가 있으면 그것 우선, 없으면 legacy 매핑으로 채워 표시한다.
 export async function GET(req: NextRequest) {
   try {
     const regId = req.nextUrl.searchParams.get('registration_id');
@@ -29,9 +37,14 @@ export async function GET(req: NextRequest) {
   }
 }
 
+// 응답 저장 — 새 동적 페이로드(answers 배열) 처리. 기본 Azure 6문항이면 q1~q6 컬럼에도
+// 매핑해 두어 legacy 대시보드(survey-list/survey-responses, 엑셀 export) 가 그대로 작동한다.
+//
+// 페이로드: { registration_id, pin, answers: SurveyAnswer[] }
 export async function POST(req: NextRequest) {
   try {
-    const { registration_id, pin, q1_azure_level, q2_difficulty, q3_purpose, q4_adoption, q5_consulting, q6_feedback } = await req.json();
+    const body = await req.json();
+    const { registration_id, pin } = body as { registration_id?: string; pin?: string };
 
     if (!registration_id || !pin) {
       return NextResponse.json({ error: '인증 정보가 필요합니다.' }, { status: 400 });
@@ -39,10 +52,9 @@ export async function POST(req: NextRequest) {
 
     const supabase = getServiceSupabase();
 
-    // PIN 검증
     const { data: reg } = await supabase
       .from('event_registrations')
-      .select('id, pin, survey_enabled, survey_completed')
+      .select('id, pin, event_id, survey_enabled, survey_completed')
       .eq('id', registration_id)
       .single();
 
@@ -54,16 +66,57 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '설문조사가 활성화되지 않았습니다.' }, { status: 400 });
     }
 
-    // 필수 항목 검증
-    if (!q1_azure_level || !q2_difficulty || !q3_purpose?.length || !q4_adoption || !q5_consulting?.length) {
-      return NextResponse.json({ error: '필수 항목을 모두 입력해주세요.' }, { status: 400 });
+    // 새 페이로드(answers) 와 legacy 페이로드(q1_azure_level 등) 모두 수용한다.
+    let answers: SurveyAnswer[] = Array.isArray(body.answers) ? body.answers : [];
+
+    if (answers.length === 0) {
+      // legacy 호환: q1~q6 만 들어왔다면 코드 기본 질문 메타데이터로 변환
+      const legacyMap = [
+        { key: 'q1_azure_level', q: DEFAULT_SURVEY_QUESTIONS[0] },
+        { key: 'q2_difficulty',  q: DEFAULT_SURVEY_QUESTIONS[1] },
+        { key: 'q3_purpose',     q: DEFAULT_SURVEY_QUESTIONS[2] },
+        { key: 'q4_adoption',    q: DEFAULT_SURVEY_QUESTIONS[3] },
+        { key: 'q5_consulting',  q: DEFAULT_SURVEY_QUESTIONS[4] },
+        { key: 'q6_feedback',    q: DEFAULT_SURVEY_QUESTIONS[5] },
+      ];
+      answers = legacyMap
+        .filter(({ key }) => body[key] !== undefined && body[key] !== null && body[key] !== '')
+        .map(({ key, q }) => ({
+          question_id: q.id,
+          question_text: q.question_text,
+          question_type: q.question_type,
+          value: body[key],
+        }));
     }
 
-    // 기존 설문이 있으면 업데이트, 없으면 신규 저장
+    if (answers.length === 0) {
+      return NextResponse.json({ error: '응답을 입력해주세요.' }, { status: 400 });
+    }
+
+    // 검증: required / type 일치
+    const questions = await loadSurveyQuestions(supabase, reg.event_id);
+    const validationError = validateAnswers(questions, answers);
+    if (validationError) {
+      return NextResponse.json({ error: validationError }, { status: 400 });
+    }
+
+    const legacy = mapAnswersToLegacyColumns(answers);
+
+    const payload: Record<string, unknown> = {
+      answers,
+      // legacy 컬럼은 기본 6문항이면 채우고, 아니면 null 로 둔다
+      q1_azure_level: legacy?.q1_azure_level ?? null,
+      q2_difficulty:  legacy?.q2_difficulty  ?? null,
+      q3_purpose:     legacy?.q3_purpose     ?? null,
+      q4_adoption:    legacy?.q4_adoption    ?? null,
+      q5_consulting:  legacy?.q5_consulting  ?? null,
+      q6_feedback:    legacy?.q6_feedback    ?? '',
+    };
+
     if (reg.survey_completed) {
       const { error: updateError } = await supabase
         .from('surveys')
-        .update({ q1_azure_level, q2_difficulty, q3_purpose, q4_adoption, q5_consulting, q6_feedback: q6_feedback || '' })
+        .update(payload)
         .eq('registration_id', registration_id);
 
       if (updateError) {
@@ -72,12 +125,7 @@ export async function POST(req: NextRequest) {
     } else {
       const { error: insertError } = await supabase.from('surveys').insert({
         registration_id,
-        q1_azure_level,
-        q2_difficulty,
-        q3_purpose,
-        q4_adoption,
-        q5_consulting,
-        q6_feedback: q6_feedback || '',
+        ...payload,
       });
 
       if (insertError) {

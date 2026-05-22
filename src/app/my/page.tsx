@@ -6,6 +6,10 @@ import { formatPhone } from '@/lib/validation';
 import { trackCertificateDownload, trackSurveyComplete, trackPortalLogin, trackInquirySubmit, trackRegistrationCancel } from '@/lib/analytics';
 import { trackView, trackClick } from '@/lib/tracker';
 import { captureAttribution } from '@/lib/utm';
+import { DEFAULT_SURVEY_QUESTIONS, type SurveyQuestion, type SurveyAnswer } from '@/lib/survey-questions';
+
+const SURVEY_ETC_LABEL = '기타';
+const SURVEY_ETC_PREFIX = '기타: ';
 
 type RegistrationData = {
   id: string;
@@ -74,6 +78,93 @@ function BrandFooter() {
   );
 }
 
+// 단일 설문 문항 렌더러. 메인 설문 화면과 통합 모드(개인정보+설문) 양쪽에서 공유.
+// "기타" 옵션이 multiple 타입에 포함돼 있으면 선택 시 자유 입력란이 같이 노출된다.
+function SurveyQuestionField({
+  q, index, answer, etc, error, etcError,
+  onSingleChange, onMultiToggle, onTextChange, onEtcChange,
+  inputNamePrefix = 'q',
+}: {
+  q: SurveyQuestion;
+  index: number;
+  answer: string | string[] | undefined;
+  etc: string;
+  error?: string;
+  etcError?: string;
+  onSingleChange: (v: string) => void;
+  onMultiToggle: (opt: string) => void;
+  onTextChange: (v: string) => void;
+  onEtcChange: (v: string) => void;
+  inputNamePrefix?: string;
+}) {
+  const num = index + 1;
+  const radioName = `${inputNamePrefix}${num}`;
+  const selectedMulti = Array.isArray(answer) ? answer : [];
+  const selectedSingle = typeof answer === 'string' ? answer : '';
+
+  return (
+    <div>
+      <p className="text-sm font-medium text-gray-800 mb-2">
+        {num}. {q.question_text}{q.required && <span className="text-red-500"> *</span>}
+      </p>
+
+      {q.question_type === 'single' && q.options.map((opt) => (
+        <label key={opt} className="flex items-center gap-2 py-1.5 cursor-pointer">
+          <input
+            type="radio"
+            name={radioName}
+            value={opt}
+            checked={selectedSingle === opt}
+            onChange={(e) => onSingleChange(e.target.value)}
+            className="w-4 h-4 accent-blue-600"
+          />
+          <span className="text-sm text-gray-700">{opt}</span>
+        </label>
+      ))}
+
+      {q.question_type === 'multiple' && (
+        <>
+          {q.options.map((opt) => (
+            <label key={opt} className="flex items-center gap-2 py-1.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={selectedMulti.includes(opt)}
+                onChange={() => onMultiToggle(opt)}
+                className="w-4 h-4 accent-blue-600"
+              />
+              <span className="text-sm text-gray-700">{opt}</span>
+            </label>
+          ))}
+          {selectedMulti.includes(SURVEY_ETC_LABEL) && (
+            <input
+              type="text"
+              value={etc}
+              onChange={(e) => onEtcChange(e.target.value)}
+              placeholder="기타 내용을 입력해주세요"
+              className="mt-1 w-full"
+              style={{ padding: '8px 12px', border: `1px solid ${etcError ? '#ef4444' : '#e0e0e0'}`, borderRadius: 8, fontSize: 14 }}
+            />
+          )}
+        </>
+      )}
+
+      {q.question_type === 'text' && (
+        <textarea
+          rows={4}
+          value={selectedSingle}
+          onChange={(e) => onTextChange(e.target.value)}
+          placeholder="자유롭게 작성해주세요"
+          className="w-full"
+          style={{ padding: '10px 12px', border: '1px solid #e0e0e0', borderRadius: 8, fontSize: 14 }}
+        />
+      )}
+
+      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+      {etcError && <p className="text-xs text-red-500 mt-1">{etcError}</p>}
+    </div>
+  );
+}
+
 export default function MyDashboard() {
   const [authenticated, setAuthenticated] = useState(false);
   // sessionStorage 에 세션이 있는지 확인하는 동안엔 로그인 폼/포탈 어느 쪽도 안 보여줌.
@@ -114,15 +205,11 @@ export default function MyDashboard() {
   const [showSurvey, setShowSurvey] = useState(false);
   const [showSurveyChoice, setShowSurveyChoice] = useState(false);
   const [surveySubmitted, setSurveySubmitted] = useState(false);
-  const [surveyForm, setSurveyForm] = useState({
-    q1: '',
-    q2: '',
-    q3: [] as string[],
-    q4: '',
-    q5: [] as string[],
-    q3_etc: '',
-    q6: '',
-  });
+  // 동적 설문: 질문은 /api/survey-questions 에서 받아온다. 응답은 question_id → 값 매핑.
+  // 기타 선택 시 별도 question_id → 기타 입력 매핑.
+  const [surveyQuestions, setSurveyQuestions] = useState<SurveyQuestion[]>(DEFAULT_SURVEY_QUESTIONS);
+  const [surveyAnswers, setSurveyAnswers] = useState<Record<string, string | string[]>>({});
+  const [surveyEtc, setSurveyEtc] = useState<Record<string, string>>({});
   const [surveyErrors, setSurveyErrors] = useState<Record<string, string>>({});
   const [surveySubmitting, setSurveySubmitting] = useState(false);
   const [surveyValidationPopup, setSurveyValidationPopup] = useState<string[]>([]);
@@ -264,6 +351,162 @@ export default function MyDashboard() {
   // registration 의 새 값을 못 봐서 캐시 복원 직후 customQuestions 를 [] 로 덮어쓰던
   // 버그가 있어 제거함. 모든 lookup/cache/load 경로에서 명시적으로 setCustomQuestions
   // 를 호출하므로 별도 정리 effect 는 불필요.)
+
+  // 등록 정보가 로드되면 설문 활성 여부와 무관하게 질문을 받아둔다.
+  // (활성 이벤트도 admin 이 언제든 토글할 수 있으므로 미리 가져두면 진입 시 깜빡임 없음)
+  useEffect(() => {
+    if (!registration?.event_id) return;
+    fetch(`/api/survey-questions?event_id=${registration.event_id}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (Array.isArray(d?.questions) && d.questions.length > 0) {
+          setSurveyQuestions(d.questions);
+        }
+      })
+      .catch(() => { /* fallback 기본 6문항 사용 */ });
+  }, [registration?.event_id]);
+
+  // 동적 설문 폼: 단일 응답 갱신
+  const setSingleAnswer = (qid: string, value: string) => {
+    setSurveyAnswers((prev) => ({ ...prev, [qid]: value }));
+    setSurveyErrors((prev) => ({ ...prev, [qid]: '' }));
+  };
+  // 동적 설문 폼: 복수 응답 토글
+  const toggleMultiAnswer = (qid: string, opt: string) => {
+    setSurveyAnswers((prev) => {
+      const cur = Array.isArray(prev[qid]) ? (prev[qid] as string[]) : [];
+      const next = cur.includes(opt) ? cur.filter((v) => v !== opt) : [...cur, opt];
+      // 기타 해제 시 입력값도 함께 비움
+      if (opt === SURVEY_ETC_LABEL && !next.includes(SURVEY_ETC_LABEL)) {
+        setSurveyEtc((etc) => ({ ...etc, [qid]: '' }));
+      }
+      return { ...prev, [qid]: next };
+    });
+    setSurveyErrors((prev) => ({ ...prev, [qid]: '' }));
+  };
+  // 동적 설문 폼: 텍스트 응답
+  const setTextAnswer = (qid: string, value: string) => {
+    setSurveyAnswers((prev) => ({ ...prev, [qid]: value }));
+  };
+  // 동적 설문 폼: 기타 입력
+  const setEtcAnswer = (qid: string, value: string) => {
+    setSurveyEtc((prev) => ({ ...prev, [qid]: value }));
+    setSurveyErrors((prev) => ({ ...prev, [`${qid}_etc`]: '' }));
+  };
+
+  // 현재 surveyAnswers + surveyEtc 를 서버 전송용 payload 로 변환
+  const buildSurveyAnswers = (): SurveyAnswer[] => {
+    const out: SurveyAnswer[] = [];
+    for (const q of surveyQuestions) {
+      const v = surveyAnswers[q.id];
+      if (q.question_type === 'single') {
+        if (typeof v === 'string' && v.trim()) {
+          out.push({ question_id: q.id, question_text: q.question_text, question_type: q.question_type, value: v });
+        }
+      } else if (q.question_type === 'multiple') {
+        const arr = Array.isArray(v) ? v : [];
+        const final = arr.map((x) => x === SURVEY_ETC_LABEL ? `${SURVEY_ETC_PREFIX}${(surveyEtc[q.id] || '').trim()}` : x);
+        if (final.length > 0) {
+          out.push({ question_id: q.id, question_text: q.question_text, question_type: q.question_type, value: final });
+        }
+      } else if (q.question_type === 'text') {
+        if (typeof v === 'string' && v.trim()) {
+          out.push({ question_id: q.id, question_text: q.question_text, question_type: q.question_type, value: v });
+        }
+      }
+    }
+    return out;
+  };
+
+  // 동적 설문 검증 — 인덱스(1,2,…)도 메시지에 포함해 사용자에게 어느 문항인지 명확히 안내
+  const validateSurvey = (): { errors: Record<string, string>; messages: string[] } => {
+    const errors: Record<string, string> = {};
+    const messages: string[] = [];
+    surveyQuestions.forEach((q, idx) => {
+      const num = idx + 1;
+      const v = surveyAnswers[q.id];
+      if (!q.required) return;
+      if (q.question_type === 'single') {
+        if (typeof v !== 'string' || !v.trim()) {
+          const msg = `${num}번 항목을 선택해주세요.`;
+          errors[q.id] = msg;
+          messages.push(msg);
+        }
+      } else if (q.question_type === 'multiple') {
+        const arr = Array.isArray(v) ? v : [];
+        if (arr.length === 0) {
+          const msg = `${num}번 항목을 하나 이상 선택해주세요.`;
+          errors[q.id] = msg;
+          messages.push(msg);
+        } else if (arr.includes(SURVEY_ETC_LABEL) && !(surveyEtc[q.id] || '').trim()) {
+          const msg = `${num}번 기타 내용을 입력해주세요.`;
+          errors[`${q.id}_etc`] = msg;
+          messages.push(msg);
+        }
+      } else if (q.question_type === 'text') {
+        if (typeof v !== 'string' || !v.trim()) {
+          const msg = `${num}번 항목을 입력해주세요.`;
+          errors[q.id] = msg;
+          messages.push(msg);
+        }
+      }
+    });
+    return { errors, messages };
+  };
+
+  // 저장된 설문 응답을 surveyAnswers/surveyEtc state 로 복원
+  // answers JSONB 우선, 없으면 legacy q1~q6 컬럼으로 복원
+  const hydrateSurveyFromRecord = (survey: Record<string, unknown>) => {
+    const ans: Record<string, string | string[]> = {};
+    const etc: Record<string, string> = {};
+    const answersJson = Array.isArray(survey?.answers) ? (survey.answers as SurveyAnswer[]) : [];
+
+    // 새 포맷 우선
+    if (answersJson.length > 0) {
+      for (const a of answersJson) {
+        if (Array.isArray(a.value)) {
+          const cleaned = a.value.map((v) => {
+            if (typeof v === 'string' && v.startsWith(SURVEY_ETC_PREFIX)) {
+              etc[a.question_id] = v.slice(SURVEY_ETC_PREFIX.length);
+              return SURVEY_ETC_LABEL;
+            }
+            return v;
+          });
+          ans[a.question_id] = cleaned;
+        } else if (typeof a.value === 'string') {
+          ans[a.question_id] = a.value;
+        }
+      }
+    } else {
+      // legacy 6문항 매핑
+      const legacy = [
+        { key: 'q1_azure_level', qid: DEFAULT_SURVEY_QUESTIONS[0].id },
+        { key: 'q2_difficulty',  qid: DEFAULT_SURVEY_QUESTIONS[1].id },
+        { key: 'q3_purpose',     qid: DEFAULT_SURVEY_QUESTIONS[2].id },
+        { key: 'q4_adoption',    qid: DEFAULT_SURVEY_QUESTIONS[3].id },
+        { key: 'q5_consulting',  qid: DEFAULT_SURVEY_QUESTIONS[4].id },
+        { key: 'q6_feedback',    qid: DEFAULT_SURVEY_QUESTIONS[5].id },
+      ];
+      for (const { key, qid } of legacy) {
+        const v = survey[key];
+        if (Array.isArray(v)) {
+          const cleaned = v.map((x: string) => {
+            if (typeof x === 'string' && x.startsWith(SURVEY_ETC_PREFIX)) {
+              etc[qid] = x.slice(SURVEY_ETC_PREFIX.length);
+              return SURVEY_ETC_LABEL;
+            }
+            return x;
+          });
+          ans[qid] = cleaned;
+        } else if (typeof v === 'string') {
+          ans[qid] = v;
+        }
+      }
+    }
+
+    setSurveyAnswers(ans);
+    setSurveyEtc(etc);
+  };
 
   const startEdit = () => {
     if (!registration) return;
@@ -945,116 +1188,42 @@ export default function MyDashboard() {
                 </div>
 
                 <div className="space-y-6">
-                  {/* Q1 */}
-                  <div>
-                    <p className="text-sm font-medium text-gray-800 mb-2">1. 교육 전 Microsoft Azure에 대한 이해 수준은 어느 정도입니까? <span className="text-red-500">*</span></p>
-                    {['전혀 모름 (들어봤으나 사용 경험 없음)', '기본 개념 (Azure 역할 및 주요 서비스 이해)', '기초 수준 (리소스 생성 등 기본 실습/사용 경험)', '중급 수준 (가상머신, 스토리지 등 일부 서비스 적용 경험)', '고급 수준 (아키텍처 설계, 최적화 등 고급 기능 숙지)'].map((opt) => (
-                      <label key={opt} className="flex items-center gap-2 py-1.5 cursor-pointer">
-                        <input type="radio" name="q1" value={opt} checked={surveyForm.q1 === opt} onChange={(e) => { setSurveyForm({ ...surveyForm, q1: e.target.value }); setSurveyErrors({ ...surveyErrors, q1: '' }); }} className="w-4 h-4 accent-blue-600" />
-                        <span className="text-sm text-gray-700">{opt}</span>
-                      </label>
-                    ))}
-                    {surveyErrors.q1 && <p className="text-xs text-red-500 mt-1">{surveyErrors.q1}</p>}
-                  </div>
-
-                  {/* Q2 */}
-                  <div>
-                    <p className="text-sm font-medium text-gray-800 mb-2">2. 오늘 참여한 이벤트의 난이도는 어떠셨나요? <span className="text-red-500">*</span></p>
-                    {['매우 쉬움', '적절함', '다소 어려움', '매우 어려움'].map((opt) => (
-                      <label key={opt} className="flex items-center gap-2 py-1.5 cursor-pointer">
-                        <input type="radio" name="q2" value={opt} checked={surveyForm.q2 === opt} onChange={(e) => { setSurveyForm({ ...surveyForm, q2: e.target.value }); setSurveyErrors({ ...surveyErrors, q2: '' }); }} className="w-4 h-4 accent-blue-600" />
-                        <span className="text-sm text-gray-700">{opt}</span>
-                      </label>
-                    ))}
-                    {surveyErrors.q2 && <p className="text-xs text-red-500 mt-1">{surveyErrors.q2}</p>}
-                  </div>
-
-                  {/* Q3 - multiple choice */}
-                  <div>
-                    <p className="text-sm font-medium text-gray-800 mb-2">3. 본 이벤트에 참여하신 목적은 무엇입니까? (복수 선택 가능) <span className="text-red-500">*</span></p>
-                    {['기초 지식 및 기본 역량 확보', '클라우드 도입 전 비교/평가', '사내 PoC 프로젝트 준비', 'Azure 전환(마이그레이션) 검토', '사용 중인 Azure 기술 고도화', '기타'].map((opt) => (
-                      <label key={opt} className="flex items-center gap-2 py-1.5 cursor-pointer">
-                        <input type="checkbox" checked={surveyForm.q3.includes(opt)} onChange={(e) => {
-                          const next = e.target.checked ? [...surveyForm.q3, opt] : surveyForm.q3.filter((v) => v !== opt);
-                          setSurveyForm({ ...surveyForm, q3: next, q3_etc: e.target.checked ? surveyForm.q3_etc : (opt === '기타' ? '' : surveyForm.q3_etc) });
-                          setSurveyErrors({ ...surveyErrors, q3: '' });
-                        }} className="w-4 h-4 accent-blue-600" />
-                        <span className="text-sm text-gray-700">{opt}</span>
-                      </label>
-                    ))}
-                    {surveyForm.q3.includes('기타') && (
-                      <input type="text" value={surveyForm.q3_etc} onChange={(e) => setSurveyForm({ ...surveyForm, q3_etc: e.target.value })} placeholder="기타 내용을 입력해주세요" className="mt-1 w-full" style={{ padding: '8px 12px', border: `1px solid ${surveyErrors.q3_etc ? '#ef4444' : '#e0e0e0'}`, borderRadius: 8, fontSize: 14 }} />
-                    )}
-                    {surveyErrors.q3 && <p className="text-xs text-red-500 mt-1">{surveyErrors.q3}</p>}
-                    {surveyErrors.q3_etc && <p className="text-xs text-red-500 mt-1">{surveyErrors.q3_etc}</p>}
-                  </div>
-
-                  {/* Q4 */}
-                  <div>
-                    <p className="text-sm font-medium text-gray-800 mb-2">4. 현재 Microsoft Azure 도입 또는 마이그레이션을 고려 중입니까? <span className="text-red-500">*</span></p>
-                    {['이미 사용 중 (추가 도입/확장 계획 있음)', '이미 사용 중 (추가 도입/확장 계획 없음)', '6개월 이내 도입 계획 있음', '1년 이내 도입 계획 있음', '계획 없음 / 미정'].map((opt) => (
-                      <label key={opt} className="flex items-center gap-2 py-1.5 cursor-pointer">
-                        <input type="radio" name="q4" value={opt} checked={surveyForm.q4 === opt} onChange={(e) => { setSurveyForm({ ...surveyForm, q4: e.target.value }); setSurveyErrors({ ...surveyErrors, q4: '' }); }} className="w-4 h-4 accent-blue-600" />
-                        <span className="text-sm text-gray-700">{opt}</span>
-                      </label>
-                    ))}
-                    {surveyErrors.q4 && <p className="text-xs text-red-500 mt-1">{surveyErrors.q4}</p>}
-                  </div>
-
-                  {/* Q5 - multiple choice */}
-                  <div>
-                    <p className="text-sm font-medium text-gray-800 mb-2">5. Microsoft Azure 추가 활용에 대한 클루커스의 컨설팅이 필요하십니까? (복수 선택 가능) <span className="text-red-500">*</span></p>
-                    {['예 (클루커스의 추가 컨설팅 필요)', '예 (교육/세미나 이벤트 소식 필요)', '필요 없음'].map((opt) => (
-                      <label key={opt} className="flex items-center gap-2 py-1.5 cursor-pointer">
-                        <input type="checkbox" checked={surveyForm.q5.includes(opt)} onChange={(e) => {
-                          const next = e.target.checked ? [...surveyForm.q5, opt] : surveyForm.q5.filter((v) => v !== opt);
-                          setSurveyForm({ ...surveyForm, q5: next });
-                          setSurveyErrors({ ...surveyErrors, q5: '' });
-                        }} className="w-4 h-4 accent-blue-600" />
-                        <span className="text-sm text-gray-700">{opt}</span>
-                      </label>
-                    ))}
-                    {surveyErrors.q5 && <p className="text-xs text-red-500 mt-1">{surveyErrors.q5}</p>}
-                  </div>
-
-                  {/* Q6 */}
-                  <div>
-                    <p className="text-sm font-medium text-gray-800 mb-2">6. 참여 후기, 추가로 배우고 싶은 교육 주제 등 핸즈온 운영에 대한 피드백이 있으시면 편히 말씀 부탁드립니다.</p>
-                    <p className="text-xs text-gray-400 mb-2">작성해 주신 피드백은 향후 더 나은 경험 제공을 위해 개선 사항으로 참고하겠습니다.</p>
-                    <textarea rows={4} value={surveyForm.q6} onChange={(e) => setSurveyForm({ ...surveyForm, q6: e.target.value })} placeholder="자유롭게 작성해주세요" className="w-full" style={{ padding: '10px 12px', border: '1px solid #e0e0e0', borderRadius: 8, fontSize: 14 }} />
-                  </div>
+                  {surveyQuestions.map((q, idx) => (
+                    <SurveyQuestionField
+                      key={q.id}
+                      q={q}
+                      index={idx}
+                      answer={surveyAnswers[q.id]}
+                      etc={surveyEtc[q.id] || ''}
+                      error={surveyErrors[q.id]}
+                      etcError={surveyErrors[`${q.id}_etc`]}
+                      onSingleChange={(v) => setSingleAnswer(q.id, v)}
+                      onMultiToggle={(opt) => toggleMultiAnswer(q.id, opt)}
+                      onTextChange={(v) => setTextAnswer(q.id, v)}
+                      onEtcChange={(v) => setEtcAnswer(q.id, v)}
+                    />
+                  ))}
                 </div>
 
                 <button
                   onClick={async () => {
-                    const errs: Record<string, string> = {};
-                    if (!surveyForm.q1) errs.q1 = '1번 (Azure 이해 수준)을 선택해주세요.';
-                    if (!surveyForm.q2) errs.q2 = '2번 (이벤트 난이도)을 선택해주세요.';
-                    if (surveyForm.q3.length === 0) errs.q3 = '3번 (참여 목적)을 하나 이상 선택해주세요.';
-                    if (surveyForm.q3.includes('기타') && !surveyForm.q3_etc.trim()) errs.q3_etc = '3번 기타 내용을 입력해주세요.';
-                    if (!surveyForm.q4) errs.q4 = '4번 (Azure 도입 계획)을 선택해주세요.';
-                    if (surveyForm.q5.length === 0) errs.q5 = '5번 (컨설팅 필요 여부)을 하나 이상 선택해주세요.';
-                    setSurveyErrors(errs);
-                    if (Object.keys(errs).length > 0) {
-                      setSurveyValidationPopup(Object.values(errs));
+                    const { errors, messages } = validateSurvey();
+                    setSurveyErrors(errors);
+                    if (messages.length > 0) {
+                      setSurveyValidationPopup(messages);
                       return;
                     }
 
                     setSurveySubmitting(true);
                     try {
-                      const q3Final = surveyForm.q3.map((v) => v === '기타' ? `기타: ${surveyForm.q3_etc}` : v);
+                      const answers = buildSurveyAnswers();
                       const res = await fetch('/api/survey', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                           registration_id: registration.id,
                           pin,
-                          q1_azure_level: surveyForm.q1,
-                          q2_difficulty: surveyForm.q2,
-                          q3_purpose: q3Final,
-                          q4_adoption: surveyForm.q4,
-                          q5_consulting: surveyForm.q5,
-                          q6_feedback: surveyForm.q6,
+                          answers,
                         }),
                       });
                       const data = await res.json();
@@ -1253,27 +1422,12 @@ export default function MyDashboard() {
                 <div className="text-right mt-3">
                   <button
                     onClick={async () => {
-                      // 기존 응답 불러오기
+                      // 기존 응답 불러오기 (answers JSONB 우선, 없으면 legacy q1~q6)
                       try {
                         const res = await fetch(`/api/survey?registration_id=${registration.id}&pin=${encodeURIComponent(pin)}`);
                         const data = await res.json();
                         if (data.exists && data.survey) {
-                          const s = data.survey;
-                          const q3 = (s.q3_purpose || []) as string[];
-                          let q3_etc = '';
-                          const q3Clean = q3.map((v: string) => {
-                            if (v.startsWith('기타: ')) { q3_etc = v.replace('기타: ', ''); return '기타'; }
-                            return v;
-                          });
-                          setSurveyForm({
-                            q1: s.q1_azure_level || '',
-                            q2: s.q2_difficulty || '',
-                            q3: q3Clean,
-                            q4: s.q4_adoption || '',
-                            q5: (s.q5_consulting || []) as string[],
-                            q3_etc,
-                            q6: s.q6_feedback || '',
-                          });
+                          hydrateSurveyFromRecord(data.survey);
                         }
                       } catch { /* 불러오기 실패 시 빈 폼 */ }
                       setSurveySubmitted(false);
@@ -1815,54 +1969,22 @@ export default function MyDashboard() {
             </div>
 
             <div className="space-y-6">
-              {/* Q1 */}
-              <div>
-                <p className="text-sm font-medium text-gray-800 mb-2">1. 교육 전 Microsoft Azure에 대한 이해 수준은 어느 정도입니까? <span className="text-red-500">*</span></p>
-                {['전혀 모름 (들어봤으나 사용 경험 없음)', '기본 개념 (Azure 역할 및 주요 서비스 이해)', '기초 수준 (리소스 생성 등 기본 실습/사용 경험)', '중급 수준 (가상머신, 스토리지 등 일부 서비스 적용 경험)', '고급 수준 (아키텍처 설계, 최적화 등 고급 기능 숙지)'].map((opt) => (
-                  <label key={opt} className="flex items-center gap-2 py-1.5 cursor-pointer"><input type="radio" name="sq1" value={opt} checked={surveyForm.q1 === opt} onChange={(e) => { setSurveyForm({ ...surveyForm, q1: e.target.value }); setSurveyErrors({ ...surveyErrors, q1: '' }); }} className="w-4 h-4 accent-blue-600" /><span className="text-sm text-gray-700">{opt}</span></label>
-                ))}
-                {surveyErrors.q1 && <p className="text-xs text-red-500 mt-1">{surveyErrors.q1}</p>}
-              </div>
-              {/* Q2 */}
-              <div>
-                <p className="text-sm font-medium text-gray-800 mb-2">2. 오늘 참여한 이벤트의 난이도는 어떠셨나요? <span className="text-red-500">*</span></p>
-                {['매우 쉬움', '적절함', '다소 어려움', '매우 어려움'].map((opt) => (
-                  <label key={opt} className="flex items-center gap-2 py-1.5 cursor-pointer"><input type="radio" name="sq2" value={opt} checked={surveyForm.q2 === opt} onChange={(e) => { setSurveyForm({ ...surveyForm, q2: e.target.value }); setSurveyErrors({ ...surveyErrors, q2: '' }); }} className="w-4 h-4 accent-blue-600" /><span className="text-sm text-gray-700">{opt}</span></label>
-                ))}
-                {surveyErrors.q2 && <p className="text-xs text-red-500 mt-1">{surveyErrors.q2}</p>}
-              </div>
-              {/* Q3 */}
-              <div>
-                <p className="text-sm font-medium text-gray-800 mb-2">3. 본 이벤트에 참여하신 목적은 무엇입니까? (복수 선택 가능) <span className="text-red-500">*</span></p>
-                {['기초 지식 및 기본 역량 확보', '클라우드 도입 전 비교/평가', '사내 PoC 프로젝트 준비', 'Azure 전환(마이그레이션) 검토', '사용 중인 Azure 기술 고도화', '기타'].map((opt) => (
-                  <label key={opt} className="flex items-center gap-2 py-1.5 cursor-pointer"><input type="checkbox" checked={surveyForm.q3.includes(opt)} onChange={(e) => { const next = e.target.checked ? [...surveyForm.q3, opt] : surveyForm.q3.filter((v) => v !== opt); setSurveyForm({ ...surveyForm, q3: next, q3_etc: e.target.checked ? surveyForm.q3_etc : (opt === '기타' ? '' : surveyForm.q3_etc) }); setSurveyErrors({ ...surveyErrors, q3: '' }); }} className="w-4 h-4 accent-blue-600" /><span className="text-sm text-gray-700">{opt}</span></label>
-                ))}
-                {surveyForm.q3.includes('기타') && (<input type="text" value={surveyForm.q3_etc} onChange={(e) => setSurveyForm({ ...surveyForm, q3_etc: e.target.value })} placeholder="기타 내용을 입력해주세요" className="mt-1 w-full" style={{ padding: '8px 12px', border: `1px solid ${surveyErrors.q3_etc ? '#ef4444' : '#e0e0e0'}`, borderRadius: 8, fontSize: 14 }} />)}
-                {surveyErrors.q3 && <p className="text-xs text-red-500 mt-1">{surveyErrors.q3}</p>}
-                {surveyErrors.q3_etc && <p className="text-xs text-red-500 mt-1">{surveyErrors.q3_etc}</p>}
-              </div>
-              {/* Q4 */}
-              <div>
-                <p className="text-sm font-medium text-gray-800 mb-2">4. 현재 Microsoft Azure 도입 또는 마이그레이션을 고려 중입니까? <span className="text-red-500">*</span></p>
-                {['이미 사용 중 (추가 도입/확장 계획 있음)', '이미 사용 중 (추가 도입/확장 계획 없음)', '6개월 이내 도입 계획 있음', '1년 이내 도입 계획 있음', '계획 없음 / 미정'].map((opt) => (
-                  <label key={opt} className="flex items-center gap-2 py-1.5 cursor-pointer"><input type="radio" name="sq4" value={opt} checked={surveyForm.q4 === opt} onChange={(e) => { setSurveyForm({ ...surveyForm, q4: e.target.value }); setSurveyErrors({ ...surveyErrors, q4: '' }); }} className="w-4 h-4 accent-blue-600" /><span className="text-sm text-gray-700">{opt}</span></label>
-                ))}
-                {surveyErrors.q4 && <p className="text-xs text-red-500 mt-1">{surveyErrors.q4}</p>}
-              </div>
-              {/* Q5 */}
-              <div>
-                <p className="text-sm font-medium text-gray-800 mb-2">5. Microsoft Azure 추가 활용에 대한 클루커스의 컨설팅이 필요하십니까? (복수 선택 가능) <span className="text-red-500">*</span></p>
-                {['예 (클루커스의 추가 컨설팅 필요)', '예 (교육/세미나 이벤트 소식 필요)', '필요 없음'].map((opt) => (
-                  <label key={opt} className="flex items-center gap-2 py-1.5 cursor-pointer"><input type="checkbox" checked={surveyForm.q5.includes(opt)} onChange={(e) => { const next = e.target.checked ? [...surveyForm.q5, opt] : surveyForm.q5.filter((v) => v !== opt); setSurveyForm({ ...surveyForm, q5: next }); setSurveyErrors({ ...surveyErrors, q5: '' }); }} className="w-4 h-4 accent-blue-600" /><span className="text-sm text-gray-700">{opt}</span></label>
-                ))}
-                {surveyErrors.q5 && <p className="text-xs text-red-500 mt-1">{surveyErrors.q5}</p>}
-              </div>
-              {/* Q6 */}
-              <div>
-                <p className="text-sm font-medium text-gray-800 mb-2">6. 참여 후기, 추가로 배우고 싶은 교육 주제 등 피드백이 있으시면 편히 말씀 부탁드립니다.</p>
-                <p className="text-xs text-gray-400 mb-2">작성해 주신 피드백은 향후 더 나은 경험 제공을 위해 개선 사항으로 참고하겠습니다.</p>
-                <textarea rows={4} value={surveyForm.q6} onChange={(e) => setSurveyForm({ ...surveyForm, q6: e.target.value })} placeholder="자유롭게 작성해주세요" className="w-full" style={{ padding: '10px 12px', border: '1px solid #e0e0e0', borderRadius: 8, fontSize: 14 }} />
-              </div>
+              {surveyQuestions.map((q, idx) => (
+                <SurveyQuestionField
+                  key={q.id}
+                  q={q}
+                  index={idx}
+                  answer={surveyAnswers[q.id]}
+                  etc={surveyEtc[q.id] || ''}
+                  error={surveyErrors[q.id]}
+                  etcError={surveyErrors[`${q.id}_etc`]}
+                  onSingleChange={(v) => setSingleAnswer(q.id, v)}
+                  onMultiToggle={(opt) => toggleMultiAnswer(q.id, opt)}
+                  onTextChange={(v) => setTextAnswer(q.id, v)}
+                  onEtcChange={(v) => setEtcAnswer(q.id, v)}
+                  inputNamePrefix="sq"
+                />
+              ))}
             </div>
 
             <button
@@ -1877,17 +1999,11 @@ export default function MyDashboard() {
                 if (!editForm.phone?.trim()) editErrs.phone = '연락처를 입력해주세요.';
                 setEditErrors(editErrs);
 
-                // 설문 검증
-                const sErrs: Record<string, string> = {};
-                if (!surveyForm.q1) sErrs.q1 = '1번 (Azure 이해 수준)을 선택해주세요.';
-                if (!surveyForm.q2) sErrs.q2 = '2번 (이벤트 난이도)을 선택해주세요.';
-                if (surveyForm.q3.length === 0) sErrs.q3 = '3번 (참여 목적)을 하나 이상 선택해주세요.';
-                if (surveyForm.q3.includes('기타') && !surveyForm.q3_etc.trim()) sErrs.q3_etc = '3번 기타 내용을 입력해주세요.';
-                if (!surveyForm.q4) sErrs.q4 = '4번 (Azure 도입 계획)을 선택해주세요.';
-                if (surveyForm.q5.length === 0) sErrs.q5 = '5번 (컨설팅 필요 여부)을 하나 이상 선택해주세요.';
+                // 설문 검증 (동적)
+                const { errors: sErrs, messages: sMsgs } = validateSurvey();
                 setSurveyErrors(sErrs);
 
-                const allErrors = [...Object.values(editErrs), ...Object.values(sErrs)];
+                const allErrors = [...Object.values(editErrs), ...sMsgs];
                 if (allErrors.length > 0) {
                   setSurveyValidationPopup(allErrors);
                   return;
@@ -1902,16 +2018,14 @@ export default function MyDashboard() {
                     body: JSON.stringify({ ...editForm, pin, force_survey_edit: true }),
                   });
 
-                  // 2. 설문 제출
-                  const q3Final = surveyForm.q3.map((v) => v === '기타' ? `기타: ${surveyForm.q3_etc}` : v);
+                  // 2. 설문 제출 (동적 answers 페이로드)
+                  const answers = buildSurveyAnswers();
                   const surveyRes = await fetch('/api/survey', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                       registration_id: registration!.id, pin,
-                      q1_azure_level: surveyForm.q1, q2_difficulty: surveyForm.q2,
-                      q3_purpose: q3Final, q4_adoption: surveyForm.q4,
-                      q5_consulting: surveyForm.q5, q6_feedback: surveyForm.q6,
+                      answers,
                     }),
                   });
                   const surveyData = await surveyRes.json();
