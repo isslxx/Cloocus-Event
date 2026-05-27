@@ -64,6 +64,15 @@ export const trackCertificateDownload = (eventName: string, eventCategory: strin
   });
 };
 
+// 수료증 다운로드 실패 — 재시도 후에도 실패한 케이스만. 실패율 모니터링용.
+export const trackCertificateDownloadFailed = (eventName: string, eventCategory: string, errorName: string) => {
+  trackEvent('certificate_download_failed', {
+    event_name_label: eventName,
+    event_category: eventCategory,
+    error_name: errorName,
+  });
+};
+
 // 신청자 포털 로그인
 export const trackPortalLogin = () => {
   trackEvent('portal_login');

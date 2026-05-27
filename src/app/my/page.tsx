@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { INDUSTRIES, COMPANY_SIZES, REFERRAL_SOURCES } from '@/lib/constants';
 import { formatPhone } from '@/lib/validation';
-import { trackCertificateDownload, trackSurveyComplete, trackPortalLogin, trackInquirySubmit, trackRegistrationCancel } from '@/lib/analytics';
+import { trackCertificateDownload, trackCertificateDownloadFailed, trackSurveyComplete, trackPortalLogin, trackInquirySubmit, trackRegistrationCancel } from '@/lib/analytics';
 import { trackView, trackClick } from '@/lib/tracker';
 import { captureAttribution } from '@/lib/utm';
 import { DEFAULT_SURVEY_QUESTIONS, type SurveyQuestion, type SurveyAnswer } from '@/lib/survey-questions';
@@ -241,6 +241,9 @@ export default function MyDashboard() {
   const [editCustomEtc, setEditCustomEtc] = useState<Record<string, string>>({});
   const [editCustomErrors, setEditCustomErrors] = useState<Record<string, string>>({});
 
+  // verify 카드용 QR (외부 서비스 호출 없이 클라이언트에서 생성)
+  const [verifyQrDataUrl, setVerifyQrDataUrl] = useState<string>('');
+
   const ETC_LABEL = '기타';
   const ETC_PREFIX = '기타: ';
 
@@ -251,6 +254,31 @@ export default function MyDashboard() {
       return () => document.body.classList.remove('mesh-hide');
     }
   }, [authenticated]);
+
+  // verify QR 생성 — 외부 QR 서비스 의존 제거를 위해 클라이언트에서 dataURL 로 직접 생성한다.
+  useEffect(() => {
+    if (!registration?.id) {
+      setVerifyQrDataUrl('');
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const QRCode = (await import('qrcode')).default;
+        const url = `${window.location.origin}/verify/${registration.id}`;
+        const dataUrl = await QRCode.toDataURL(url, {
+          width: 400,
+          margin: 1,
+          errorCorrectionLevel: 'M',
+        });
+        if (!cancelled) setVerifyQrDataUrl(dataUrl);
+      } catch (err) {
+        console.error('[my] verify QR 생성 실패:', err);
+        if (!cancelled) setVerifyQrDataUrl('');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [registration?.id]);
 
   useEffect(() => {
     captureAttribution();
@@ -1030,9 +1058,6 @@ export default function MyDashboard() {
   if (!registration) return null;
 
   const status = statusLabel(registration.registration_status || 'pending');
-  const verifyUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/verify/${registration.id}`
-    : `/verify/${registration.id}`;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -1280,9 +1305,13 @@ export default function MyDashboard() {
                 {/* 수료증 다운로드 */}
                 <button
                   onClick={async () => {
-                    try {
-                      const html2canvas = (await import('html2canvas')).default;
-                      const { jsPDF } = await import('jspdf');
+                    // 일시적 외부 의존성·청크 로드 실패를 흡수하기 위해 1회 자동 재시도.
+                    const generateAndSave = async () => {
+                      const [html2canvas, { jsPDF }, QRCode] = await Promise.all([
+                        import('html2canvas').then((m) => m.default),
+                        import('jspdf'),
+                        import('qrcode').then((m) => m.default),
+                      ]);
 
                       const issueDate = new Date();
                       const evtDate = new Date(registration.event_date);
@@ -1292,6 +1321,13 @@ export default function MyDashboard() {
                       // 위조 방지: 고유 인증번호 생성
                       const certId = `CLO-${registration.id.slice(0,8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
                       const verifyQr = `${window.location.origin}/verify/${registration.id}`;
+
+                      // QR 코드를 dataURL 로 사전 생성 (외부 서비스 의존 제거 — 일시 장애·CORS 이슈 차단)
+                      const qrDataUrl = await QRCode.toDataURL(verifyQr, {
+                        width: 200,
+                        margin: 0,
+                        errorCorrectionLevel: 'M',
+                      });
 
                       const certEl = document.createElement('div');
                       certEl.style.cssText = 'position:fixed;left:-9999px;top:0;width:1122px;height:794px;font-family:"Noto Sans KR",sans-serif;overflow:hidden;';
@@ -1329,9 +1365,9 @@ export default function MyDashboard() {
                                 <p style="font-size:10px;color:#4c2d96;margin:0 0 4px;font-weight:600;letter-spacing:1px;">Issued by</p>
                                 <p style="font-size:14px;font-weight:700;color:#222;margin:0;">Cloocus co.,Ltd.</p>
                               </div>
-                              <!-- 위조방지 QR + 인증번호 -->
+                              <!-- 위조방지 QR + 인증번호 (QR 은 dataURL 로 인라인 — 외부 서비스 의존 없음) -->
                               <div style="display:flex;align-items:flex-start;gap:10px;margin-left:auto;">
-                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(verifyQr)}" style="width:52px;height:52px;" crossorigin="anonymous" />
+                                <img src="${qrDataUrl}" style="width:52px;height:52px;" />
                                 <div style="padding-top:2px;">
                                   <p style="font-size:9px;color:#999;margin:0 0 2px;font-weight:600;">Certificate ID</p>
                                   <p style="font-size:10px;color:#666;margin:0;font-family:monospace;letter-spacing:0.5px;">${certId}</p>
@@ -1376,28 +1412,30 @@ export default function MyDashboard() {
                       `;
                       document.body.appendChild(certEl);
 
-                      // 이미지 로드 대기
-                      const imgs = certEl.querySelectorAll('img');
-                      await Promise.all(Array.from(imgs).map((img) =>
-                        img.complete ? Promise.resolve() : new Promise<void>((r) => { img.onload = () => r(); img.onerror = () => r(); setTimeout(r, 2000); })
-                      ));
+                      try {
+                        // 이미지 로드 대기 (이제 모두 same-origin 또는 dataURL — 외부 호출 없음)
+                        const imgs = certEl.querySelectorAll('img');
+                        await Promise.all(Array.from(imgs).map((img) =>
+                          img.complete ? Promise.resolve() : new Promise<void>((r) => { img.onload = () => r(); img.onerror = () => r(); setTimeout(r, 2000); })
+                        ));
 
-                      const canvas = await html2canvas(certEl, { scale: 2, backgroundColor: '#fff', useCORS: true, logging: false });
-                      document.body.removeChild(certEl);
+                        const canvas = await html2canvas(certEl, { scale: 2, backgroundColor: '#fff', useCORS: true, logging: false });
+                        const imgData = canvas.toDataURL('image/png');
+                        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+                        doc.addImage(imgData, 'PNG', 0, 0, 297, 210);
 
-                      const imgData = canvas.toDataURL('image/png');
-                      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-                      doc.addImage(imgData, 'PNG', 0, 0, 297, 210);
+                        // PDF 메타데이터 (위조 방지)
+                        doc.setProperties({
+                          title: `수료증 - ${registration.name}`,
+                          subject: registration.event_name,
+                          author: 'Cloocus co.,ltd.',
+                          creator: `Cloocus Event System | ${certId}`,
+                        });
 
-                      // PDF 메타데이터 (위조 방지)
-                      doc.setProperties({
-                        title: `수료증 - ${registration.name}`,
-                        subject: registration.event_name,
-                        author: 'Cloocus co.,ltd.',
-                        creator: `Cloocus Event System | ${certId}`,
-                      });
-
-                      doc.save(`수료증_${registration.name}_${registration.event_name}.pdf`);
+                        doc.save(`수료증_${registration.name}_${registration.event_name}.pdf`);
+                      } finally {
+                        if (certEl.parentNode) certEl.parentNode.removeChild(certEl);
+                      }
 
                       // GA: 수료증 다운로드
                       trackCertificateDownload(registration.event_name, registration.event_category || '');
@@ -1408,8 +1446,22 @@ export default function MyDashboard() {
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ registration_id: registration.id, pin }),
                       }).catch(() => {});
-                    } catch (err) {
-                      alert('PDF 생성 중 오류: ' + String(err));
+                    };
+
+                    try {
+                      await generateAndSave();
+                    } catch (err1) {
+                      // 일시 오류(예: 청크 로드 실패) — 0.5s 후 1회 재시도
+                      console.error('[my] 수료증 1차 시도 실패 — 재시도합니다:', err1);
+                      await new Promise((r) => setTimeout(r, 500));
+                      try {
+                        await generateAndSave();
+                      } catch (err2) {
+                        const errName = (err2 as { name?: string })?.name || 'UnknownError';
+                        console.error('[my] 수료증 재시도도 실패:', err2);
+                        trackCertificateDownloadFailed(registration.event_name, registration.event_category || '', errName);
+                        alert('수료증 발급에 실패했습니다.\n잠시 후 다시 시도해 주시거나, 페이지를 새로고침해 주세요.\n계속 같은 문제가 발생하면 marketing@cloocus.com 으로 알려주세요.');
+                      }
                     }
                   }}
                   className="btn-primary mb-3"
@@ -1453,14 +1505,23 @@ export default function MyDashboard() {
                 {showQr && (
                   <>
                     <p className="text-xs text-gray-500 mb-3">이벤트 현장에서 아래 QR코드를 제시해주세요.</p>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(verifyUrl)}`}
-                      alt="QR Code"
-                      className="mx-auto border border-gray-100 rounded-lg p-2"
-                      width={200}
-                      height={200}
-                    />
+                    {verifyQrDataUrl ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={verifyQrDataUrl}
+                        alt="QR Code"
+                        className="mx-auto border border-gray-100 rounded-lg p-2"
+                        width={200}
+                        height={200}
+                      />
+                    ) : (
+                      <div
+                        className="mx-auto border border-gray-100 rounded-lg p-2 bg-gray-50 flex items-center justify-center text-xs text-gray-400"
+                        style={{ width: 200, height: 200 }}
+                      >
+                        QR 생성 중…
+                      </div>
+                    )}
                     <p className="text-xs text-gray-400 mt-3">{registration.name} | {registration.company_name}</p>
                     <p className="text-[10px] text-gray-300 mt-1">QR 스캔 시 참석자 검증 페이지로 연결됩니다</p>
                   </>
