@@ -4,6 +4,7 @@ import { normalizeCompanyName } from '@/lib/company-normalize';
 import { isBlockedEmailDomain, isValidEmail, isValidPhone, isFakePhone } from '@/lib/validation';
 import { validateAndPrepareCustomAnswers } from '@/lib/custom-answers';
 import { isInternalRequest } from '@/lib/internal-ip';
+import { notifyAdminRegistrationComplete } from '@/lib/notifications';
 
 function getServiceSupabase() {
   return createClient(
@@ -121,6 +122,38 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       return NextResponse.json({ error: '등록 중 오류가 발생했습니다.' }, { status: 500 });
+    }
+
+    // 운영자 본인 IP에서 발생한 등록은 통계 제외 대상이므로 알림도 보내지 않음
+    if (!is_internal) {
+      void (async () => {
+        try {
+          let eventName = '카테고리 미지정';
+          let eventCategory: string | undefined;
+          if (insertRow.event_id) {
+            const { data: evt } = await supabase
+              .from('events')
+              .select('name, category')
+              .eq('id', insertRow.event_id)
+              .maybeSingle();
+            if (evt?.name) eventName = evt.name;
+            if (evt?.category) eventCategory = evt.category;
+          }
+          await notifyAdminRegistrationComplete({
+            userName: insertRow.name,
+            companyName: insertRow.company_name_raw,
+            department: insertRow.department,
+            jobTitle: insertRow.job_title,
+            email: insertRow.email,
+            phone: insertRow.phone,
+            eventName,
+            eventCategory,
+            registrationId: insertedData?.id ?? '',
+          });
+        } catch (err) {
+          console.error('[register] admin notify failed:', err);
+        }
+      })();
     }
 
     return NextResponse.json({ success: true, id: insertedData?.id });
